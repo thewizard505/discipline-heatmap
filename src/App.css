@@ -1,0 +1,202 @@
+/* ---------- GLOBAL RESET ---------- */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #000;
+  color: white;
+  font-family:
+    system-ui,
+    -apple-system,
+    Segoe UI,
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  overflow-x: hidden;
+}
+
+/* ---------- ROOT LAYOUT ---------- */
+
+#root {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* ---------- GLASS PANELS ---------- */
+
+.card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  border-radius: 32px;
+  padding: 2rem;
+  transition: all 0.4s ease;
+}
+
+.card:hover {
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  transform: translateY(-4px);
+  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);
+}
+
+/* ---------- BUTTON SYSTEM ---------- */
+
+button {
+  border-radius: 999px;
+  border: none;
+  padding: 0.7rem 1.6rem;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+button.primary {
+  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  color: white;
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.35);
+}
+
+button.primary:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 45px rgba(59, 130, 246, 0.6);
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: white;
+}
+
+button.secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* ---------- INPUT FIELD ---------- */
+
+input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 14px 18px;
+  color: white;
+  font-size: 14px;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.35);
+}
+
+/* ---------- LOGO STYLE ---------- */
+
+.logo {
+  height: 5em;
+  padding: 1em;
+  transition:
+    transform 0.3s ease,
+    filter 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+}
+
+/* ---------- TITLE GLOW ---------- */
+
+.title-glow {
+  font-size: 3rem;
+  font-weight: 200;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.2));
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* ---------- FLOAT ANIMATION ---------- */
+
+@keyframes float {
+  0% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+  100% {
+    transform: translateY(0px);
+  }
+}
+
+.float {
+  animation: float 4s ease-in-out infinite;
+}
+
+/* ---------- BUTTON BREATHING EFFECT ---------- */
+
+@keyframes breathing {
+  0% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.04);
+  }
+  100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+}
+
+.breathing {
+  animation: breathing 3s infinite ease-in-out;
+}
+
+/* ---------- PAGE FADE ---------- */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.5s ease;
+}
+
+/* ---------- SCROLLBAR ---------- */
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
+}
