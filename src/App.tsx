@@ -640,8 +640,9 @@ export default function App() {
           {/* Glow background */}
           <div className="hero-glow"></div>
 
+          <div className="relative flex flex-col items-center justify-center pt-24 pb-16 text-center"></div>
           {/* TITLE */}
-          <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] text-center uppercase">
+          <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase">
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
               Tunnel Vision
             </span>
@@ -650,12 +651,13 @@ export default function App() {
           {/* SUBTITLE */}
           <p
             className="
-    mt-10
+    mt-8
+    max-w-4xl
+    font-[Inter]
     text-3xl md:text-4xl
     font-semibold
+    leading-tight
     text-center
-    max-w-3xl
-    leading-snug
 
     bg-gradient-to-r
     from-blue-300
@@ -665,8 +667,8 @@ export default function App() {
     bg-clip-text
     text-transparent
 
-    drop-shadow-[0_0_25px_rgba(59,130,246,0.8)]
-    drop-shadow-[0_0_60px_rgba(59,130,246,0.5)]
+    drop-shadow-[0_0_25px_rgba(59,130,246,0.9)]
+    drop-shadow-[0_0_60px_rgba(59,130,246,0.6)]
   "
           >
             A focus tool designed to maximize and analyze productivity.
