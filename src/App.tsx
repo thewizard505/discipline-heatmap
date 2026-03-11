@@ -651,25 +651,25 @@ export default function App() {
           {/* SUBTITLE */}
           <p
             className="
-    mt-8
-    max-w-4xl
-    font-[Inter]
-    text-3xl md:text-4xl
-    font-semibold
-    leading-tight
-    text-center
+mt-8
+max-w-4xl
+text-center
+text-3xl md:text-4xl
+font-semibold
+leading-tight
+tracking-tight
 
-    bg-gradient-to-r
-    from-blue-300
-    via-blue-400
-    to-blue-500
+bg-gradient-to-r
+from-blue-300
+via-blue-400
+to-blue-500
 
-    bg-clip-text
-    text-transparent
+bg-clip-text
+text-transparent
 
-    drop-shadow-[0_0_25px_rgba(59,130,246,0.9)]
-    drop-shadow-[0_0_60px_rgba(59,130,246,0.6)]
-  "
+drop-shadow-[0_0_20px_rgba(59,130,246,0.9)]
+drop-shadow-[0_0_50px_rgba(59,130,246,0.6)]
+"
           >
             A focus tool designed to maximize and analyze productivity.
           </p>
