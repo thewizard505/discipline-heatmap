@@ -635,11 +635,42 @@ export default function App() {
               background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
             }}
           />
-          <div className="text-5xl font-mono font-extralight tracking-[0.9em] text-center uppercase">
+          <div className="w-full flex flex-col items-center justify-center pt-28 pb-32 fade-in"></div>
+
+          {/* Glow background */}
+          <div className="hero-glow"></div>
+
+          {/* TITLE */}
+          <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] text-center uppercase">
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
               Tunnel Vision
             </span>
           </div>
+
+          {/* SUBTITLE */}
+          <p
+            className="
+    mt-10
+    text-3xl md:text-4xl
+    font-semibold
+    text-center
+    max-w-3xl
+    leading-snug
+
+    bg-gradient-to-r
+    from-blue-300
+    via-blue-400
+    to-blue-500
+
+    bg-clip-text
+    text-transparent
+
+    drop-shadow-[0_0_25px_rgba(59,130,246,0.8)]
+    drop-shadow-[0_0_60px_rgba(59,130,246,0.5)]
+  "
+          >
+            A focus tool designed to maximize and analyze productivity.
+          </p>
         </div>
 
         <nav
