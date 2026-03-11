@@ -649,7 +649,7 @@ export default function App() {
               Tunnel Vision
             </span>
           </div>
-          <p className="gradient-text-blue hero-glow hero-subtitle">
+          <p className="hero-subtitle">
             A focus tool designed to maximize and analyze productivity.
           </p>
         </div>
