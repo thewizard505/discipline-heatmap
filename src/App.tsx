@@ -638,13 +638,7 @@ export default function App() {
         </div>
 
         <div className="hero fade-in">
-          <div className="hero-title">
-            <div className="text-6xl font-mono font-extralight tracking-[0.5em] uppercase text-center">
-              <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/30 to-transparent">
-                TUNNEL VISION
-              </span>
-            </div>
-          </div>
+          <h1 className="hero-title">TUNNEL VISION</h1>
 
           <p className="hero-subtitle">
             A focus tool designed to maximize and analyze productivity.
