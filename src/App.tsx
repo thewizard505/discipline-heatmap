@@ -637,18 +637,13 @@ export default function App() {
           />
         </div>
 
-        <div
-          className={`${isSimulation ? "fixed" : "absolute"} top-12 w-full z-0 flex justify-center pointer-events-none transition-all duration-1000 ${running ? "blur-md opacity-0" : "opacity-100"}`}
-          style={{
-            opacity: titleOpacity,
-            transform: isSimulation ? `translateY(${scrollY * 0.1}px)` : "none",
-          }}
-        >
-          <div className="text-5xl font-mono font-extralight tracking-[0.9em] text-center uppercase">
-            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
+        <div className="hero">
+          <div className="text-6xl font-mono font-extralight tracking-[0.5em] uppercase text-center">
+            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/30 to-transparent">
               Tunnel Vision
             </span>
           </div>
+
           <p className="hero-subtitle">
             A focus tool designed to maximize and analyze productivity.
           </p>

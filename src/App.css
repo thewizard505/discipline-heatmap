@@ -126,12 +126,20 @@ input:focus {
   color: transparent;
 }
 
+/* ---------- HERO LAYOUT ---------- */
+
+.hero {
+  max-width: 900px;
+  margin: 120px auto 60px auto;
+  text-align: center;
+}
+
 /* ---------- HERO SUBTITLE ---------- */
 
 .hero-subtitle {
-  font-size: 1.6rem;
-  font-weight: 700;
-  margin-top: 20px;
+  font-size: 2rem;
+  font-weight: 800;
+  margin-top: 28px;
   letter-spacing: 0.02em;
 
   background: linear-gradient(90deg, #60a5fa, #3b82f6, #1d4ed8);
@@ -139,13 +147,14 @@ input:focus {
   background-clip: text;
   color: transparent;
 
-  text-shadow: 0 0 18px rgba(59, 130, 246, 0.35);
+  text-shadow:
+    0 0 12px rgba(59, 130, 246, 0.5),
+    0 0 30px rgba(59, 130, 246, 0.25);
 
-  max-width: 650px;
+  max-width: 750px;
   margin-left: auto;
   margin-right: auto;
 }
-
 /* ---------- FLOAT ANIMATION ---------- */
 
 @keyframes float {
