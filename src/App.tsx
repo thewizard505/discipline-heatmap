@@ -635,14 +635,11 @@ export default function App() {
               background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
             }}
           />
-        </div>
-
-        <div className="hero fade-in">
-          <h1 className="hero-title">TUNNEL VISION</h1>
-
-          <p className="hero-subtitle">
-            A focus tool designed to maximize and analyze productivity.
-          </p>
+          <div className="text-5xl font-mono font-extralight tracking-[0.9em] text-center uppercase">
+            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
+              Tunnel Vision
+            </span>
+          </div>
         </div>
 
         <nav

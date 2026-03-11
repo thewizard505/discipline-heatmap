@@ -126,57 +126,6 @@ input:focus {
   color: transparent;
 }
 
-/* ---------- HERO LAYOUT ---------- */
-
-.hero {
-  width: 100%;
-  margin-top: 80px;
-  margin-bottom: 120px;
-  text-align: center;
-}
-
-/* ---------- HERO TITLE ---------- */
-
-.hero-title {
-  width: 100%;
-
-  font-size: 6rem;
-  font-weight: 200;
-  text-transform: uppercase;
-
-  letter-spacing: 1.2em;
-
-  background: linear-gradient(to bottom, #ffffff, rgba(255, 255, 255, 0.25));
-
-  -webkit-background-clip: text;
-  color: transparent;
-}
-
-/* ---------- HERO SUBTITLE ---------- */
-
-.hero-subtitle {
-  margin-top: 40px;
-
-  font-size: 3.2rem;
-  font-weight: 900;
-  letter-spacing: 0.02em;
-
-  max-width: 1000px;
-  margin-left: auto;
-  margin-right: auto;
-
-  font-family: Inter, system-ui, sans-serif;
-
-  background: linear-gradient(90deg, #93c5fd, #3b82f6, #1d4ed8);
-
-  -webkit-background-clip: text;
-  color: transparent;
-
-  text-shadow:
-    0 0 25px rgba(59, 130, 246, 0.8),
-    0 0 60px rgba(59, 130, 246, 0.5);
-}
-
 /* ---------- FLOAT ANIMATION ---------- */
 
 @keyframes float {
