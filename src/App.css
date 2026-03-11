@@ -126,6 +126,17 @@ input:focus {
   color: transparent;
 }
 
+/* ---------- GRADIENT TEXT ---------- */
+
+.gradient-text-blue {
+  font-weight: 600;
+  font-size: 1.25rem;
+  background: linear-gradient(90deg, #60a5fa, #2563eb);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* ---------- FLOAT ANIMATION ---------- */
 
 @keyframes float {
