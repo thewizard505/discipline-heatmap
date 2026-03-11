@@ -146,35 +146,6 @@ input:focus {
   margin-right: auto;
 }
 
-/* ---------- HERO TEXT GLOW ---------- */
-
-.hero-glow {
-  text-shadow:
-    0 0 10px rgba(59, 130, 246, 0.4),
-    0 0 25px rgba(59, 130, 246, 0.25);
-}
-
-/* ---------- GRADIENT TEXT ---------- */
-
-.gradient-text-blue {
-  font-weight: 600;
-  font-size: 1.25rem;
-  background: linear-gradient(90deg, #60a5fa, #2563eb);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.hero-subtitle {
-  margin-top: 14px;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-}
-.hero-container {
-  max-width: 900px;
-  margin: 0 auto;
-}
-
 /* ---------- FLOAT ANIMATION ---------- */
 
 @keyframes float {
