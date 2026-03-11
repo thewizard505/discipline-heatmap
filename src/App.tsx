@@ -649,7 +649,7 @@ export default function App() {
               Tunnel Vision
             </span>
           </div>
-          <p className="text-center text-white/60 text-sm mt-4 max-w-xl mx-auto backdrop-blur-sm">
+          <p className="mt-6 text-lg md:text-xl font-semibold bg-gradient-to-r from-blue-400 to-blue-600 bg-clip-text text-transparent text-center max-w-2xl drop-shadow-[0_0_8px_rgba(59,130,246,0.5)]">
             A focus tool designed to maximize and analyze productivity.
           </p>
         </div>
