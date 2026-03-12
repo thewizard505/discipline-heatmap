@@ -637,7 +637,7 @@ export default function App() {
           />
 
           {/* TITLE */}
-          <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase">
+          <div className="absolute top-10 left-1/2 -translate-x-1/2 text-center text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase">
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
               Tunnel Vision
             </span>
