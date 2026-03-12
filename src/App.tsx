@@ -690,21 +690,20 @@ export default function App() {
 
         {/* HERO LAYOUT FOUNDATION */}
         {isSimulation && (
-        <section className="relative z-20 w-full px-6 pt-32 pb-16">
+        <section className="relative z-20 w-full px-6 pt-32 pb-16 flex items-center">
           <div className="mx-auto max-w-6xl grid gap-10 md:grid-cols-2 items-center">
             {/* Left: Text + CTA */}
-            <div className="space-y-4">
+            <div className="space-y-6 max-w-xl">
               <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                 Discipline Operating System
               </p>
-              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
-                Clarity for your daily focus.
+              <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
+                Purity, finally.
               </h1>
-              <p className="text-sm md:text-base text-white/60 max-w-md">
-                Plan your day, track deep work, and beat yesterday with a
-                simple, focused flow.
+              <p className="text-sm md:text-lg text-white/70">
+                A powerful productivity system used by 50+ million students to stay focused and eliminate distractions.
               </p>
-              <div className="flex flex-wrap gap-3 pt-4">
+              <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handleGetStarted}
