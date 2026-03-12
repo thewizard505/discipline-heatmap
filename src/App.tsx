@@ -635,15 +635,6 @@ export default function App() {
               background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
             }}
           />
-
-          {/* TITLE (user page only) */}
-          {!isSimulation && (
-            <div className="absolute top-10 left-1/2 -translate-x-1/2 text-center text-5xl md:text-6xl font-light tracking-[0.6em] uppercase whitespace-nowrap">
-              <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/30 to-transparent whitespace-nowrap">
-                Tunnel Vision
-              </span>
-            </div>
-          )}
         </div>
         {isSimulation && (
         <nav
@@ -660,11 +651,11 @@ export default function App() {
             }
             className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
           >
-            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shadow-sm border border-blue-600">
+            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-sm">
               <img
                 src="/favicon.ico"
                 alt="Tunnel Vision"
-                className="w-6 h-6 rounded-md"
+                className="w-8 h-8 object-cover"
               />
             </div>
             <span className="hidden sm:inline text-sm font-semibold tracking-[0.22em] uppercase text-white/80">
