@@ -636,15 +636,17 @@ export default function App() {
             }}
           />
 
-          {/* TITLE */}
-          <div className="absolute top-10 left-1/2 -translate-x-1/2 text-center text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase whitespace-nowrap">
-            <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent whitespace-nowrap">
-              Tunnel Vision
-            </span>
-          </div>
+          {/* TITLE (user page only) */}
+          {!isSimulation && (
+            <div className="absolute top-10 left-1/2 -translate-x-1/2 text-center text-5xl md:text-6xl font-light tracking-[0.6em] uppercase whitespace-nowrap">
+              <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/30 to-transparent whitespace-nowrap">
+                Tunnel Vision
+              </span>
+            </div>
+          )}
         </div>
         <nav
-          className={`fixed top-0 w-full z-[250] px-6 md:px-10 py-4 md:py-5 flex items-center justify-between transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"} bg-gradient-to-b from-black/80 via-black/40 to-transparent`}
+          className={`sticky top-0 w-full z-[250] px-6 md:px-10 py-3 md:py-4 flex items-center justify-between transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"} bg-black/60 backdrop-blur-md border-b border-white/10`}
         >
           {/* Left: Logo as home button */}
           <button
@@ -657,14 +659,14 @@ export default function App() {
             }
             className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm">
+            <div className="w-9 h-9 rounded-full bg-white/95 flex items-center justify-center overflow-hidden shadow-sm border border-white/60">
               <img
                 src="/favicon.ico"
                 alt="Tunnel Vision"
-                className="w-6 h-6"
+                className="w-6 h-6 rounded-md"
               />
             </div>
-            <span className="hidden sm:inline text-xs font-semibold tracking-[0.18em] uppercase text-white/70">
+            <span className="hidden sm:inline text-sm font-semibold tracking-[0.22em] uppercase text-white/80">
               Tunnel Vision
             </span>
           </button>
