@@ -659,7 +659,7 @@ export default function App() {
             }
             className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
           >
-            <div className="w-9 h-9 rounded-full bg-white/95 flex items-center justify-center overflow-hidden shadow-sm border border-white/60">
+            <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center overflow-hidden shadow-sm border border-blue-300/80">
               <img
                 src="/favicon.ico"
                 alt="Tunnel Vision"
@@ -687,6 +687,7 @@ export default function App() {
             </button>
             <button
               type="button"
+              onClick={handleGetStarted}
               className="inline-flex items-center rounded-full px-4 md:px-5 py-2 text-[11px] font-semibold tracking-[0.18em] uppercase bg-white text-black hover:bg-blue-100"
             >
               Get Started
@@ -710,8 +711,12 @@ export default function App() {
                 simple, focused flow.
               </p>
               <div className="flex flex-wrap gap-3 pt-4">
-                <button className="px-6 py-3 rounded-full bg-blue-500 text-sm font-semibold tracking-wide text-black hover:bg-blue-400 transition-colors">
-                  Start for free
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="px-6 py-3 rounded-full bg-blue-500 text-sm font-semibold tracking-wide text-black hover:bg-blue-400 transition-colors"
+                >
+                  Get started
                 </button>
               </div>
             </div>
