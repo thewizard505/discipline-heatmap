@@ -635,7 +635,6 @@ export default function App() {
               background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
             }}
           />
-          <div className="w-full flex flex-col items-center justify-center pt-28 pb-32 fade-in"></div>
 
           <div className="relative flex flex-col items-center justify-center pt-24 pb-16 text-center"></div>
           {/* TITLE */}
