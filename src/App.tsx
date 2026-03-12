@@ -78,6 +78,18 @@ export default function App() {
   const [reflectionText, setReflectionText] = useState("");
   const [scrollY, setScrollY] = useState(0);
 
+  /* --- HERO PREVIEW SIMULATION STATE --- */
+  const previewScrollRef = useRef<HTMLDivElement | null>(null);
+  const feature1Ref = useRef<HTMLDivElement | null>(null);
+  const feature2Ref = useRef<HTMLDivElement | null>(null);
+  const [previewSection, setPreviewSection] = useState<"feature1" | "feature2">(
+    "feature1",
+  );
+  const [demoTasks, setDemoTasks] = useState<string[]>([]);
+  const [demoSeconds, setDemoSeconds] = useState(25 * 60);
+  const [demoRunning, setDemoRunning] = useState(false);
+  const [hasPlayedFeature1Demo, setHasPlayedFeature1Demo] = useState(false);
+
   /* --- HEATMAP & SCORE STATE --- */
   const [heatmapData, setHeatmapData] = useState<DayMetric[]>([]);
 
@@ -445,6 +457,78 @@ export default function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  /* ------------------- HERO PREVIEW SCROLL LOGIC ------------------- */
+  useEffect(() => {
+    if (!isSimulation) return;
+
+    const handlePreviewScroll = () => {
+      if (!feature1Ref.current || !feature2Ref.current) return;
+      const viewportMid = window.innerHeight / 2;
+      const rect1 = feature1Ref.current.getBoundingClientRect();
+      const rect2 = feature2Ref.current.getBoundingClientRect();
+
+      const feature2InView =
+        rect2.top < viewportMid && rect2.bottom > viewportMid;
+
+      setPreviewSection(feature2InView ? "feature2" : "feature1");
+    };
+
+    handlePreviewScroll();
+    window.addEventListener("scroll", handlePreviewScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handlePreviewScroll);
+  }, [isSimulation, feature1Ref, feature2Ref]);
+
+  useEffect(() => {
+    if (!previewScrollRef.current) return;
+    const target = previewSection === "feature1" ? 0 : 260;
+    previewScrollRef.current.scrollTo({
+      top: target,
+      behavior: "smooth",
+    });
+  }, [previewSection]);
+
+  /* --- Feature 1 demo sequence --- */
+  useEffect(() => {
+    if (!isSimulation || previewSection !== "feature1" || hasPlayedFeature1Demo)
+      return;
+
+    setHasPlayedFeature1Demo(true);
+    setDemoTasks([]);
+    setDemoSeconds(25 * 60);
+    setDemoRunning(false);
+
+    const examples = [
+      "Write philosophy essay",
+      "Study calculus problem set",
+      "Deep work: portfolio project",
+    ];
+
+    const timeouts: number[] = [];
+    examples.forEach((task, index) => {
+      const id = window.setTimeout(() => {
+        setDemoTasks((prev) => [...prev, task]);
+      }, index * 600);
+      timeouts.push(id);
+    });
+
+    const startId = window.setTimeout(() => {
+      setDemoRunning(true);
+    }, examples.length * 600 + 800);
+    timeouts.push(startId);
+
+    return () => {
+      timeouts.forEach((id) => window.clearTimeout(id));
+    };
+  }, [isSimulation, previewSection, hasPlayedFeature1Demo]);
+
+  useEffect(() => {
+    if (!demoRunning) return;
+    const id = window.setInterval(() => {
+      setDemoSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [demoRunning]);
+
   useEffect(() => {
     if (!running || (seconds <= 0 && isSimulation)) return;
     const id = setInterval(() => {
@@ -688,12 +772,12 @@ export default function App() {
         </nav>
         )}
 
-        {/* HERO LAYOUT FOUNDATION */}
+        {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
         {isSimulation && (
-        <section className="relative z-20 w-full px-6 pt-32 pb-16 flex items-center">
-          <div className="mx-auto max-w-6xl grid gap-10 md:grid-cols-2 items-center">
-            {/* Left: Text + CTA */}
-            <div className="space-y-6 max-w-xl">
+        <section className="relative z-20 w-full px-6 pt-32 pb-32">
+          <div className="mx-auto max-w-6xl grid gap-16 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
+            {/* Left: Hero copy + feature sections */}
+            <div className="space-y-16 max-w-xl">
               <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                 Discipline Operating System
               </p>
@@ -715,12 +799,203 @@ export default function App() {
                   </span>
                 </button>
               </div>
+
+              {/* Feature sections */}
+              <div className="space-y-20 pt-10">
+                {/* Feature 1 */}
+                <section
+                  ref={feature1Ref}
+                  className="space-y-4"
+                >
+                  <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                    Dump tasks and stay focused.
+                  </h2>
+                  <p className="text-sm md:text-base text-white/70 leading-relaxed">
+                    Tunnel Vision stores your tasks and uses a timer to bring the best out of you every day.
+                    It keeps track of time spent on other tabs to build strong focus habits.
+                  </p>
+                </section>
+
+                {/* Feature 2 */}
+                <section
+                  ref={feature2Ref}
+                  className="space-y-4"
+                >
+                  <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                    Analyze your performance over weeks.
+                  </h2>
+                  <p className="text-sm md:text-base text-white/70 leading-relaxed">
+                    The first step to improving your focus habits is seeing the truth in numbers.
+                    Tunnel Vision gives you a clear view of your performance so you can improve with intention.
+                  </p>
+                </section>
+              </div>
             </div>
 
-            {/* Right: App preview container (empty for now) */}
-            <div className="flex justify-center md:justify-end">
-              <div className="w-full max-w-[500px] rounded-2xl border border-white/10 bg-white/5 shadow-lg p-6">
-                {/* App preview will go here */}
+            {/* Right: Sticky app preview container */}
+            <div className="flex justify-center md:justify-end md:sticky md:top-24">
+              <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-white/10 shadow-xl p-4 md:p-6">
+                <div className="flex items-center justify-between mb-4 px-1">
+                  <div className="flex gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+                    Tunnel Vision · Demo
+                  </span>
+                  <span className="w-8" />
+                </div>
+
+                {/* Scrollable simulated app */}
+                <div
+                  ref={previewScrollRef}
+                  className="h-[440px] overflow-hidden rounded-2xl bg-black/80 border border-white/10"
+                >
+                  <div className="h-full w-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent px-5 py-5 space-y-8">
+                    {/* Simulated hero / hello area */}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.25em] text-blue-400/80">
+                            Today
+                          </p>
+                          <h3 className="text-2xl font-semibold tracking-tight">
+                            Hello <span className="text-blue-400">Alex</span>.
+                          </h3>
+                          <p className="text-xs text-white/50 mt-1">
+                            Ready to beat yesterday?
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">
+                            Streak
+                          </p>
+                          <p className="text-xl font-mono font-bold">
+                            3<span className="text-[10px] text-white/40 ml-1">days</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Demo timer + tasks card */}
+                      <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-center">
+                        <div className="relative flex items-center justify-center">
+                          <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)]">
+                            <span className="font-mono text-lg">
+                              {String(Math.floor(demoSeconds / 60)).padStart(
+                                2,
+                                "0",
+                              )}
+                              :
+                              {String(demoSeconds % 60).padStart(2, "0")}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <div className="flex-1 px-3 py-2 rounded-2xl bg-white/5 border border-white/10 text-[11px] text-white/70">
+                              Next objective...
+                            </div>
+                            <div className="px-4 py-2 rounded-2xl bg-white text-[10px] font-black tracking-[0.2em] uppercase text-black">
+                              Add
+                            </div>
+                          </div>
+                          <div className="space-y-1.5">
+                            {demoTasks.map((task, index) => (
+                              <div
+                                key={task}
+                                className={`flex items-center justify-between px-3 py-2 rounded-2xl border text-[11px] ${
+                                  index === 0
+                                    ? "bg-white/10 border-blue-400/40"
+                                    : "bg-white/5 border-white/10"
+                                }`}
+                              >
+                                <span className="text-white/80">{task}</span>
+                                <span className="w-4 h-4 rounded-full border border-white/20" />
+                              </div>
+                            ))}
+                            {demoTasks.length === 0 && (
+                              <div className="flex items-center justify-between px-3 py-2 rounded-2xl border border-dashed border-white/15 text-[11px] text-white/40">
+                                Tasks you add will appear here
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Simulated analytics area (scroll target for feature 2) */}
+                    <div className="space-y-6 pt-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-xs uppercase tracking-[0.3em] text-white/50">
+                          Performance dashboard
+                        </h3>
+                        <span className="text-[10px] text-blue-400/80 uppercase tracking-[0.2em]">
+                          Weekly view
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3 text-xs">
+                        {["Total focus", "Best integrity", "Longest streak", "Tasks done"].map(
+                          (label, i) => (
+                            <div
+                              key={label}
+                              className="rounded-2xl bg-white/5 border border-white/10 px-3 py-3 space-y-1"
+                            >
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-white/40">
+                                {label}
+                              </p>
+                              <p className="text-sm font-mono font-bold">
+                                {i === 0 && "14h 22m"}
+                                {i === 1 && "99.2%"}
+                                {i === 2 && "7 days"}
+                                {i === 3 && "482"}
+                              </p>
+                            </div>
+                          ),
+                        )}
+                      </div>
+
+                      <div className="rounded-3xl bg-white/5 border border-white/10 p-4 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <p className="text-[10px] uppercase tracking-[0.25em] text-white/50">
+                            Discipline log
+                          </p>
+                          <span className="text-[10px] text-blue-400/80 uppercase tracking-[0.2em]">
+                            Month view
+                          </span>
+                        </div>
+                        <div className="grid grid-cols-7 gap-1">
+                          {Array.from({ length: 21 }).map((_, i) => (
+                            <div
+                              key={i}
+                              className={`aspect-square rounded-md border border-white/5 ${
+                                i % 5 === 0
+                                  ? "bg-blue-500/70"
+                                  : i % 3 === 0
+                                    ? "bg-blue-400/40"
+                                    : "bg-white/5"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="rounded-3xl bg-white/5 border border-white/10 p-4 space-y-2">
+                        <p className="text-[10px] uppercase tracking-[0.25em] text-white/50">
+                          Focus integrity trend
+                        </p>
+                        <div className="h-24 rounded-2xl bg-gradient-to-tr from-blue-500/60 via-blue-400/30 to-transparent border border-blue-400/40 relative overflow-hidden">
+                          <div className="absolute inset-x-6 bottom-3 h-12 border-t border-white/15" />
+                          <div className="absolute inset-3">
+                            <div className="h-full w-full rounded-xl border border-white/10 bg-black/30" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
