@@ -645,6 +645,7 @@ export default function App() {
             </div>
           )}
         </div>
+        {isSimulation && (
         <nav
           className={`sticky top-0 w-full z-[250] px-6 md:px-10 py-3 md:py-4 flex items-center justify-between transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"} bg-black/60 backdrop-blur-md border-b border-white/10`}
         >
@@ -659,7 +660,7 @@ export default function App() {
             }
             className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
           >
-            <div className="w-9 h-9 rounded-full bg-blue-500 flex items-center justify-center overflow-hidden shadow-sm border border-blue-300/80">
+            <div className="w-9 h-9 rounded-full bg-blue-600 flex items-center justify-center overflow-hidden shadow-sm border border-blue-600">
               <img
                 src="/favicon.ico"
                 alt="Tunnel Vision"
@@ -694,8 +695,10 @@ export default function App() {
             </button>
           </div>
         </nav>
+        )}
 
         {/* HERO LAYOUT FOUNDATION */}
+        {isSimulation && (
         <section className="relative z-20 w-full px-6 pt-32 pb-16">
           <div className="mx-auto max-w-6xl grid gap-10 md:grid-cols-2 items-center">
             {/* Left: Text + CTA */}
@@ -729,6 +732,7 @@ export default function App() {
             </div>
           </div>
         </section>
+        )}
 
         <div
           className="flex flex-col items-center gap-10 relative z-20"
