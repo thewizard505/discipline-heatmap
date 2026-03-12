@@ -664,6 +664,37 @@ export default function App() {
           </div>
         </nav>
 
+        {/* HERO LAYOUT FOUNDATION */}
+        <section className="relative z-20 w-full px-6 pt-32 pb-16">
+          <div className="mx-auto max-w-6xl grid gap-10 md:grid-cols-2 items-center">
+            {/* Left: Text + CTA */}
+            <div className="space-y-4">
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                Discipline Operating System
+              </p>
+              <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
+                Clarity for your daily focus.
+              </h1>
+              <p className="text-sm md:text-base text-white/60 max-w-md">
+                Plan your day, track deep work, and beat yesterday with a
+                simple, focused flow.
+              </p>
+              <div className="flex flex-wrap gap-3 pt-4">
+                <button className="px-6 py-3 rounded-full bg-blue-500 text-sm font-semibold tracking-wide text-black hover:bg-blue-400 transition-colors">
+                  Start for free
+                </button>
+              </div>
+            </div>
+
+            {/* Right: App preview container (empty for now) */}
+            <div className="flex justify-center md:justify-end">
+              <div className="w-full max-w-[500px] rounded-2xl border border-white/10 bg-white/5 shadow-lg p-6">
+                {/* App preview will go here */}
+              </div>
+            </div>
+          </div>
+        </section>
+
         <div
           className="flex flex-col items-center gap-10 relative z-20"
           style={{
