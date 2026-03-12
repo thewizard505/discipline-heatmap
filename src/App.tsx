@@ -636,7 +636,6 @@ export default function App() {
             }}
           />
 
-          <div className="relative flex flex-col items-center justify-center pt-24 pb-16 text-center"></div>
           {/* TITLE */}
           <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase">
             <span className="bg-clip-text text-transparent bg-gradient-to-b from-white via-white/20 to-transparent">
