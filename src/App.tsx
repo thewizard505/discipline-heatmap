@@ -644,23 +644,51 @@ export default function App() {
           </div>
         </div>
         <nav
-          className={`fixed top-0 w-full z-[250] px-10 py-8 flex justify-end items-center mix-blend-difference transition-all duration-1000 ${running ? "blur-md opacity-0" : "opacity-100"}`}
+          className={`fixed top-0 w-full z-[250] px-6 md:px-10 py-4 md:py-5 flex items-center justify-between transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"} bg-gradient-to-b from-black/80 via-black/40 to-transparent`}
         >
-          <div className="flex gap-8 items-center">
+          {/* Left: Logo as home button */}
+          <button
+            type="button"
+            onClick={() =>
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              })
+            }
+            className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center overflow-hidden shadow-sm">
+              <img
+                src="/favicon.ico"
+                alt="Tunnel Vision"
+                className="w-6 h-6"
+              />
+            </div>
+            <span className="hidden sm:inline text-xs font-semibold tracking-[0.18em] uppercase text-white/70">
+              Tunnel Vision
+            </span>
+          </button>
+
+          {/* Right: Modern nav buttons (no dropdowns yet) */}
+          <div className="flex items-center gap-2 md:gap-3">
             <button
-              onClick={handleGoHome}
-              className="text-[10px] tracking-widest uppercase opacity-30 hover:opacity-100 transition"
+              type="button"
+              className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-[11px] font-medium tracking-[0.16em] uppercase text-white/70 bg-white/0 hover:bg-white/10 border border-white/5"
             >
-              Home
+              Made For
             </button>
-            {!isSimulation && (
-              <button
-                onClick={resetAllData}
-                className="text-[10px] tracking-widest uppercase text-red-500/60 hover:text-red-500 transition-all bg-red-500/5 px-4 py-1.5 rounded-full border border-red-500/20"
-              >
-                Reset Session
-              </button>
-            )}
+            <button
+              type="button"
+              className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-[11px] font-medium tracking-[0.16em] uppercase text-white/70 bg-white/0 hover:bg-white/10 border border-white/5"
+            >
+              Resources
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center rounded-full px-4 md:px-5 py-2 text-[11px] font-semibold tracking-[0.18em] uppercase bg-white text-black hover:bg-blue-100"
+            >
+              Get Started
+            </button>
           </div>
         </nav>
 
