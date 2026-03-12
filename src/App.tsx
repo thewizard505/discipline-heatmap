@@ -703,13 +703,16 @@ export default function App() {
               <p className="text-sm md:text-lg text-white/70">
                 A powerful productivity system used by 50+ million students to stay focused and eliminate distractions.
               </p>
-              <div className="flex flex-wrap gap-3 pt-2">
+              <div className="flex flex-wrap gap-3 pt-4">
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="px-6 py-3 rounded-full bg-blue-500 text-sm font-semibold tracking-wide text-black hover:bg-blue-400 transition-colors"
+                  className="group relative px-10 py-4 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_0_35px_rgba(37,99,235,0.45)]"
                 >
-                  Get started
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                  <span className="relative text-white font-semibold tracking-[0.25em] text-xs uppercase">
+                    Get started
+                  </span>
                 </button>
               </div>
             </div>
@@ -929,34 +932,6 @@ export default function App() {
               )}
             </div>
           </div>
-
-          {isSimulation && (
-            <div className="flex flex-col items-center gap-6 mt-4">
-              <button
-                onClick={handleGetStarted}
-                className="group relative px-16 py-6 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                <span className="relative text-white font-black tracking-[0.4em] text-xs uppercase">
-                  GET STARTED
-                </span>
-              </button>
-              <div className="animate-bounce mt-10 opacity-30">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M7 13l5 5 5-5M7 6l5 5 5-5" />
-                </svg>
-              </div>
-            </div>
-          )}
 
           <div className="w-full max-w-4xl space-y-12 pb-32">
             <div
