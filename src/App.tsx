@@ -703,14 +703,14 @@ export default function App() {
               <p className="text-sm md:text-lg text-white/70">
                 A powerful productivity system used by 50+ million students to stay focused and eliminate distractions.
               </p>
-              <div className="flex flex-wrap gap-3 pt-4">
+              <div className="flex flex-wrap gap-3 pt-2">
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="group relative px-10 py-4 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_0_35px_rgba(37,99,235,0.45)]"
+                  className="group relative px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
                 >
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                  <span className="relative text-white font-semibold tracking-[0.25em] text-xs uppercase">
+                  <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
                     Get started
                   </span>
                 </button>
