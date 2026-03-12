@@ -637,9 +637,6 @@ export default function App() {
           />
           <div className="w-full flex flex-col items-center justify-center pt-28 pb-32 fade-in"></div>
 
-          {/* Glow background */}
-          <div className="hero-glow"></div>
-
           <div className="relative flex flex-col items-center justify-center pt-24 pb-16 text-center"></div>
           {/* TITLE */}
           <div className="text-5xl md:text-6xl font-mono font-extralight tracking-[0.9em] uppercase">
@@ -647,34 +644,7 @@ export default function App() {
               Tunnel Vision
             </span>
           </div>
-
-          {/* SUBTITLE */}
-          <p
-            className="
-mt-8
-max-w-4xl
-text-center
-text-3xl md:text-4xl
-font-semibold
-leading-tight
-tracking-tight
-
-bg-gradient-to-r
-from-blue-300
-via-blue-400
-to-blue-500
-
-bg-clip-text
-text-transparent
-
-drop-shadow-[0_0_20px_rgba(59,130,246,0.9)]
-drop-shadow-[0_0_50px_rgba(59,130,246,0.6)]
-"
-          >
-            A focus tool designed to maximize and analyze productivity.
-          </p>
         </div>
-
         <nav
           className={`fixed top-0 w-full z-[250] px-10 py-8 flex justify-end items-center mix-blend-difference transition-all duration-1000 ${running ? "blur-md opacity-0" : "opacity-100"}`}
         >
