@@ -1062,7 +1062,7 @@ export default function App() {
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
         {isSimulation && (
           <section
-            className="relative z-20 w-full px-6 pt-32 pb-32 overflow-hidden"
+            className="relative z-20 w-full px-6 pt-32 pb-32"
             onMouseMove={handleHeroMouseMove}
           >
             <div
