@@ -92,6 +92,16 @@ export default function App() {
   const [demoRunning, setDemoRunning] = useState(false);
   const [hasPlayedFeature1Demo, setHasPlayedFeature1Demo] = useState(false);
 
+  /* --- NAV / DROPDOWNS STATE --- */
+  const [openDropdown, setOpenDropdown] = useState<"madeFor" | "resources" | null>(
+    null,
+  );
+  const madeForRef = useRef<HTMLDivElement | null>(null);
+  const resourcesRef = useRef<HTMLDivElement | null>(null);
+  const performanceRef = useRef<HTMLDivElement | null>(null);
+  const habitRef = useRef<HTMLDivElement | null>(null);
+  const timeRef = useRef<HTMLDivElement | null>(null);
+
   /* --- HEATMAP & SCORE STATE --- */
   const [heatmapData, setHeatmapData] = useState<DayMetric[]>([]);
 
@@ -499,6 +509,31 @@ export default function App() {
     return () => window.removeEventListener("resize", compute);
   }, [isSimulation]);
 
+  /* ------------------- NAVBAR DROPDOWN LOGIC ------------------- */
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        madeForRef.current &&
+        !madeForRef.current.contains(target) &&
+        resourcesRef.current &&
+        !resourcesRef.current.contains(target)
+      ) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement>) => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const absoluteY = window.scrollY + rect.top - 96;
+    window.scrollTo({ top: absoluteY, behavior: "smooth" });
+  };
+
   /* --- Feature 1 demo sequence --- */
   useEffect(() => {
     if (!isSimulation || previewSection !== "feature1" || hasPlayedFeature1Demo)
@@ -778,26 +813,107 @@ export default function App() {
             </span>
           </button>
 
-          {/* Right: Modern nav buttons (no dropdowns yet) */}
-          <div className="flex items-center gap-2 md:gap-3">
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-[11px] font-medium tracking-[0.16em] uppercase text-white/70 bg-white/0 hover:bg-white/10 border border-white/5"
+          {/* Right: Modern nav buttons with dropdowns */}
+          <div className="flex items-center gap-3 md:gap-4 text-[11px] font-medium tracking-[0.16em] uppercase">
+            {/* Made For dropdown */}
+            <div
+              ref={madeForRef}
+              className="relative hidden sm:block"
             >
-              Made For
-            </button>
-            <button
-              type="button"
-              className="hidden sm:inline-flex items-center rounded-full px-4 py-2 text-[11px] font-medium tracking-[0.16em] uppercase text-white/70 bg-white/0 hover:bg-white/10 border border-white/5"
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown((cur) => (cur === "madeFor" ? null : "madeFor"))
+                }
+                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 hover:bg-white/10 text-white/70 transition-colors ${
+                  openDropdown === "madeFor" ? "bg-white/10" : ""
+                }`}
+              >
+                <span>Made For</span>
+                <span className="text-[10px]">{openDropdown === "madeFor" ? "▲" : "▼"}</span>
+              </button>
+              {openDropdown === "madeFor" && (
+                <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-black/90 border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-xl overflow-hidden animate-fade-in">
+                  <div className="py-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(performanceRef);
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                    >
+                      Performance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(habitRef);
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                    >
+                      Habit Building
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        scrollToSection(timeRef);
+                        setOpenDropdown(null);
+                      }}
+                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                    >
+                      Time Management
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Resources dropdown */}
+            <div
+              ref={resourcesRef}
+              className="relative hidden sm:block"
             >
-              Resources
-            </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown((cur) => (cur === "resources" ? null : "resources"))
+                }
+                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 hover:bg-white/10 text-white/70 transition-colors ${
+                  openDropdown === "resources" ? "bg-white/10" : ""
+                }`}
+              >
+                <span>Resources</span>
+                <span className="text-[10px]">{openDropdown === "resources" ? "▲" : "▼"}</span>
+              </button>
+              {openDropdown === "resources" && (
+                <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-black/90 border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-xl overflow-hidden animate-fade-in">
+                  <div className="py-2">
+                    {["Guides", "Tutorials", "Documentation"].map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Get Started CTA – match hero button */}
             <button
               type="button"
               onClick={handleGetStarted}
-              className="inline-flex items-center rounded-full px-4 md:px-5 py-2 text-[11px] font-semibold tracking-[0.18em] uppercase bg-white text-black hover:bg-blue-100"
+              className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
             >
-              Get Started
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+              <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                Get Started
+              </span>
             </button>
           </div>
         </nav>
@@ -832,11 +948,11 @@ export default function App() {
               </div>
 
               {/* Feature sections */}
-              <div className="space-y-32 pt-20">
+              <div className="space-y-32 pt-32">
                 {/* Feature 1 */}
                 <section
                   ref={feature1Ref}
-                  className="space-y-4 min-h-[140vh] flex flex-col justify-center"
+                  className="space-y-6 min-h-[140vh] flex flex-col justify-center"
                 >
                   <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                     Dump tasks and stay focused.
@@ -850,7 +966,7 @@ export default function App() {
                 {/* Feature 2 */}
                 <section
                   ref={feature2Ref}
-                  className="space-y-4 min-h-[140vh] flex flex-col justify-center"
+                  className="space-y-6 min-h-[140vh] flex flex-col justify-center"
                 >
                   <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                     Analyze your performance over weeks.
@@ -1582,6 +1698,88 @@ export default function App() {
             </div>
           </div>
         </div>
+        )}
+
+        {/* "Made For" landing sections (Performance / Habit / Time) */}
+        {isSimulation && (
+        <section className="relative z-10 w-full px-6 pb-32">
+          <div className="mx-auto max-w-5xl space-y-32">
+            <div
+              ref={performanceRef}
+              className="space-y-6 text-left pt-12"
+            >
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                Performance
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Track your task performance.
+              </h2>
+              <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                Use Tunnel Vision to bring out your competitive edge. How many tasks can you complete before the timer runs out?
+              </p>
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  Get started
+                </span>
+              </button>
+            </div>
+
+            <div
+              ref={habitRef}
+              className="space-y-6 text-left pt-4"
+            >
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                Habit Building
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Fix your habits before it's too late.
+              </h2>
+              <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                Tunnel Vision should become your go-to task manager. Brain dump all your tasks right as you get home and hit deadlines without breaking a sweat.
+              </p>
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  Get started
+                </span>
+              </button>
+            </div>
+
+            <div
+              ref={timeRef}
+              className="space-y-6 text-left pt-4"
+            >
+              <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                Time Management
+              </p>
+              <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                Own your schedule.
+              </h2>
+              <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                Organize your tasks between most urgent and least urgent.
+              </p>
+              <button
+                type="button"
+                onClick={handleGetStarted}
+                className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  Get started
+                </span>
+              </button>
+            </div>
+          </div>
+        </section>
         )}
 
         <style>{`
