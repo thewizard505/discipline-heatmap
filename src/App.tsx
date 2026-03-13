@@ -527,7 +527,9 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (
+    sectionRef: React.RefObject<HTMLDivElement | null>,
+  ) => {
     const el = sectionRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -798,11 +800,9 @@ export default function App() {
           />
         </div>
         {isSimulation && (
-          <nav
-            className={`sticky top-4 z-[250] flex justify-center px-4 transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"}`}
-          >
-            <div className="w-full max-w-5xl pointer-events-auto">
-              <div className="flex items-center justify-between rounded-full bg-white/5/5 bg-gradient-to-r from-white/8 via-white/5 to-white/8 border border-white/10 backdrop-blur-2xl shadow-[0_18px_60px_rgba(0,0,0,0.8)] px-4 md:px-6 py-2 md:py-2.5">
+          <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
+            <div className="w-full pointer-events-auto">
+              <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-2.5">
                 {/* Left: Logo as home button */}
                 <button
                   type="button"
@@ -833,7 +833,7 @@ export default function App() {
                     {/* Made For dropdown - feature panel */}
                     <div
                       ref={madeForRef}
-                      className="relative"
+                      className="relative pb-2"
                       onMouseEnter={() => setOpenDropdown("madeFor")}
                       onMouseLeave={() => setOpenDropdown(null)}
                     >
@@ -871,10 +871,10 @@ export default function App() {
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
                                   ⚡
                                 </span>
-                                <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                <span className="text-sm font-semibold text-white">
                                   Performance
                                 </span>
-                                <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
                                   Track your task performance and push your
                                   limits.
                                 </span>
@@ -890,10 +890,10 @@ export default function App() {
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
                                   🌱
                                 </span>
-                                <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                <span className="text-sm font-semibold text-white">
                                   Habit Building
                                 </span>
-                                <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
                                   Turn discipline into a daily habit.
                                 </span>
                               </button>
@@ -908,10 +908,10 @@ export default function App() {
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
                                   ⏱
                                 </span>
-                                <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                <span className="text-sm font-semibold text-white">
                                   Time Management
                                 </span>
-                                <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
                                   Take control of your schedule and priorities.
                                 </span>
                               </button>
@@ -924,7 +924,7 @@ export default function App() {
                     {/* Resources dropdown */}
                     <div
                       ref={resourcesRef}
-                      className="relative"
+                      className="relative pb-2"
                       onMouseEnter={() => setOpenDropdown("resources")}
                       onMouseLeave={() => setOpenDropdown(null)}
                     >
@@ -1837,7 +1837,7 @@ export default function App() {
         {/* "Made For" landing sections (Performance / Habit / Time) */}
         {isSimulation && (
           <section className="relative z-10 w-full px-6 pb-32">
-            <div className="mx-auto max-w-5xl space-y-32">
+            <div className="mx-auto max-w-5xl space-y-40">
               <div ref={performanceRef} className="space-y-6 text-left pt-12">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Performance
@@ -1861,7 +1861,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div ref={habitRef} className="space-y-6 text-left pt-4">
+              <div ref={habitRef} className="space-y-6 text-left pt-12">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Habit Building
                 </p>
@@ -1885,7 +1885,7 @@ export default function App() {
                 </button>
               </div>
 
-              <div ref={timeRef} className="space-y-6 text-left pt-4">
+              <div ref={timeRef} className="space-y-6 text-left pt-12">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Time Management
                 </p>
