@@ -96,6 +96,7 @@ export default function App() {
   const [openDropdown, setOpenDropdown] = useState<"madeFor" | "resources" | null>(
     null,
   );
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const madeForRef = useRef<HTMLDivElement | null>(null);
   const resourcesRef = useRef<HTMLDivElement | null>(null);
   const performanceRef = useRef<HTMLDivElement | null>(null);
@@ -532,6 +533,7 @@ export default function App() {
     const rect = el.getBoundingClientRect();
     const absoluteY = window.scrollY + rect.top - 96;
     window.scrollTo({ top: absoluteY, behavior: "smooth" });
+    setIsMobileMenuOpen(false);
   };
 
   /* --- Feature 1 demo sequence --- */
@@ -787,134 +789,245 @@ export default function App() {
           />
         </div>
         {isSimulation && (
-        <nav
-          className={`sticky top-0 w-full z-[250] px-6 md:px-10 py-3 md:py-4 flex items-center justify-between transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"} bg-black/60 backdrop-blur-md border-b border-white/10`}
-        >
-          {/* Left: Logo as home button */}
-          <button
-            type="button"
-            onClick={() =>
-              window.scrollTo({
-                top: 0,
-                behavior: "smooth",
-              })
-            }
-            className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/5 transition-colors"
-          >
-            <div className="w-8 h-8 rounded-xl overflow-hidden shadow-sm">
-              <img
-                src="/favicon.ico"
-                alt="Tunnel Vision"
-                className="w-8 h-8 object-cover"
-              />
-            </div>
-            <span className="hidden sm:inline text-sm font-semibold tracking-[0.22em] uppercase text-white/80">
-              Tunnel Vision
-            </span>
-          </button>
-
-          {/* Right: Modern nav buttons with dropdowns */}
-          <div className="flex items-center gap-3 md:gap-4 text-[11px] font-medium tracking-[0.16em] uppercase">
-            {/* Made For dropdown */}
-            <div
-              ref={madeForRef}
-              className="relative hidden sm:block"
-            >
+        <nav className={`sticky top-4 z-[250] flex justify-center px-4 transition-all duration-500 ${running ? "blur-md opacity-0" : "opacity-100"}`}>
+          <div className="w-full max-w-5xl pointer-events-auto">
+            <div className="flex items-center justify-between rounded-full bg-white/5/5 bg-gradient-to-r from-white/8 via-white/5 to-white/8 border border-white/10 backdrop-blur-2xl shadow-[0_18px_60px_rgba(0,0,0,0.8)] px-4 md:px-6 py-2 md:py-2.5">
+              {/* Left: Logo as home button */}
               <button
                 type="button"
                 onClick={() =>
-                  setOpenDropdown((cur) => (cur === "madeFor" ? null : "madeFor"))
+                  window.scrollTo({
+                    top: 0,
+                    behavior: "smooth",
+                  })
                 }
-                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 hover:bg-white/10 text-white/70 transition-colors ${
-                  openDropdown === "madeFor" ? "bg-white/10" : ""
-                }`}
+                className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/10 hover:scale-[1.02] transition-all duration-200"
               >
-                <span>Made For</span>
-                <span className="text-[10px]">{openDropdown === "madeFor" ? "▲" : "▼"}</span>
+                <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md">
+                  <img
+                    src="/favicon.ico"
+                    alt="Tunnel Vision"
+                    className="w-8 h-8 object-cover"
+                  />
+                </div>
+                <span className="hidden sm:inline text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-white/80">
+                  Tunnel Vision
+                </span>
               </button>
-              {openDropdown === "madeFor" && (
-                <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-black/90 border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-xl overflow-hidden animate-fade-in">
-                  <div className="py-2">
+
+              {/* Center / right controls */}
+              <div className="flex items-center gap-2 md:gap-4 text-[11px] font-medium tracking-[0.16em] uppercase">
+                {/* Desktop nav */}
+                <div className="hidden sm:flex items-center gap-2 md:gap-3">
+                  {/* Made For dropdown - feature panel */}
+                  <div
+                    ref={madeForRef}
+                    className="relative"
+                    onMouseEnter={() => setOpenDropdown("madeFor")}
+                    onMouseLeave={() => setOpenDropdown(null)}
+                  >
                     <button
                       type="button"
-                      onClick={() => {
-                        scrollToSection(performanceRef);
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                      onClick={() =>
+                        setOpenDropdown((cur) =>
+                          cur === "madeFor" ? null : "madeFor",
+                        )
+                      }
+                      className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 text-white/70 transition-all duration-200 hover:bg-white/10 hover:scale-105 ${
+                        openDropdown === "madeFor" ? "bg-white/10" : ""
+                      }`}
+                    >
+                      <span>Made For</span>
+                      <span className="text-[10px]">
+                        {openDropdown === "madeFor" ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    {openDropdown === "madeFor" && (
+                      <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-black/80 border border-white/10 shadow-[0_32px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="px-6 py-5">
+                          <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 mb-3">
+                            Made For
+                          </p>
+                          <div className="grid md:grid-cols-3 gap-3">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                scrollToSection(performanceRef);
+                                setOpenDropdown(null);
+                              }}
+                              className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                            >
+                              <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
+                                ⚡
+                              </span>
+                              <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                Performance
+                              </span>
+                              <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                Track your task performance and push your limits.
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                scrollToSection(habitRef);
+                                setOpenDropdown(null);
+                              }}
+                              className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                            >
+                              <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
+                                🌱
+                              </span>
+                              <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                Habit Building
+                              </span>
+                              <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                Turn discipline into a daily habit.
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                scrollToSection(timeRef);
+                                setOpenDropdown(null);
+                              }}
+                              className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                            >
+                              <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
+                                ⏱
+                              </span>
+                              <span className="text-xs font-semibold tracking-[0.18em] uppercase text-white">
+                                Time Management
+                              </span>
+                              <span className="mt-1 text-[11px] text-white/70 leading-snug">
+                                Take control of your schedule and priorities.
+                              </span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Resources dropdown */}
+                  <div
+                    ref={resourcesRef}
+                    className="relative"
+                    onMouseEnter={() => setOpenDropdown("resources")}
+                    onMouseLeave={() => setOpenDropdown(null)}
+                  >
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenDropdown((cur) =>
+                          cur === "resources" ? null : "resources",
+                        )
+                      }
+                      className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 text-white/70 transition-all duration-200 hover:bg-white/10 hover:scale-105 ${
+                        openDropdown === "resources" ? "bg-white/10" : ""
+                      }`}
+                    >
+                      <span>Resources</span>
+                      <span className="text-[10px]">
+                        {openDropdown === "resources" ? "▲" : "▼"}
+                      </span>
+                    </button>
+                    {openDropdown === "resources" && (
+                      <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-black/80 border border-white/10 shadow-[0_32px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="px-5 py-4 space-y-1">
+                          {["Guides", "Tutorials", "Documentation"].map((item) => (
+                            <button
+                              key={item}
+                              type="button"
+                              className="w-full text-left px-2 py-2.5 text-[11px] tracking-[0.18em] uppercase text-white/70 rounded-2xl hover:bg-white/10 transition-colors"
+                            >
+                              {item}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Get Started CTA – match hero button */}
+                <button
+                  type="button"
+                  onClick={handleGetStarted}
+                  className="hidden sm:inline-flex group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                  <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                    Get Started
+                  </span>
+                </button>
+
+                {/* Mobile hamburger */}
+                <button
+                  type="button"
+                  className="sm:hidden inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 w-9 h-9 hover:bg-white/10 transition-all duration-200"
+                  onClick={() => setIsMobileMenuOpen((v) => !v)}
+                >
+                  <span className="sr-only">Toggle navigation</span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="w-4 h-0.5 bg-white rounded-full" />
+                    <span className="w-4 h-0.5 bg-white rounded-full" />
+                  </div>
+                </button>
+              </div>
+
+              {/* Mobile menu panel */}
+              {isMobileMenuOpen && (
+                <div className="sm:hidden mt-3 rounded-3xl bg-black/80 border border-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(0,0,0,0.9)] px-4 py-4 space-y-4 text-[11px] tracking-[0.18em] uppercase">
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-white/40">Made For</p>
+                    <button
+                      type="button"
+                      onClick={() => scrollToSection(performanceRef)}
+                      className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
                     >
                       Performance
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        scrollToSection(habitRef);
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                      onClick={() => scrollToSection(habitRef)}
+                      className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
                     >
                       Habit Building
                     </button>
                     <button
                       type="button"
-                      onClick={() => {
-                        scrollToSection(timeRef);
-                        setOpenDropdown(null);
-                      }}
-                      className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                      onClick={() => scrollToSection(timeRef)}
+                      className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
                     >
                       Time Management
                     </button>
                   </div>
-                </div>
-              )}
-            </div>
-
-            {/* Resources dropdown */}
-            <div
-              ref={resourcesRef}
-              className="relative hidden sm:block"
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  setOpenDropdown((cur) => (cur === "resources" ? null : "resources"))
-                }
-                className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 hover:bg-white/10 text-white/70 transition-colors ${
-                  openDropdown === "resources" ? "bg-white/10" : ""
-                }`}
-              >
-                <span>Resources</span>
-                <span className="text-[10px]">{openDropdown === "resources" ? "▲" : "▼"}</span>
-              </button>
-              {openDropdown === "resources" && (
-                <div className="absolute right-0 mt-3 w-64 rounded-2xl bg-black/90 border border-white/10 shadow-[0_24px_80px_rgba(0,0,0,0.8)] backdrop-blur-xl overflow-hidden animate-fade-in">
-                  <div className="py-2">
+                  <div className="space-y-2 pt-2">
+                    <p className="text-[10px] text-white/40">Resources</p>
                     {["Guides", "Tutorials", "Documentation"].map((item) => (
                       <button
                         key={item}
                         type="button"
-                        className="w-full text-left px-4 py-3 text-[11px] tracking-[0.18em] uppercase text-white/70 hover:bg-white/5"
+                        className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
                       >
                         {item}
                       </button>
                     ))}
                   </div>
+                  <button
+                    type="button"
+                    onClick={handleGetStarted}
+                    className="w-full mt-3 group relative px-6 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                      Get Started
+                    </span>
+                  </button>
                 </div>
               )}
             </div>
-
-            {/* Get Started CTA – match hero button */}
-            <button
-              type="button"
-              onClick={handleGetStarted}
-              className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-              <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
-                Get Started
-              </span>
-            </button>
           </div>
         </nav>
         )}
