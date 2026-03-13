@@ -527,7 +527,9 @@ export default function App() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const scrollToSection = (sectionRef: React.RefObject<HTMLDivElement>) => {
+  const scrollToSection = (
+    sectionRef: React.RefObject<HTMLDivElement | null>,
+  ) => {
     const el = sectionRef.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();
@@ -788,7 +790,6 @@ export default function App() {
             }}
           />
         </div>
-        {isSimulation && (
         <nav className="sticky top-0 z-[260] w-full px-4 md:px-8 py-2 md:py-3 bg-black/70 backdrop-blur-xl border-b border-white/10 transition-all duration-500">
           <div className="mx-auto flex max-w-6xl items-center justify-between">
               {/* Left: Logo as home button */}
@@ -1025,7 +1026,6 @@ export default function App() {
             </div>
           </div>
         </nav>
-        )}
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
         {isSimulation && (
