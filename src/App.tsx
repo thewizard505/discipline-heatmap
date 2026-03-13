@@ -85,6 +85,8 @@ export default function App() {
   const [previewSection, setPreviewSection] = useState<"feature1" | "feature2">(
     "feature1",
   );
+  const [previewParallax, setPreviewParallax] = useState(0);
+  const [previewMaxScroll, setPreviewMaxScroll] = useState(0);
   const [demoTasks, setDemoTasks] = useState<string[]>([]);
   const [demoSeconds, setDemoSeconds] = useState(25 * 60);
   const [demoRunning, setDemoRunning] = useState(false);
@@ -471,21 +473,31 @@ export default function App() {
         rect2.top < viewportMid && rect2.bottom > viewportMid;
 
       setPreviewSection(feature2InView ? "feature2" : "feature1");
+
+      const sectionStart = rect1.top;
+      const sectionEnd = rect2.bottom;
+      const total = sectionEnd - sectionStart || 1;
+      const progressRaw = (viewportMid - sectionStart) / total;
+      const progress = Math.min(1, Math.max(0, progressRaw));
+      setPreviewParallax(progress);
     };
 
     handlePreviewScroll();
     window.addEventListener("scroll", handlePreviewScroll, { passive: true });
     return () => window.removeEventListener("scroll", handlePreviewScroll);
-  }, [isSimulation, feature1Ref, feature2Ref]);
+  }, [isSimulation]);
 
   useEffect(() => {
-    if (!previewScrollRef.current) return;
-    const target = previewSection === "feature1" ? 0 : 260;
-    previewScrollRef.current.scrollTo({
-      top: target,
-      behavior: "smooth",
-    });
-  }, [previewSection]);
+    if (!isSimulation || !previewScrollRef.current) return;
+    const el = previewScrollRef.current;
+    const compute = () => {
+      const max = el.scrollHeight - el.clientHeight;
+      setPreviewMaxScroll(max > 0 ? max : 0);
+    };
+    compute();
+    window.addEventListener("resize", compute);
+    return () => window.removeEventListener("resize", compute);
+  }, [isSimulation]);
 
   /* --- Feature 1 demo sequence --- */
   useEffect(() => {
@@ -801,11 +813,11 @@ export default function App() {
               </div>
 
               {/* Feature sections */}
-              <div className="space-y-20 pt-10">
+              <div className="space-y-32 pt-20">
                 {/* Feature 1 */}
                 <section
                   ref={feature1Ref}
-                  className="space-y-4"
+                  className="space-y-4 min-h-[140vh] flex flex-col justify-center"
                 >
                   <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                     Dump tasks and stay focused.
@@ -819,7 +831,7 @@ export default function App() {
                 {/* Feature 2 */}
                 <section
                   ref={feature2Ref}
-                  className="space-y-4"
+                  className="space-y-4 min-h-[140vh] flex flex-col justify-center"
                 >
                   <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                     Analyze your performance over weeks.
@@ -833,8 +845,8 @@ export default function App() {
             </div>
 
             {/* Right: Sticky app preview container */}
-            <div className="flex justify-center md:justify-end md:sticky md:top-24">
-              <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-white/10 shadow-xl p-4 md:p-6">
+            <div className="flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
+              <div className="w-full max-w-[520px] rounded-3xl border border-white/15 bg-white/5/5 shadow-[0_30px_80px_rgba(0,0,0,0.75)] p-4 md:p-6 backdrop-blur-xl">
                 <div className="flex items-center justify-between mb-4 px-1">
                   <div className="flex gap-1.5">
                     <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
@@ -852,7 +864,13 @@ export default function App() {
                   ref={previewScrollRef}
                   className="h-[440px] overflow-hidden rounded-2xl bg-black/80 border border-white/10"
                 >
-                  <div className="h-full w-full overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent px-5 py-5 space-y-8">
+                  <div
+                    className="min-h-full w-full px-5 py-5 space-y-8 will-change-transform"
+                    style={{
+                      transform: `translateY(-${previewParallax * previewMaxScroll}px)`,
+                      transition: "transform 0.45s ease-out",
+                    }}
+                  >
                     {/* Simulated hero / hello area */}
                     <div className="space-y-4">
                       <div className="flex items-center justify-between">
