@@ -538,6 +538,19 @@ export default function App() {
     setIsMobileMenuOpen(false);
   };
 
+  const handleHeroMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (window.innerWidth < 768) return;
+    const el = e.currentTarget;
+    const rect = el.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+
+    window.requestAnimationFrame(() => {
+      el.style.setProperty("--mouse-x", `${x}%`);
+      el.style.setProperty("--mouse-y", `${y}%`);
+    });
+  };
+
   /* --- Feature 1 demo sequence --- */
   useEffect(() => {
     if (!isSimulation || previewSection !== "feature1" || hasPlayedFeature1Demo)
@@ -1048,7 +1061,18 @@ export default function App() {
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
         {isSimulation && (
-          <section className="relative z-20 w-full px-6 pt-32 pb-32">
+          <section
+            className="relative z-20 w-full px-6 pt-32 pb-32 overflow-hidden"
+            onMouseMove={handleHeroMouseMove}
+          >
+            <div
+              className="pointer-events-none absolute inset-0 -z-10"
+              style={{
+                background:
+                  "radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 30%), rgba(255,255,255,0.08), transparent 40%)",
+                transition: "background 0.18s ease-out",
+              }}
+            />
             <div className="mx-auto max-w-6xl grid gap-16 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
               {/* Left: Hero copy + feature sections */}
               <div className="space-y-16 max-w-xl">
@@ -1076,11 +1100,11 @@ export default function App() {
                 </div>
 
                 {/* Feature sections */}
-                <div className="space-y-32 pt-32">
+                <div className="space-y-40 pt-40">
                   {/* Feature 1 */}
                   <section
                     ref={feature1Ref}
-                    className="space-y-6 min-h-[140vh] flex flex-col justify-center"
+                    className="space-y-6 min-h-[160vh] flex flex-col justify-center"
                   >
                     <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                       Dump tasks and stay focused.
@@ -1095,7 +1119,7 @@ export default function App() {
                   {/* Feature 2 */}
                   <section
                     ref={feature2Ref}
-                    className="space-y-6 min-h-[140vh] flex flex-col justify-center"
+                    className="space-y-6 min-h-[160vh] flex flex-col justify-center"
                   >
                     <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
                       Analyze your performance over weeks.
@@ -1838,7 +1862,10 @@ export default function App() {
         {isSimulation && (
           <section className="relative z-10 w-full px-6 pb-32">
             <div className="mx-auto max-w-5xl space-y-40">
-              <div ref={performanceRef} className="space-y-6 text-left pt-12">
+              <div
+                ref={performanceRef}
+                className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
+              >
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Performance
                 </p>
@@ -1861,7 +1888,10 @@ export default function App() {
                 </button>
               </div>
 
-              <div ref={habitRef} className="space-y-6 text-left pt-12">
+              <div
+                ref={habitRef}
+                className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
+              >
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Habit Building
                 </p>
@@ -1885,7 +1915,10 @@ export default function App() {
                 </button>
               </div>
 
-              <div ref={timeRef} className="space-y-6 text-left pt-12">
+              <div
+                ref={timeRef}
+                className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
+              >
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Time Management
                 </p>
@@ -1911,6 +1944,7 @@ export default function App() {
         )}
 
         <style>{`
+html { scroll-behavior: smooth; }
 @keyframes glitch { 0% { transform: translate(0); } }
 @keyframes breathing { 0% { opacity: 0.6; } 50% { opacity: 1; } 100% { opacity: 0.6; } }
 @keyframes reflection-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
