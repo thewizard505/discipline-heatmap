@@ -1002,13 +1002,12 @@ export default function App() {
         </section>
         )}
 
+        {!isSimulation && (
         <div
           className="flex flex-col items-center gap-10 relative z-20"
           style={{
-            paddingTop: isSimulation ? "20vh" : "5rem",
-            transform: isSimulation
-              ? `translateY(${-scrollY * 0.1}px)`
-              : "none",
+            paddingTop: "5rem",
+            transform: "none",
           }}
         >
           {warning && (
@@ -1475,6 +1474,7 @@ export default function App() {
             </div>
           </div>
         </div>
+        )}
 
         <style>{`
 @keyframes glitch { 0% { transform: translate(0); } }
