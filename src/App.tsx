@@ -1134,8 +1134,8 @@ export default function App() {
               </div>
 
               {/* Right: Sticky app preview container */}
-              <div className="flex justify-center md:justify-end sticky top-24 self-start">
-                <div className="w-full max-w-[520px] rounded-3xl border border-white/15 bg-white/5/5 shadow-[0_30px_80px_rgba(0,0,0,0.75)] p-4 md:p-6 backdrop-blur-xl">
+              <div className="flex justify-center md:justify-end self-start">
+                <div className="w-full max-w-[520px] sticky top-24 rounded-3xl border border-white/15 bg-white/5/5 shadow-[0_30px_80px_rgba(0,0,0,0.75)] p-4 md:p-6 backdrop-blur-xl">
                   <div className="flex items-center justify-between mb-4 px-1">
                     <div className="flex gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
