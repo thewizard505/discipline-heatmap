@@ -785,7 +785,7 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full bg-black text-white selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0 scale-95" : "opacity-100 scale-100"}`}
+        className={`size-full bg-black text-white selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* VIGNETTE & AURA */}
         <div
@@ -1409,6 +1409,20 @@ export default function App() {
             <div
               className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || showReflection ? "blur-lg opacity-0" : "opacity-100"}`}
             >
+              {!isSimulation && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={handleGoHome}
+                    className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                      Home
+                    </span>
+                  </button>
+                </div>
+              )}
               <h1 className="text-4xl font-semibold tracking-tight">
                 Hello <span className="text-blue-400">{name}</span>.
               </h1>
