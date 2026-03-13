@@ -697,6 +697,25 @@ export default function App() {
     return "0";
   }, [yesterdayTotalFocusMinutes, todayTotalFocusMinutes, isSimulation]);
 
+  /* --- PREVIEW SCENE OPACITIES (for soft crossfades) --- */
+  const heroOpacity = useMemo(() => {
+    return 1 - Math.min(previewParallax * 1.2, 0.6);
+  }, [previewParallax]);
+
+  const focusOpacity = useMemo(() => {
+    const start = 0.15;
+    const end = 0.75;
+    const clamped = Math.min(1, Math.max(0, (previewParallax - start) / (end - start)));
+    return 0.3 + clamped * 0.7;
+  }, [previewParallax]);
+
+  const analyticsOpacity = useMemo(() => {
+    const start = 0.55;
+    const end = 1;
+    const clamped = Math.min(1, Math.max(0, (previewParallax - start) / (end - start)));
+    return clamped;
+  }, [previewParallax]);
+
   return (
     <>
       <style>{`
@@ -865,14 +884,17 @@ export default function App() {
                   className="h-[440px] overflow-hidden rounded-2xl bg-black/80 border border-white/10"
                 >
                   <div
-                    className="min-h-full w-full px-5 py-5 space-y-8 will-change-transform"
+                    className="min-h-full w-full px-5 py-5 space-y-10 will-change-transform"
                     style={{
                       transform: `translateY(-${previewParallax * previewMaxScroll}px)`,
                       transition: "transform 0.45s ease-out",
                     }}
                   >
-                    {/* Simulated hero / hello area */}
-                    <div className="space-y-4">
+                    {/* Simulated hero / hello area (starting state) */}
+                    <div
+                      className="space-y-4"
+                      style={{ opacity: heroOpacity }}
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-xs uppercase tracking-[0.25em] text-blue-400/80">
@@ -943,8 +965,76 @@ export default function App() {
                       </div>
                     </div>
 
+                    {/* Focus mode scene */}
+                    <div
+                      className="space-y-4 pt-6"
+                      style={{ opacity: focusOpacity }}
+                    >
+                      <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+                        Focus mode · Live
+                      </div>
+                      <div className="rounded-[32px] bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-blue-500/40 shadow-[0_0_40px_rgba(37,99,235,0.6)] px-8 py-10 space-y-6">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="text-[10px] uppercase tracking-[0.3em] text-blue-400/80">
+                            Deep work session
+                          </div>
+                          <div className="text-5xl md:text-6xl font-mono tracking-tight">
+                            {String(Math.floor(demoSeconds / 60)).padStart(
+                              2,
+                              "0",
+                            )}
+                            :
+                            {String(demoSeconds % 60).padStart(2, "0")}
+                          </div>
+                          <div className="text-[10px] uppercase tracking-[0.3em] text-blue-300/80">
+                            Focus integrity: 96.4%
+                          </div>
+                        </div>
+
+                        <div className="space-y-3">
+                          <div className="flex gap-2">
+                            <div className="flex-1 px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[11px] text-white/70">
+                              Next objective...
+                            </div>
+                            <button className="px-5 py-2 rounded-full bg-white text-[10px] font-black tracking-[0.25em] uppercase text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                              Add
+                            </button>
+                          </div>
+                          <div className="space-y-2">
+                            {demoTasks.map((task, index) => (
+                              <div
+                                key={`focus-${task}`}
+                                className={`flex items-center justify-between px-4 py-2.5 rounded-full border text-[11px] ${
+                                  index === 0
+                                    ? "bg-blue-500/25 border-blue-400/80"
+                                    : "bg-white/5 border-white/15"
+                                }`}
+                              >
+                                <div className="flex items-center gap-3">
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full ${
+                                      index === 0
+                                        ? "bg-blue-300"
+                                        : "bg-white/30"
+                                    }`}
+                                  />
+                                  <span className="text-white/85">
+                                    {task}
+                                  </span>
+                                </div>
+                                <span className="w-4 h-4 rounded-full border border-white/25" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Simulated analytics area (scroll target for feature 2) */}
-                    <div className="space-y-6 pt-4">
+                    <div
+                      className="space-y-6 pt-6"
+                      style={{ opacity: analyticsOpacity }}
+                    >
                       <div className="flex items-center justify-between">
                         <h3 className="text-xs uppercase tracking-[0.3em] text-white/50">
                           Performance dashboard
