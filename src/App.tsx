@@ -562,9 +562,9 @@ export default function App() {
     setDemoRunning(false);
 
     const examples = [
-      "Write philosophy essay",
-      "Study calculus problem set",
-      "Deep work: portfolio project",
+      "Precalculus homework",
+      "Take bins down",
+      "Read Ch20 Of Mice and Men",
     ];
 
     const timeouts: number[] = [];
@@ -1106,12 +1106,11 @@ export default function App() {
                     className="space-y-6 min-h-[160vh] flex flex-col justify-center"
                   >
                     <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                      Dump tasks and stay focused.
+                      Step 1
                     </h2>
                     <p className="text-sm md:text-base text-white/70 leading-relaxed">
-                      Tunnel Vision stores your tasks and uses a timer to bring
-                      the best out of you every day. It keeps track of time
-                      spent on other tabs to build strong focus habits.
+                      Brain dump all your tasks that include homework, chores, and projects.
+                      Start a timer and see how many tasks you can get done.
                     </p>
                   </section>
 
@@ -1121,12 +1120,10 @@ export default function App() {
                     className="space-y-6 min-h-[160vh] flex flex-col justify-center"
                   >
                     <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
-                      Analyze your performance over weeks.
+                      Step 2
                     </h2>
                     <p className="text-sm md:text-base text-white/70 leading-relaxed">
-                      The first step to improving your focus habits is seeing
-                      the truth in numbers. Tunnel Vision gives you a clear view
-                      of your performance so you can improve with intention.
+                      Use Tunnel Vision's graphs to view your productivity over weeks and set goals for yourself in the future.
                     </p>
                   </section>
                 </div>
@@ -1189,11 +1186,11 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Demo timer + tasks card */}
-                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-center">
+                        {/* Demo timer + tasks card (Todoist-style list) */}
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
                           <div className="relative flex items-center justify-center">
-                            <div className="w-24 h-24 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center shadow-[0_0_20px_rgba(59,130,246,0.4)]">
-                              <span className="font-mono text-lg">
+                            <div className="w-24 h-24 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center shadow-lg">
+                              <span className="font-mono text-lg text-white/90">
                                 {String(Math.floor(demoSeconds / 60)).padStart(
                                   2,
                                   "0",
@@ -1203,31 +1200,31 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="space-y-3">
-                            <div className="flex gap-2">
-                              <div className="flex-1 px-3 py-2 rounded-2xl bg-white/5 border border-white/10 text-[11px] text-white/70">
-                                Next objective...
+                          <div className="rounded-2xl bg-white/[0.04] border border-white/10 shadow-sm overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-white/5">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[12px] text-white/60 placeholder-white/30 font-sans">
+                                Add task...
                               </div>
-                              <div className="px-4 py-2 rounded-2xl bg-white text-[10px] font-black tracking-[0.2em] uppercase text-black">
+                              <div className="px-3 py-2 rounded-xl bg-white text-[11px] font-semibold text-black shadow-sm">
                                 Add
                               </div>
                             </div>
-                            <div className="space-y-1.5">
+                            <div className="divide-y divide-white/5">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={task}
-                                  className={`flex items-center justify-between px-3 py-2 rounded-2xl border text-[11px] ${
+                                  className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-white/10 border-blue-400/40"
-                                      : "bg-white/5 border-white/10"
+                                      ? "bg-white/5 text-white/95"
+                                      : "text-white/80"
                                   }`}
                                 >
-                                  <span className="text-white/80">{task}</span>
-                                  <span className="w-4 h-4 rounded-full border border-white/20" />
+                                  <span className="tracking-tight">{task}</span>
+                                  <span className="w-4 h-4 rounded-md border border-white/20 bg-white/5 flex-shrink-0" />
                                 </div>
                               ))}
                               {demoTasks.length === 0 && (
-                                <div className="flex items-center justify-between px-3 py-2 rounded-2xl border border-dashed border-white/15 text-[11px] text-white/40">
+                                <div className="px-3 py-4 text-center text-[12px] text-white/40 font-sans">
                                   Tasks you add will appear here
                                 </div>
                               )}
@@ -1263,36 +1260,34 @@ export default function App() {
 
                           <div className="space-y-3">
                             <div className="flex gap-2">
-                              <div className="flex-1 px-4 py-2 rounded-full bg-white/5 border border-white/15 text-[11px] text-white/70">
-                                Next objective...
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[12px] text-white/60 font-sans">
+                                Add task...
                               </div>
-                              <button className="px-5 py-2 rounded-full bg-white text-[10px] font-black tracking-[0.25em] uppercase text-black shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                              <button className="px-4 py-2 rounded-xl bg-white text-[11px] font-semibold text-black shadow-sm">
                                 Add
                               </button>
                             </div>
-                            <div className="space-y-2">
+                            <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden shadow-sm">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={`focus-${task}`}
-                                  className={`flex items-center justify-between px-4 py-2.5 rounded-full border text-[11px] ${
+                                  className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-500/25 border-blue-400/80"
-                                      : "bg-white/5 border-white/15"
+                                      ? "bg-blue-500/15 text-white/95"
+                                      : "text-white/80"
                                   }`}
                                 >
-                                  <div className="flex items-center gap-3">
+                                  <div className="flex items-center gap-2.5">
                                     <span
-                                      className={`w-1.5 h-1.5 rounded-full ${
+                                      className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                         index === 0
-                                          ? "bg-blue-300"
+                                          ? "bg-blue-400"
                                           : "bg-white/30"
                                       }`}
                                     />
-                                    <span className="text-white/85">
-                                      {task}
-                                    </span>
+                                    <span className="tracking-tight">{task}</span>
                                   </div>
-                                  <span className="w-4 h-4 rounded-full border border-white/25" />
+                                  <span className="w-4 h-4 rounded-md border border-white/20 bg-white/5 flex-shrink-0" />
                                 </div>
                               ))}
                             </div>
