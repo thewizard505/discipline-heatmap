@@ -782,10 +782,12 @@ export default function App() {
       <style>{`
         .animate-fade-in{ animation:fadein .4s ease; }
         @keyframes fadein{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes chevron-bounce{ 0%,100%{ transform:translateY(0); opacity:0.7 } 50%{ transform:translateY(6px); opacity:1 } }
+        .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
       `}</style>
 
       <div
-        className={`size-full bg-gray-50 text-gray-900 selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900 selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* VIGNETTE & AURA */}
         <div
@@ -1095,6 +1097,35 @@ export default function App() {
                     <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
                       Get started
                     </span>
+                  </button>
+                </div>
+
+                {/* Scroll indicator */}
+                <div className="flex justify-center pt-16 pb-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      feature1Ref.current?.scrollIntoView({
+                        behavior: "smooth",
+                      })
+                    }
+                    className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 rounded-full p-2"
+                    aria-label="Scroll to content"
+                  >
+                    <span className="text-[10px] uppercase tracking-widest font-medium">
+                      Scroll
+                    </span>
+                    <svg
+                      className="w-6 h-6 animate-chevron-bounce"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 9l-7 7-7-7" />
+                    </svg>
                   </button>
                 </div>
 
