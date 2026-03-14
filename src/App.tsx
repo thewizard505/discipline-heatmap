@@ -1079,12 +1079,11 @@ export default function App() {
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
                   Discipline Operating System
                 </p>
-                <h1 className="text-4xl md:text-6xl font-bold tracking-tight leading-tight">
-                  Purity, finally.
+                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-white">
+                  Other options are just a glorified google calendar
                 </h1>
-                <p className="text-sm md:text-lg text-white/70">
-                  A powerful productivity system used by 50+ million students to
-                  stay focused and eliminate distractions.
+                <p className="text-base md:text-lg text-white/60 leading-relaxed mt-4">
+                  Tunnel Vision times your tasks and gives you a focus integrity score so you can take accountability.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
