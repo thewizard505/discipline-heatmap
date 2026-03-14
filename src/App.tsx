@@ -1103,12 +1103,12 @@ export default function App() {
                   {/* Feature 1 */}
                   <section
                     ref={feature1Ref}
-                    className="space-y-6 min-h-[160vh] flex flex-col justify-center"
+                    className="space-y-5 min-h-[160vh] flex flex-col justify-center"
                   >
-                    <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
                       Step 1
                     </h2>
-                    <p className="text-sm md:text-base text-white/70 leading-relaxed">
+                    <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-xl">
                       Brain dump all your tasks that include homework, chores, and projects.
                       Start a timer and see how many tasks you can get done.
                     </p>
@@ -1117,12 +1117,12 @@ export default function App() {
                   {/* Feature 2 */}
                   <section
                     ref={feature2Ref}
-                    className="space-y-6 min-h-[160vh] flex flex-col justify-center"
+                    className="space-y-5 min-h-[160vh] flex flex-col justify-center"
                   >
-                    <h2 className="text-2xl md:text-3xl font-semibold tracking-tight">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
                       Step 2
                     </h2>
-                    <p className="text-sm md:text-base text-white/70 leading-relaxed">
+                    <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-xl">
                       Use Tunnel Vision's graphs to view your productivity over weeks and set goals for yourself in the future.
                     </p>
                   </section>
