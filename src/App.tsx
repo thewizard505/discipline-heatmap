@@ -731,16 +731,16 @@ export default function App() {
 
   const getHeatmapClass = (symbol: string, isCurrentDay: boolean) => {
     if (isCurrentDay && symbol === "⬜")
-      return "bg-blue-600/20 border-blue-500 shadow-[0_0_15px_rgba(37,99,235,0.4)]";
-    if (symbol === "⬜") return "bg-white/5 border-white/5 shadow-none";
-    if (symbol === "🔹") return "bg-blue-900/40 border-blue-500/20";
+      return "bg-blue-100 border-blue-400 shadow-md";
+    if (symbol === "⬜") return "bg-gray-100 border-gray-200 shadow-none";
+    if (symbol === "🔹") return "bg-blue-100 border-blue-300";
     if (symbol === "🔷")
-      return "bg-blue-600/40 border-blue-400/30 shadow-[0_0_10px_rgba(37,99,235,0.2)]";
+      return "bg-blue-200 border-blue-400 shadow-sm";
     if (symbol === "🔵")
-      return "bg-blue-500 border-blue-300/40 shadow-[0_0_15px_rgba(59,130,246,0.4)]";
+      return "bg-blue-400 border-blue-500 text-white shadow-md";
     if (symbol === "🔥")
-      return "bg-blue-400 border-white/40 shadow-[0_0_20px_rgba(96,165,250,0.8)]";
-    return "bg-white/5";
+      return "bg-blue-500 border-blue-600 text-white shadow-lg";
+    return "bg-gray-100";
   };
 
   const improvementDelta = useMemo(() => {
@@ -782,17 +782,19 @@ export default function App() {
       <style>{`
         .animate-fade-in{ animation:fadein .4s ease; }
         @keyframes fadein{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes chevron-bounce{ 0%,100%{ transform:translateY(0); opacity:0.7 } 50%{ transform:translateY(6px); opacity:1 } }
+        .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
       `}</style>
 
       <div
-        className={`size-full bg-black text-white selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900 selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* VIGNETTE & AURA */}
         <div
           className={`fixed inset-0 z-[150] pointer-events-none transition-opacity duration-1000 ${running ? "opacity-100" : "opacity-0"}`}
           style={{
             background:
-              "radial-gradient(circle, transparent 40%, rgba(0,0,0,0.8) 150%)",
+              "radial-gradient(circle, transparent 40%, rgba(0,0,0,0.12) 150%)",
           }}
         />
 
@@ -813,7 +815,7 @@ export default function App() {
           />
         </div>
         {isSimulation && (
-          <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-black/80 backdrop-blur-xl border-b border-white/10">
+          <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-white/95 backdrop-blur-xl border-b border-gray-200">
             <div className="w-full pointer-events-auto">
               <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-2.5">
                 {/* Left: Logo as home button */}
@@ -825,7 +827,7 @@ export default function App() {
                       behavior: "smooth",
                     })
                   }
-                  className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/10 hover:scale-[1.02] transition-all duration-200"
+                  className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100 hover:scale-[1.02] transition-all duration-200"
                 >
                   <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md">
                     <img
@@ -834,7 +836,7 @@ export default function App() {
                       className="w-8 h-8 object-cover"
                     />
                   </div>
-                  <span className="hidden sm:inline text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-white/80">
+                  <span className="hidden sm:inline text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-gray-700">
                     Tunnel Vision
                   </span>
                 </button>
@@ -857,8 +859,8 @@ export default function App() {
                             cur === "madeFor" ? null : "madeFor",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 text-white/70 transition-all duration-200 hover:bg-white/10 hover:scale-105 ${
-                          openDropdown === "madeFor" ? "bg-white/10" : ""
+                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
+                          openDropdown === "madeFor" ? "bg-gray-100" : ""
                         }`}
                       >
                         <span>Made For</span>
@@ -867,9 +869,9 @@ export default function App() {
                         </span>
                       </button>
                       {openDropdown === "madeFor" && (
-                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-black/80 border border-white/10 shadow-[0_32px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
                           <div className="px-6 py-5">
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-white/40 mb-3">
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500 mb-3">
                               Made For
                             </p>
                             <div className="grid md:grid-cols-3 gap-3">
@@ -879,15 +881,15 @@ export default function App() {
                                   scrollToSection(performanceRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
                                   ⚡
                                 </span>
-                                <span className="text-sm font-semibold text-white">
+                                <span className="text-sm font-semibold text-gray-900">
                                   Performance
                                 </span>
-                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
+                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
                                   Track your task performance and push your
                                   limits.
                                 </span>
@@ -898,15 +900,15 @@ export default function App() {
                                   scrollToSection(habitRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
                                   🌱
                                 </span>
-                                <span className="text-sm font-semibold text-white">
+                                <span className="text-sm font-semibold text-gray-900">
                                   Habit Building
                                 </span>
-                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
+                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
                                   Turn discipline into a daily habit.
                                 </span>
                               </button>
@@ -916,15 +918,15 @@ export default function App() {
                                   scrollToSection(timeRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-white/5 border border-white/10 px-4 py-4 text-left hover:bg-white/10 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(0,0,0,0.8)] transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
                                   ⏱
                                 </span>
-                                <span className="text-sm font-semibold text-white">
+                                <span className="text-sm font-semibold text-gray-900">
                                   Time Management
                                 </span>
-                                <span className="mt-1 text-xs text-white/50 leading-relaxed">
+                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
                                   Take control of your schedule and priorities.
                                 </span>
                               </button>
@@ -948,8 +950,8 @@ export default function App() {
                             cur === "resources" ? null : "resources",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-white/10 bg-white/0 text-white/70 transition-all duration-200 hover:bg-white/10 hover:scale-105 ${
-                          openDropdown === "resources" ? "bg-white/10" : ""
+                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
+                          openDropdown === "resources" ? "bg-gray-100" : ""
                         }`}
                       >
                         <span>Resources</span>
@@ -958,14 +960,14 @@ export default function App() {
                         </span>
                       </button>
                       {openDropdown === "resources" && (
-                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-black/80 border border-white/10 shadow-[0_32px_120px_rgba(0,0,0,0.9)] backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
                           <div className="px-5 py-4 space-y-1">
                             {["Guides", "Tutorials", "Documentation"].map(
                               (item) => (
                                 <button
                                   key={item}
                                   type="button"
-                                  className="w-full text-left px-2 py-2.5 text-[11px] tracking-[0.18em] uppercase text-white/70 rounded-2xl hover:bg-white/10 transition-colors"
+                                  className="w-full text-left px-2 py-2.5 text-[11px] tracking-[0.18em] uppercase text-gray-600 rounded-2xl hover:bg-gray-100 transition-colors"
                                 >
                                   {item}
                                 </button>
@@ -992,51 +994,51 @@ export default function App() {
                   {/* Mobile hamburger */}
                   <button
                     type="button"
-                    className="sm:hidden inline-flex items-center justify-center rounded-full border border-white/15 bg-white/5 w-9 h-9 hover:bg-white/10 transition-all duration-200"
+                    className="sm:hidden inline-flex items-center justify-center rounded-full border border-gray-200 bg-gray-50 w-9 h-9 hover:bg-gray-100 transition-all duration-200"
                     onClick={() => setIsMobileMenuOpen((v) => !v)}
                   >
                     <span className="sr-only">Toggle navigation</span>
                     <div className="flex flex-col gap-1.5">
-                      <span className="w-4 h-0.5 bg-white rounded-full" />
-                      <span className="w-4 h-0.5 bg-white rounded-full" />
+                      <span className="w-4 h-0.5 bg-gray-700 rounded-full" />
+                      <span className="w-4 h-0.5 bg-gray-700 rounded-full" />
                     </div>
                   </button>
                 </div>
 
                 {/* Mobile menu panel */}
                 {isMobileMenuOpen && (
-                  <div className="sm:hidden mt-3 rounded-3xl bg-black/80 border border-white/10 backdrop-blur-2xl shadow-[0_24px_80px_rgba(0,0,0,0.9)] px-4 py-4 space-y-4 text-[11px] tracking-[0.18em] uppercase">
+                  <div className="sm:hidden mt-3 rounded-3xl bg-white border border-gray-200 backdrop-blur-2xl shadow-xl px-4 py-4 space-y-4 text-[11px] tracking-[0.18em] uppercase">
                     <div className="space-y-2">
-                      <p className="text-[10px] text-white/40">Made For</p>
+                      <p className="text-[10px] text-gray-500">Made For</p>
                       <button
                         type="button"
                         onClick={() => scrollToSection(performanceRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         Performance
                       </button>
                       <button
                         type="button"
                         onClick={() => scrollToSection(habitRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         Habit Building
                       </button>
                       <button
                         type="button"
                         onClick={() => scrollToSection(timeRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                       >
                         Time Management
                       </button>
                     </div>
                     <div className="space-y-2 pt-2">
-                      <p className="text-[10px] text-white/40">Resources</p>
+                      <p className="text-[10px] text-gray-500">Resources</p>
                       {["Guides", "Tutorials", "Documentation"].map((item) => (
                         <button
                           key={item}
                           type="button"
-                          className="w-full text-left px-3 py-2 rounded-2xl bg-white/5 text-white/80 hover:bg-white/10 transition-colors"
+                          className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
                         >
                           {item}
                         </button>
@@ -1069,20 +1071,20 @@ export default function App() {
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
                 background:
-                  "radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 30%), rgba(255,255,255,0.08), transparent 40%)",
+                  "radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 30%), rgba(59, 130, 246, 0.14), transparent 40%)",
                 transition: "background 0.18s ease-out",
               }}
             />
             <div className="mx-auto max-w-6xl grid gap-16 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
               {/* Left: Hero copy + feature sections */}
               <div className="space-y-16 max-w-xl">
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Discipline Operating System
                 </p>
-                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-white">
+                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
                   Other options are just a glorified google calendar
                 </h1>
-                <p className="text-base md:text-lg text-white/60 leading-relaxed mt-4">
+                <p className="text-base md:text-lg text-gray-600 leading-relaxed mt-4">
                   Tunnel Vision times your tasks and gives you a focus integrity score so you can take accountability.
                 </p>
                 <div className="flex flex-wrap gap-3 pt-2">
@@ -1098,6 +1100,35 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* Scroll indicator */}
+                <div className="flex justify-center pt-16 pb-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      feature1Ref.current?.scrollIntoView({
+                        behavior: "smooth",
+                      })
+                    }
+                    className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 rounded-full p-2"
+                    aria-label="Scroll to content"
+                  >
+                    <span className="text-[10px] uppercase tracking-widest font-medium">
+                      Scroll
+                    </span>
+                    <svg
+                      className="w-6 h-6 animate-chevron-bounce"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                </div>
+
                 {/* Feature sections */}
                 <div className="space-y-24 pt-32">
                   {/* Feature 1 */}
@@ -1108,10 +1139,10 @@ export default function App() {
                     <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
                       Declutter your thoughts.
                     </p>
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
                       Step 1
                     </h2>
-                    <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-xl">
+                    <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
                       Brain dump all your tasks that include homework, chores, and projects.
                       Start a timer and see how many tasks you can get done.
                     </p>
@@ -1122,13 +1153,13 @@ export default function App() {
                     ref={feature2Ref}
                     className="space-y-5 min-h-[160vh] flex flex-col justify-center"
                   >
-                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
+                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-600">
                       Make improvement a priority.
                     </p>
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
+                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
                       Step 2
                     </h2>
-                    <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-xl">
+                    <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
                       Use Tunnel Vision's graphs to view your productivity over weeks and set goals for yourself in the future.
                     </p>
                   </section>
@@ -1137,14 +1168,14 @@ export default function App() {
 
               {/* Right: Sticky app preview container */}
 <div className="flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
-  <div className="w-full max-w-[520px] rounded-3xl border border-white/15 bg-white/5 shadow-[0_30px_80px_rgba(0,0,0,0.75)] p-4 md:p-6 backdrop-blur-xl">
+  <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
     <div className="flex items-center justify-between mb-4 px-1">
       <div className="flex gap-1.5">
         <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
         <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
       </div>
-      <span className="text-[10px] uppercase tracking-[0.2em] text-white/40">
+      <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
         Tunnel Vision · Demo
       </span>
       <span className="w-8" />
@@ -1153,7 +1184,7 @@ export default function App() {
                   {/* Scrollable simulated app */}
                   <div
                     ref={previewScrollRef}
-                    className="h-[440px] overflow-hidden rounded-2xl bg-black/80 border border-white/10"
+                    className="h-[440px] overflow-hidden rounded-2xl bg-gray-100 border border-gray-200"
                   >
                     <div
                       className="min-h-full w-full px-5 py-5 space-y-10 will-change-transform"
@@ -1169,23 +1200,23 @@ export default function App() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.25em] text-blue-400/80">
+                            <p className="text-xs uppercase tracking-[0.25em] text-blue-600">
                               Today
                             </p>
-                            <h3 className="text-2xl font-semibold tracking-tight">
-                              Hello <span className="text-blue-400">Alex</span>.
+                            <h3 className="text-2xl font-semibold tracking-tight text-gray-900">
+                              Hello <span className="text-blue-600">Alex</span>.
                             </h3>
-                            <p className="text-xs text-white/50 mt-1">
+                            <p className="text-xs text-gray-500 mt-1">
                               Ready to beat yesterday?
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-white/40">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">
                               Streak
                             </p>
-                            <p className="text-xl font-mono font-bold">
+                            <p className="text-xl font-mono font-bold text-gray-900">
                               3
-                              <span className="text-[10px] text-white/40 ml-1">
+                              <span className="text-[10px] text-gray-500 ml-1">
                                 days
                               </span>
                             </p>
@@ -1195,8 +1226,8 @@ export default function App() {
                         {/* Demo timer + tasks card (Todoist-style list) */}
                         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
                           <div className="relative flex items-center justify-center">
-                            <div className="w-24 h-24 rounded-2xl bg-white/[0.06] border border-white/10 flex items-center justify-center shadow-lg">
-                              <span className="font-mono text-lg text-white/90">
+                            <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
+                              <span className="font-mono text-lg text-gray-900">
                                 {String(Math.floor(demoSeconds / 60)).padStart(
                                   2,
                                   "0",
@@ -1206,31 +1237,31 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="rounded-2xl bg-white/[0.04] border border-white/10 shadow-sm overflow-hidden">
-                            <div className="flex gap-2 p-2 border-b border-white/5">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[12px] text-white/60 placeholder-white/30 font-sans">
+                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-gray-100">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
                                 Add task...
                               </div>
-                              <div className="px-3 py-2 rounded-xl bg-white text-[11px] font-semibold text-black shadow-sm">
+                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
                               </div>
                             </div>
-                            <div className="divide-y divide-white/5">
+                            <div className="divide-y divide-gray-100">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={task}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-white/5 text-white/95"
-                                      : "text-white/80"
+                                      ? "bg-blue-50/80 text-gray-900"
+                                      : "text-gray-700"
                                   }`}
                                 >
                                   <span className="tracking-tight">{task}</span>
-                                  <span className="w-4 h-4 rounded-md border border-white/20 bg-white/5 flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
                                 </div>
                               ))}
                               {demoTasks.length === 0 && (
-                                <div className="px-3 py-4 text-center text-[12px] text-white/40 font-sans">
+                                <div className="px-3 py-4 text-center text-[12px] text-gray-400 font-sans">
                                   Tasks you add will appear here
                                 </div>
                               )}
@@ -1244,56 +1275,56 @@ export default function App() {
                         className="space-y-4 pt-6"
                         style={{ opacity: focusOpacity }}
                       >
-                        <div className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-gray-500">
                           Focus mode · Live
                         </div>
-                        <div className="rounded-[32px] bg-gradient-to-b from-slate-900 via-slate-950 to-black border border-blue-500/40 shadow-[0_0_40px_rgba(37,99,235,0.6)] px-8 py-10 space-y-6">
+                        <div className="rounded-[32px] bg-gradient-to-b from-blue-50 to-white border border-blue-200 shadow-lg px-8 py-10 space-y-6">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-400/80">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
                               Deep work session
                             </div>
-                            <div className="text-5xl md:text-6xl font-mono tracking-tight">
+                            <div className="text-5xl md:text-6xl font-mono tracking-tight text-gray-900">
                               {String(Math.floor(demoSeconds / 60)).padStart(
                                 2,
                                 "0",
                               )}
                               :{String(demoSeconds % 60).padStart(2, "0")}
                             </div>
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-300/80">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
                               Focus integrity: 96.4%
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             <div className="flex gap-2">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-[12px] text-white/60 font-sans">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[12px] text-gray-500 font-sans">
                                 Add task...
                               </div>
-                              <button className="px-4 py-2 rounded-xl bg-white text-[11px] font-semibold text-black shadow-sm">
+                              <button className="px-4 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
                               </button>
                             </div>
-                            <div className="divide-y divide-white/5 rounded-2xl bg-white/[0.04] border border-white/10 overflow-hidden shadow-sm">
+                            <div className="divide-y divide-gray-100 rounded-2xl bg-white border border-gray-200 overflow-hidden shadow-sm">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={`focus-${task}`}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-500/15 text-white/95"
-                                      : "text-white/80"
+                                      ? "bg-blue-50 text-gray-900"
+                                      : "text-gray-700"
                                   }`}
                                 >
                                   <div className="flex items-center gap-2.5">
                                     <span
                                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                         index === 0
-                                          ? "bg-blue-400"
-                                          : "bg-white/30"
+                                          ? "bg-blue-500"
+                                          : "bg-gray-400"
                                       }`}
                                     />
                                     <span className="tracking-tight">{task}</span>
                                   </div>
-                                  <span className="w-4 h-4 rounded-md border border-white/20 bg-white/5 flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
                                 </div>
                               ))}
                             </div>
@@ -1307,10 +1338,10 @@ export default function App() {
                         style={{ opacity: analyticsOpacity }}
                       >
                         <div className="flex items-center justify-between">
-                          <h3 className="text-xs uppercase tracking-[0.3em] text-white/50">
+                          <h3 className="text-xs uppercase tracking-[0.3em] text-gray-500">
                             Performance dashboard
                           </h3>
-                          <span className="text-[10px] text-blue-400/80 uppercase tracking-[0.2em]">
+                          <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
                             Weekly view
                           </span>
                         </div>
@@ -1324,12 +1355,12 @@ export default function App() {
                           ].map((label, i) => (
                             <div
                               key={label}
-                              className="rounded-2xl bg-white/5 border border-white/10 px-3 py-3 space-y-1"
+                              className="rounded-2xl bg-white border border-gray-200 px-3 py-3 space-y-1"
                             >
-                              <p className="text-[9px] uppercase tracking-[0.2em] text-white/40">
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500">
                                 {label}
                               </p>
-                              <p className="text-sm font-mono font-bold">
+                              <p className="text-sm font-mono font-bold text-gray-900">
                                 {i === 0 && "14h 22m"}
                                 {i === 1 && "99.2%"}
                                 {i === 2 && "7 days"}
@@ -1339,12 +1370,12 @@ export default function App() {
                           ))}
                         </div>
 
-                        <div className="rounded-3xl bg-white/5 border border-white/10 p-4 space-y-3">
+                        <div className="rounded-3xl bg-white border border-gray-200 p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-white/50">
+                            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
                               Discipline log
                             </p>
-                            <span className="text-[10px] text-blue-400/80 uppercase tracking-[0.2em]">
+                            <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
                               Month view
                             </span>
                           </div>
@@ -1352,26 +1383,26 @@ export default function App() {
                             {Array.from({ length: 21 }).map((_, i) => (
                               <div
                                 key={i}
-                                className={`aspect-square rounded-md border border-white/5 ${
+                                className={`aspect-square rounded-md border border-gray-200 ${
                                   i % 5 === 0
-                                    ? "bg-blue-500/70"
+                                    ? "bg-blue-500"
                                     : i % 3 === 0
-                                      ? "bg-blue-400/40"
-                                      : "bg-white/5"
+                                      ? "bg-blue-300"
+                                      : "bg-gray-100"
                                 }`}
                               />
                             ))}
                           </div>
                         </div>
 
-                        <div className="rounded-3xl bg-white/5 border border-white/10 p-4 space-y-2">
-                          <p className="text-[10px] uppercase tracking-[0.25em] text-white/50">
+                        <div className="rounded-3xl bg-white border border-gray-200 p-4 space-y-2">
+                          <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
                             Focus integrity trend
                           </p>
-                          <div className="h-24 rounded-2xl bg-gradient-to-tr from-blue-500/60 via-blue-400/30 to-transparent border border-blue-400/40 relative overflow-hidden">
-                            <div className="absolute inset-x-6 bottom-3 h-12 border-t border-white/15" />
+                          <div className="h-24 rounded-2xl bg-gradient-to-tr from-blue-200 via-blue-100 to-transparent border border-blue-200 relative overflow-hidden">
+                            <div className="absolute inset-x-6 bottom-3 h-12 border-t border-gray-200" />
                             <div className="absolute inset-3">
-                              <div className="h-full w-full rounded-xl border border-white/10 bg-black/30" />
+                              <div className="h-full w-full rounded-xl border border-gray-200 bg-white/60" />
                             </div>
                           </div>
                         </div>
@@ -1423,43 +1454,43 @@ export default function App() {
                   </button>
                 </div>
               )}
-              <h1 className="text-4xl font-semibold tracking-tight">
-                Hello <span className="text-blue-400">{name}</span>.
+              <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
+                Hello <span className="text-blue-600">{name}</span>.
               </h1>
-              <p className="text-lg opacity-40 font-light italic">
+              <p className="text-lg text-gray-500 font-light italic">
                 {randomGreeting}
               </p>
-              <div className="text-[10px] tracking-[0.3em] uppercase opacity-40">
+              <div className="text-[10px] tracking-[0.3em] uppercase text-gray-500">
                 🔥 {streak} day streak
               </div>
 
               {!isSimulation && (
                 <div className="pt-6 flex justify-center">
-                  <div className="bg-white/[0.03] border border-white/10 rounded-[32px] p-8 flex gap-12 backdrop-blur-xl shadow-[0_0_20px_rgba(59,130,246,0.1)] relative">
+                  <div className="bg-white border border-gray-200 rounded-[32px] p-8 flex gap-12 shadow-lg relative">
                     <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] opacity-30 font-black">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
                         YESTERDAY
                       </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter">
+                      <div className="text-3xl font-mono font-bold tracking-tighter text-gray-900">
                         {yesterdayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] opacity-40 uppercase">
+                        <span className="text-[10px] text-gray-500 uppercase">
                           MIN
                         </span>
                       </div>
                     </div>
                     <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] opacity-30 font-black">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
                         TODAY
                       </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter text-blue-400">
+                      <div className="text-3xl font-mono font-bold tracking-tighter text-blue-600">
                         {todayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-blue-400/40 uppercase">
+                        <span className="text-[10px] text-blue-600/80 uppercase">
                           MIN
                         </span>
                       </div>
                     </div>
                     <div
-                      className={`flex items-end pb-1 text-[10px] font-black uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-400" : "text-red-400"}`}
+                      className={`flex items-end pb-1 text-[10px] font-black uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
                     >
                       <span className="mr-1">
                         {parseInt(improvementDelta) >= 0 ? "▲" : "▼"}
@@ -1478,7 +1509,7 @@ export default function App() {
                   cx="180"
                   cy="180"
                   r={RADIUS}
-                  stroke="rgba(255,255,255,0.03)"
+                  stroke="rgba(0,0,0,0.08)"
                   strokeWidth="12"
                   fill="none"
                 />
@@ -1504,11 +1535,11 @@ export default function App() {
                 />
               </svg>
               <div
-                className={`w-80 h-80 rounded-[56px] bg-white/[0.02] backdrop-blur-3xl border border-white/10 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden`}
+                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden`}
               >
                 {!showReflection ? (
                   <>
-                    <div className={`text-7xl font-mono tracking-tighter`}>
+                    <div className={`text-7xl font-mono tracking-tighter text-gray-900`}>
                       {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                         2,
                         "0",
@@ -1532,14 +1563,14 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="px-8 py-2 bg-white/5 border border-white/10 rounded-full text-[10px] tracking-widest uppercase transition hover:bg-white/10"
+                          className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
                         >
                           +15 MIN
                         </button>
                         {seconds > 0 && (
                           <button
                             onClick={startTimer}
-                            className="px-8 py-2 bg-white text-black rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
+                            className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
                           >
                             START
                           </button>
@@ -1551,16 +1582,16 @@ export default function App() {
                   <div className="flex flex-col items-center px-6 text-center w-full animate-reflection-in">
                     {!reflectionPrompt ? (
                       <div className="space-y-2 w-full">
-                        <div className="text-[10px] font-black uppercase tracking-[0.3em] opacity-30 mb-4">
+                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">
                           Reflect
                         </div>
                         {prompts.map((p, i) => (
                           <button
                             key={i}
                             onClick={() => setReflectionPrompt(p)}
-                            className="w-full text-left p-3 rounded-2xl bg-white/[0.03] border border-white/5 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all text-[10px] group"
+                            className="w-full text-left p-3 rounded-2xl bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-[10px] group"
                           >
-                            <span className="opacity-50 group-hover:opacity-100 transition-opacity font-medium line-clamp-1">
+                            <span className="text-gray-500 group-hover:text-gray-900 transition-colors font-medium line-clamp-1">
                               {p}
                             </span>
                           </button>
@@ -1568,7 +1599,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="space-y-4 w-full flex flex-col items-center">
-                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-400 px-3 py-1 bg-blue-500/10 rounded-full border border-blue-500/20">
+                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
                           {reflectionPrompt}
                         </div>
                         <textarea
@@ -1576,7 +1607,7 @@ export default function App() {
                           value={reflectionText}
                           onChange={(e) => setReflectionText(e.target.value)}
                           placeholder="..."
-                          className="w-full h-24 bg-white/5 border border-white/10 rounded-2xl p-4 outline-none text-[10px] focus:border-blue-500/50 transition-all resize-none"
+                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-2xl p-4 outline-none text-[10px] text-gray-900 focus:border-blue-400 transition-all resize-none"
                         />
                         <div className="flex gap-2 w-full">
                           <button
@@ -1584,14 +1615,14 @@ export default function App() {
                               setReflectionPrompt(null);
                               setReflectionText("");
                             }}
-                            className="px-4 py-2 bg-white/5 border border-white/10 rounded-xl font-bold text-[8px] tracking-widest uppercase"
+                            className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl font-bold text-[8px] tracking-widest uppercase text-gray-700"
                           >
                             BACK
                           </button>
                           <button
                             onClick={handleReflectionSubmit}
                             disabled={!reflectionText.trim()}
-                            className="flex-1 py-2 bg-white text-black rounded-xl font-black text-[8px] uppercase tracking-widest"
+                            className="flex-1 py-2 bg-gray-900 text-white rounded-xl font-black text-[8px] uppercase tracking-widest"
                           >
                             SYNC
                           </button>
@@ -1615,7 +1646,7 @@ export default function App() {
                     placeholder={
                       isSimulation ? "Simulating input..." : "Next objective..."
                     }
-                    className="flex-1 px-6 py-4 rounded-[24px] bg-white/[0.03] border border-white/10 text-white outline-none text-sm focus:border-blue-500/50 transition-all"
+                    className="flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all placeholder-gray-400"
                   />
                   <button
                     disabled={isSimulation}
@@ -1633,7 +1664,7 @@ export default function App() {
                         setTaskInput("");
                       }
                     }}
-                    className="px-8 bg-white text-black rounded-[24px] font-black text-[10px] tracking-widest uppercase"
+                    className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
                   >
                     ADD
                   </button>
@@ -1643,20 +1674,20 @@ export default function App() {
                   {tasks.map((task, index) => (
                     <div
                       key={task.id}
-                      className={`flex items-center justify-between p-4 rounded-[28px] bg-white/[0.02] border border-white/5 transition-all duration-300 ${task.removing ? "opacity-0 translate-x-12" : "opacity-100"} ${running && index === 0 ? "bg-white/[0.08] border-blue-500/30" : ""}`}
+                      className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${task.removing ? "opacity-0 translate-x-12" : "opacity-100"} ${running && index === 0 ? "bg-blue-50/80 border-blue-300" : ""}`}
                     >
                       <div className="flex items-center gap-5">
                         <div
-                          className={`w-1.5 h-1.5 rounded-full ${running && index === 0 ? "bg-blue-400" : "bg-white/20"}`}
+                          className={`w-1.5 h-1.5 rounded-full ${running && index === 0 ? "bg-blue-500" : "bg-gray-400"}`}
                         />
-                        <span className="text-base text-white/80">
+                        <span className="text-base text-gray-800">
                           {task.text}
                         </span>
                       </div>
                       <button
                         disabled={isSimulation}
                         onClick={() => completeTask(task.id)}
-                        className="w-7 h-7 rounded-full border border-white/10 hover:border-emerald-500 hover:bg-emerald-500/20 transition-all"
+                        className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
                       />
                     </div>
                   ))}
@@ -1668,7 +1699,7 @@ export default function App() {
               >
                 <div className="mt-10 w-full max-w-4xl mx-auto space-y-8">
                   <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-6">
-                    <h2 className="text-[10px] tracking-[0.4em] uppercase opacity-30 font-black">
+                    <h2 className="text-[10px] tracking-[0.4em] uppercase text-gray-500 font-black">
                       PERFORMANCE DASHBOARD
                     </h2>
                     <div className="flex gap-4 items-center">
@@ -1676,26 +1707,26 @@ export default function App() {
                         <select
                           value={selectedTaskGraph}
                           onChange={(e) => setSelectedTaskGraph(e.target.value)}
-                          className="bg-white/[0.03] backdrop-blur-md border border-white/10 rounded-full px-5 py-2 text-[9px] uppercase tracking-widest font-black text-blue-400 outline-none hover:bg-white/10 transition shadow-lg"
+                          className="bg-white border border-gray-200 rounded-full px-5 py-2 text-[9px] uppercase tracking-widest font-black text-gray-700 outline-none hover:bg-gray-50 transition shadow-sm"
                         >
                           <option value="">Select Task</option>
                           {Object.keys(taskHistory).map((task) => (
                             <option
                               key={task}
                               value={task}
-                              className="bg-black text-white"
+                              className="bg-white text-gray-900"
                             >
                               {task}
                             </option>
                           ))}
                         </select>
                       )}
-                      <div className="flex bg-white/[0.03] border border-white/10 p-1 rounded-full backdrop-blur-xl shadow-inner">
+                      <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-full shadow-inner">
                         {["Integrity", "Speed"].map((type) => (
                           <button
                             key={type}
                             onClick={() => setSelectedStat(type)}
-                            className={`px-6 py-2 rounded-full text-[9px] uppercase tracking-[0.2em] font-black transition-all duration-500 ${selectedStat === type ? "bg-white text-black shadow-[0_0_20px_rgba(255,255,255,0.4)] scale-100" : "text-white/30 hover:text-white/60 scale-95"}`}
+                            className={`px-6 py-2 rounded-full text-[9px] uppercase tracking-[0.2em] font-black transition-all duration-500 ${selectedStat === type ? "bg-white text-gray-900 shadow-md scale-100" : "text-gray-500 hover:text-gray-700 scale-95"}`}
                           >
                             {type}
                           </button>
@@ -1705,12 +1736,12 @@ export default function App() {
                   </div>
 
                   <div className="grid gap-8">
-                    <div className="bg-white/[0.01] border border-white/10 rounded-[48px] overflow-hidden relative group min-h-[350px] shadow-[inset_0_0_80px_rgba(59,130,246,0.05)]">
+                    <div className="bg-white border border-gray-200 rounded-[48px] overflow-hidden relative group min-h-[350px] shadow-lg">
                       <div className="absolute top-10 left-12 z-10">
-                        <div className="text-[10px] uppercase tracking-widest opacity-40 mb-1 font-black">
+                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-black">
                           SESSION ANALYTICS
                         </div>
-                        <div className="text-2xl font-mono font-bold text-blue-400 tracking-tighter uppercase">
+                        <div className="text-2xl font-mono font-bold text-blue-600 tracking-tighter uppercase">
                           {selectedStat === "Integrity"
                             ? "FOCUS INTEGRITY"
                             : selectedTaskGraph
@@ -1778,7 +1809,7 @@ export default function App() {
                           className="transition-all duration-1000 ease-out"
                         />
                       </svg>
-                      <div className="absolute bottom-10 right-12 text-[10px] font-mono opacity-20 uppercase tracking-widest">
+                      <div className="absolute bottom-10 right-12 text-[10px] font-mono text-gray-400 uppercase tracking-widest">
                         STRUCTURAL INTEGRITY: 100%
                       </div>
                     </div>
@@ -1787,12 +1818,12 @@ export default function App() {
 
                 <div className="grid md:grid-cols-2 gap-8 mt-12">
                   {/* DISCIPLINE LOG: Real Calendar Mapping */}
-                  <div className="bg-white/[0.02] border border-white/10 rounded-[48px] p-10 backdrop-blur-md">
+                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
                     <div className="flex justify-between items-center mb-10">
-                      <h2 className="text-[10px] tracking-[0.3em] uppercase opacity-30 font-black">
+                      <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
                         DISCIPLINE LOG
                       </h2>
-                      <span className="text-[10px] font-mono font-bold text-blue-400 opacity-60 uppercase">
+                      <span className="text-[10px] font-mono font-bold text-blue-600 uppercase">
                         {getCurrentMonthName()}
                       </span>
                     </div>
@@ -1801,7 +1832,7 @@ export default function App() {
                       {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
                         <div
                           key={i}
-                          className="text-[8px] font-black opacity-20 text-center mb-2"
+                          className="text-[8px] font-black text-gray-400 text-center mb-2"
                         >
                           {day}
                         </div>
@@ -1820,21 +1851,21 @@ export default function App() {
                               {day.symbol || "⬜"}
                             </span>
                             {day.date && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-4 bg-gray-950 border border-white/20 rounded-2xl text-[10px] opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[300] backdrop-blur-xl shadow-2xl">
-                                <div className="font-bold border-b border-white/10 pb-2 mb-2 uppercase">
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-4 bg-white border border-gray-200 rounded-2xl text-[10px] text-gray-700 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[300] shadow-xl">
+                                <div className="font-bold border-b border-gray-200 pb-2 mb-2 uppercase">
                                   {day.date}
                                 </div>
-                                <div className="flex justify-between opacity-60 uppercase">
+                                <div className="flex justify-between text-gray-600 uppercase">
                                   <span>FOCUS:</span>
                                   <span>
                                     {Math.floor(day.totalFocusSeconds / 60)} MIN
                                   </span>
                                 </div>
-                                <div className="flex justify-between opacity-60 uppercase">
+                                <div className="flex justify-between text-gray-600 uppercase">
                                   <span>INTEGRITY:</span>
                                   <span>{day.focusIntegrity.toFixed(0)}%</span>
                                 </div>
-                                <div className="mt-2 pt-2 border-t border-white/10 text-blue-400 font-bold flex justify-between uppercase">
+                                <div className="mt-2 pt-2 border-t border-gray-200 text-blue-600 font-bold flex justify-between uppercase">
                                   <span>GRADE:</span>
                                   <span>{day.symbol}</span>
                                 </div>
@@ -1846,20 +1877,20 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="bg-white/[0.02] border border-white/10 rounded-[48px] p-10 backdrop-blur-md">
-                    <h2 className="text-[10px] tracking-[0.3em] uppercase opacity-30 font-black">
+                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
+                    <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
                       PERFORMANCE ANALYTICS
                     </h2>
                     <div className="grid grid-cols-2 gap-4">
                       {stats.map((stat, i) => (
                         <div
                           key={i}
-                          className="p-5 bg-white/[0.03] border border-white/5 rounded-3xl hover:scale-[1.03] transition-all duration-500 group shadow-lg"
+                          className="p-5 bg-gray-50 border border-gray-200 rounded-3xl hover:scale-[1.03] transition-all duration-500 group shadow-sm"
                         >
-                          <div className="text-[8px] uppercase tracking-widest opacity-30 mb-2 group-hover:text-blue-400 transition-colors font-black">
+                          <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-2 group-hover:text-blue-600 transition-colors font-black">
                             {stat.label}
                           </div>
-                          <div className="text-lg font-mono font-bold">
+                          <div className="text-lg font-mono font-bold text-gray-900">
                             {stat.val}
                           </div>
                         </div>
@@ -1880,13 +1911,13 @@ export default function App() {
                 ref={performanceRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Performance
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
                   Track your task performance.
                 </h2>
-                <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
                   Use Tunnel Vision to bring out your competitive edge. How many
                   tasks can you complete before the timer runs out?
                 </p>
@@ -1906,13 +1937,13 @@ export default function App() {
                 ref={habitRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Habit Building
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
                   Fix your habits before it's too late.
                 </h2>
-                <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
                   Tunnel Vision should become your go-to task manager. Brain
                   dump all your tasks right as you get home and hit deadlines
                   without breaking a sweat.
@@ -1933,13 +1964,13 @@ export default function App() {
                 ref={timeRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-400/80">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Time Management
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
                   Own your schedule.
                 </h2>
-                <p className="text-sm md:text-base text-white/70 max-w-2xl leading-relaxed">
+                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
                   Organize your tasks between most urgent and least urgent.
                 </p>
                 <button
