@@ -14,6 +14,18 @@ import { useState, useEffect, useMemo, useRef } from "react";
 const RADIUS = 135;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+/** Typing simulation: updates setText with one more character every msPerChar. */
+async function typeText(
+  setText: (value: React.SetStateAction<string>) => void,
+  text: string,
+  msPerChar: number = 50
+): Promise<void> {
+  for (let i = 0; i <= text.length; i++) {
+    setText(text.slice(0, i));
+    if (i < text.length) await new Promise((r) => setTimeout(r, msPerChar));
+  }
+}
+
 /* --- DATA MODELS --- */
 type Task = { id: number; text: string; removing: boolean; createdAt: number };
 type HistoryPoint = { value: number; date: string };
@@ -91,6 +103,8 @@ export default function App() {
   const [demoSeconds, setDemoSeconds] = useState(25 * 60);
   const [demoRunning, setDemoRunning] = useState(false);
   const [hasPlayedFeature1Demo, setHasPlayedFeature1Demo] = useState(false);
+  const [demoInputText, setDemoInputText] = useState("");
+  const feature1DemoStartedRef = useRef(false);
 
   /* --- NAV / DROPDOWNS STATE --- */
   const [openDropdown, setOpenDropdown] = useState<
@@ -551,42 +565,62 @@ export default function App() {
     });
   };
 
-  /* --- Feature 1 demo sequence --- */
+  /* --- Feature 1 demo: typing simulation when Step 1 scrolls into view (once) --- */
   useEffect(() => {
-    if (!isSimulation || previewSection !== "feature1" || hasPlayedFeature1Demo)
-      return;
+    if (!isSimulation || !feature1Ref.current) return;
 
-    setHasPlayedFeature1Demo(true);
-    setDemoTasks([]);
-    setDemoSeconds(25 * 60);
-    setDemoRunning(false);
+    let cancelled = false;
 
-    const examples = [
-      "Precalculus homework",
-      "Take bins down",
-      "Read Ch20 Of Mice and Men",
-    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting || feature1DemoStartedRef.current) return;
+        feature1DemoStartedRef.current = true;
 
-    const timeouts: number[] = [];
-    examples.forEach((task, index) => {
-      const id = window.setTimeout(() => {
-        setDemoTasks((prev) => [...prev, task]);
-      }, index * 600);
-      timeouts.push(id);
-    });
+        setHasPlayedFeature1Demo(true);
+        setDemoTasks([]);
+        setDemoInputText("");
+        setDemoSeconds(25 * 60);
+        setDemoRunning(false);
 
-    const startId = window.setTimeout(
-      () => {
-        setDemoRunning(true);
+        (async () => {
+          const addTask = (task: string) => {
+            if (cancelled) return;
+            setDemoTasks((prev) => [...prev, task]);
+            setDemoInputText("");
+          };
+
+          const delay = (ms: number) =>
+            new Promise((r) => setTimeout(r, ms));
+
+          const msPerChar = 40 + Math.random() * 20;
+
+          await typeText(setDemoInputText, "calculus homework", msPerChar);
+          if (cancelled) return;
+          addTask("calculus homework");
+          await delay(700);
+
+          await typeText(setDemoInputText, "take bins down", msPerChar);
+          if (cancelled) return;
+          addTask("take bins down");
+          await delay(700);
+
+          await typeText(setDemoInputText, "Read Ch20 Of Mice and Men", msPerChar);
+          if (cancelled) return;
+          addTask("Read Ch20 Of Mice and Men");
+
+          if (!cancelled) setDemoRunning(true);
+        })();
       },
-      examples.length * 600 + 800,
+      { threshold: 0.2, rootMargin: "0px" }
     );
-    timeouts.push(startId);
 
+    observer.observe(feature1Ref.current);
     return () => {
-      timeouts.forEach((id) => window.clearTimeout(id));
+      cancelled = true;
+      observer.disconnect();
     };
-  }, [isSimulation, previewSection, hasPlayedFeature1Demo]);
+  }, [isSimulation]);
 
   useEffect(() => {
     if (!demoRunning) return;
@@ -1240,7 +1274,14 @@ export default function App() {
                           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex gap-2 p-2 border-b border-gray-100">
                               <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
-                                Add task...
+                                {demoInputText ? (
+                                  <>
+                                    <span className="text-gray-700">{demoInputText}</span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">|</span>
+                                  </>
+                                ) : (
+                                  "Add task..."
+                                )}
                               </div>
                               <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
@@ -1298,7 +1339,14 @@ export default function App() {
                           <div className="space-y-3">
                             <div className="flex gap-2">
                               <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[12px] text-gray-500 font-sans">
-                                Add task...
+                                {demoInputText ? (
+                                  <>
+                                    <span className="text-gray-700">{demoInputText}</span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">|</span>
+                                  </>
+                                ) : (
+                                  "Add task..."
+                                )}
                               </div>
                               <button className="px-4 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
