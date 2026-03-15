@@ -1099,12 +1099,15 @@ export default function App() {
                 </div>
 
                 {/* Feature sections */}
-                <div className="space-y-40 pt-40">
+                <div className="space-y-24 pt-32">
                   {/* Feature 1 */}
                   <section
                     ref={feature1Ref}
                     className="space-y-5 min-h-[160vh] flex flex-col justify-center"
                   >
+                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
+                      Declutter your thoughts.
+                    </p>
                     <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
                       Step 1
                     </h2>
@@ -1119,6 +1122,9 @@ export default function App() {
                     ref={feature2Ref}
                     className="space-y-5 min-h-[160vh] flex flex-col justify-center"
                   >
+                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
+                      Make improvement a priority.
+                    </p>
                     <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
                       Step 2
                     </h2>
