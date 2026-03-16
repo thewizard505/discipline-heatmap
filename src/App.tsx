@@ -899,8 +899,8 @@ export default function App() {
                       className="w-8 h-8 object-cover"
                     />
                   </div>
-                  <span className="hidden sm:inline text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-gray-700">
-                    Tunnel Vision
+                  <span className="hidden sm:inline text-xs md:text-sm font-bold tracking-[0.18em] uppercase text-gray-700 font-sans">
+                    TunnelVision
                   </span>
                 </button>
 
@@ -1145,7 +1145,7 @@ export default function App() {
                   Discipline Operating System
                 </p>
                 <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
-                  Other options are just a glorified google calendar
+                  Other options are just a glorified Google Calendar
                 </h1>
                 <p className="text-base md:text-lg text-gray-600 leading-relaxed mt-4">
                   Tunnel Vision times your tasks and gives you a focus integrity score so you can take accountability.
