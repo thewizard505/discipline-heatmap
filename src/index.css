@@ -1,1 +1,9 @@
 @import "tailwindcss";
+
+/* Blinking cursor for embed typing simulation */
+@keyframes demo-cursor-blink {
+  50% { opacity: 0; }
+}
+.demo-cursor-blink {
+  animation: demo-cursor-blink 1s step-end infinite;
+}

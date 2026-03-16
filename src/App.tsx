@@ -14,8 +14,26 @@ import { useState, useEffect, useMemo, useRef } from "react";
 const RADIUS = 135;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
+/** Typing simulation: updates setText with one more character every msPerChar. */
+async function typeText(
+  setText: (value: React.SetStateAction<string>) => void,
+  text: string,
+  msPerChar: number = 50,
+): Promise<void> {
+  for (let i = 0; i <= text.length; i++) {
+    setText(text.slice(0, i));
+    if (i < text.length) await new Promise((r) => setTimeout(r, msPerChar));
+  }
+}
+
 /* --- DATA MODELS --- */
-type Task = { id: number; text: string; removing: boolean; createdAt: number };
+type Task = {
+  id: number;
+  text: string;
+  removing: boolean;
+  createdAt: number;
+  workMode: "inside" | "external";
+};
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
@@ -42,6 +60,11 @@ export default function App() {
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
+  const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
+    number | null
+  >(null);
+  const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
 
   const [selectedStat, setSelectedStat] = useState("Integrity");
   const [history, setHistory] = useState<HistoryData>({});
@@ -91,6 +114,8 @@ export default function App() {
   const [demoSeconds, setDemoSeconds] = useState(25 * 60);
   const [demoRunning, setDemoRunning] = useState(false);
   const [hasPlayedFeature1Demo, setHasPlayedFeature1Demo] = useState(false);
+  const [demoInputText, setDemoInputText] = useState("");
+  const feature1DemoStartedRef = useRef(false);
 
   /* --- NAV / DROPDOWNS STATE --- */
   const [openDropdown, setOpenDropdown] = useState<
@@ -147,9 +172,7 @@ export default function App() {
   const heroVariant = useMemo(() => {
     const variants = [
       {
-        lines: [
-          "Most productivity apps are just glorified Google Calendars",
-        ],
+        lines: ["Most productivity apps are just glorified Google Calendars"],
       },
       {
         lines: ["Stop scheduling tasks,", "Start measuring focus."],
@@ -301,11 +324,20 @@ export default function App() {
 
   /* ------------------- FOCUS INTEGRITY ENGINE ------------------- */
   useEffect(() => {
-    if (!running) return;
+    if (!running || isSimulation) return;
     const handleVisibilityChange = () => {
+      const activeTask = tasks.find((t) => !t.removing);
       if (document.hidden) {
+        if (!activeTask || activeTask.workMode !== "inside") {
+          hiddenTimeRef.current = null;
+          return;
+        }
         hiddenTimeRef.current = Date.now();
       } else if (hiddenTimeRef.current) {
+        if (!activeTask || activeTask.workMode !== "inside") {
+          hiddenTimeRef.current = null;
+          return;
+        }
         const msAway = Date.now() - hiddenTimeRef.current;
         const secondsAway = Math.floor(msAway / 1000);
         if (secondsAway > 0) {
@@ -325,7 +357,7 @@ export default function App() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [running]);
+  }, [running, isSimulation, tasks]);
 
   const integrityScoreNum = useMemo(
     () => Math.max(0, 100 - integrityPenalty),
@@ -461,7 +493,13 @@ export default function App() {
         if (isSimAborted.current) return;
         setTasks((prev) => [
           ...prev,
-          { id: Date.now(), text: t, removing: false, createdAt: Date.now() },
+          {
+            id: Date.now(),
+            text: t,
+            removing: false,
+            createdAt: Date.now(),
+            workMode: "inside",
+          },
         ]);
         setTaskInput("");
         await wait(600);
@@ -569,42 +607,65 @@ export default function App() {
     });
   };
 
-  /* --- Feature 1 demo sequence --- */
+  /* --- Feature 1 demo: typing simulation when Step 1 scrolls into view (once) --- */
   useEffect(() => {
-    if (!isSimulation || previewSection !== "feature1" || hasPlayedFeature1Demo)
-      return;
+    if (!isSimulation || !feature1Ref.current) return;
 
-    setHasPlayedFeature1Demo(true);
-    setDemoTasks([]);
-    setDemoSeconds(25 * 60);
-    setDemoRunning(false);
+    let cancelled = false;
 
-    const examples = [
-      "Precalculus homework",
-      "Take bins down",
-      "Read Ch20 Of Mice and Men",
-    ];
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (!entry?.isIntersecting || feature1DemoStartedRef.current) return;
+        feature1DemoStartedRef.current = true;
 
-    const timeouts: number[] = [];
-    examples.forEach((task, index) => {
-      const id = window.setTimeout(() => {
-        setDemoTasks((prev) => [...prev, task]);
-      }, index * 600);
-      timeouts.push(id);
-    });
+        setHasPlayedFeature1Demo(true);
+        setDemoTasks([]);
+        setDemoInputText("");
+        setDemoSeconds(25 * 60);
+        setDemoRunning(false);
 
-    const startId = window.setTimeout(
-      () => {
-        setDemoRunning(true);
+        (async () => {
+          const addTask = (task: string) => {
+            if (cancelled) return;
+            setDemoTasks((prev) => [...prev, task]);
+            setDemoInputText("");
+          };
+
+          const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+          const msPerChar = 40 + Math.random() * 20;
+
+          await typeText(setDemoInputText, "calculus homework", msPerChar);
+          if (cancelled) return;
+          addTask("calculus homework");
+          await delay(700);
+
+          await typeText(setDemoInputText, "take bins down", msPerChar);
+          if (cancelled) return;
+          addTask("take bins down");
+          await delay(700);
+
+          await typeText(
+            setDemoInputText,
+            "Read Ch20 Of Mice and Men",
+            msPerChar,
+          );
+          if (cancelled) return;
+          addTask("Read Ch20 Of Mice and Men");
+
+          if (!cancelled) setDemoRunning(true);
+        })();
       },
-      examples.length * 600 + 800,
+      { threshold: 0.2, rootMargin: "0px" },
     );
-    timeouts.push(startId);
 
+    observer.observe(feature1Ref.current);
     return () => {
-      timeouts.forEach((id) => window.clearTimeout(id));
+      cancelled = true;
+      observer.disconnect();
     };
-  }, [isSimulation, previewSection, hasPlayedFeature1Demo]);
+  }, [isSimulation]);
 
   useEffect(() => {
     if (!demoRunning) return;
@@ -669,6 +730,9 @@ export default function App() {
         { value: Math.round(durationSecs / 60), date: today },
       ],
     }));
+    setBestFocusIntegrity((prev) =>
+      Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
+    );
     setSelectedTaskGraph(task.text);
     setSelectedStat("Speed");
     setTasks((prev) => {
@@ -752,8 +816,7 @@ export default function App() {
       return "bg-blue-100 border-blue-400 shadow-md";
     if (symbol === "⬜") return "bg-gray-100 border-gray-200 shadow-none";
     if (symbol === "🔹") return "bg-blue-100 border-blue-300";
-    if (symbol === "🔷")
-      return "bg-blue-200 border-blue-400 shadow-sm";
+    if (symbol === "🔷") return "bg-blue-200 border-blue-400 shadow-sm";
     if (symbol === "🔵")
       return "bg-blue-400 border-blue-500 text-white shadow-md";
     if (symbol === "🔥")
@@ -801,6 +864,8 @@ export default function App() {
         .animate-fade-in{ animation:fadein .4s ease; }
         @keyframes fadein{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes chevron-bounce{ 0%,100%{ transform:translateY(0); opacity:0.7 } 50%{ transform:translateY(6px); opacity:1 } }
+        @keyframes workmode-modal-in{ from{ opacity:0; transform:translateY(8px) scale(.96) } to{ opacity:1; transform:translateY(0) scale(1) } }
+        .workmode-modal-enter{ animation:workmode-modal-in .18s ease-out; }
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
       `}</style>
 
@@ -854,8 +919,8 @@ export default function App() {
                       className="w-8 h-8 object-cover"
                     />
                   </div>
-                  <span className="hidden sm:inline text-xs md:text-sm font-semibold tracking-[0.22em] uppercase text-gray-700">
-                    Tunnel Vision
+                  <span className="hidden sm:inline text-xs md:text-sm font-bold tracking-[0.18em] uppercase text-gray-700 font-sans">
+                    TunnelVision
                   </span>
                 </button>
 
@@ -1093,31 +1158,19 @@ export default function App() {
                 transition: "background 0.18s ease-out",
               }}
             />
-            <div className="mx-auto max-w-6xl grid gap-16 md:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
-              {/* Left: Hero copy + feature sections */}
-              <div className="space-y-16 max-w-xl">
+            <div className="mx-auto max-w-6xl grid grid-cols-1 gap-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
+              {/* Left: Hero copy + feature sections (full width on mobile) */}
+              <div className="space-y-16 w-full max-w-xl">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Discipline Operating System
                 </p>
-                <div className="space-y-4 animate-fade-in">
-                  <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
-                    {heroVariant.lines.length === 1 ? (
-                      heroVariant.lines[0]
-                    ) : (
-                      <>
-                        <span className="block">{heroVariant.lines[0]}</span>
-                        <span className="block">{heroVariant.lines[1]}</span>
-                      </>
-                    )}
-                  </h1>
-                  <p className="text-base md:text-lg text-gray-700 leading-relaxed mt-1 max-w-xl">
-                    Tunnel Vision times your tasks and{" "}
-                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
-                      measures your focus
-                    </span>{" "}
-                    so you can take accountability.
-                  </p>
-                </div>
+                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
+                  Other options are just a glorified Google Calendar
+                </h1>
+                <p className="text-base md:text-lg text-gray-600 leading-relaxed mt-4">
+                  Tunnel Vision times your tasks and gives you a focus integrity
+                  score so you can take accountability.
+                </p>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="button"
@@ -1160,29 +1213,180 @@ export default function App() {
                   </button>
                 </div>
 
+                {/* Mobile only: main interactive demo (with typing) below hero */}
+                <div className="lg:hidden w-full max-w-[520px] mx-auto pt-8">
+                  <div className="rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
+                    <div className="flex items-center justify-between mb-4 px-1">
+                      <div className="flex gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                      </div>
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                        Tunnel Vision · Demo
+                      </span>
+                      <span className="w-8" />
+                    </div>
+                    <div className="h-[440px] overflow-hidden rounded-2xl bg-gray-100 border border-gray-200">
+                      <div className="w-full px-5 py-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-xs uppercase tracking-[0.25em] text-blue-600">
+                              Today
+                            </p>
+                            <h3 className="text-2xl font-semibold tracking-tight text-gray-900">
+                              Hello <span className="text-blue-600">Alex</span>.
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Ready to beat yesterday?
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">
+                              Streak
+                            </p>
+                            <p className="text-xl font-mono font-bold text-gray-900">
+                              3
+                              <span className="text-[10px] text-gray-500 ml-1">
+                                days
+                              </span>
+                            </p>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
+                          <div className="relative flex items-center justify-center">
+                            <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
+                              <span className="font-mono text-lg text-gray-900">
+                                {String(Math.floor(demoSeconds / 60)).padStart(
+                                  2,
+                                  "0",
+                                )}
+                                :{String(demoSeconds % 60).padStart(2, "0")}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-gray-100">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
+                                {demoInputText ? (
+                                  <>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
+                                  </>
+                                ) : (
+                                  "Add task..."
+                                )}
+                              </div>
+                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                                Add
+                              </div>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                              {demoTasks.map((task, index) => (
+                                <div
+                                  key={`mobile-${task}`}
+                                  className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
+                                    index === 0
+                                      ? "bg-blue-50/80 text-gray-900"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  <span className="tracking-tight">{task}</span>
+                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                </div>
+                              ))}
+                              {demoTasks.length === 0 && (
+                                <div className="px-3 py-4 text-center text-[12px] text-gray-400 font-sans">
+                                  Tasks you add will appear here
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Feature sections */}
-                <div className="space-y-24 pt-32">
+                <div className="space-y-24 pt-16 lg:pt-32">
                   {/* Feature 1 */}
                   <section
                     ref={feature1Ref}
-                    className="space-y-5 min-h-[160vh] flex flex-col justify-center"
+                    className="space-y-5 min-h-0 lg:min-h-[160vh] flex flex-col justify-center"
                   >
-                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-600">
+                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
                       Declutter your thoughts.
                     </p>
                     <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
                       Step 1
                     </h2>
                     <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Brain dump all your tasks that include homework, chores, and projects.
-                      Start a timer and see how many tasks you can get done.
+                      Brain dump tasks like emails, meetings, homework, or
+                      chores. Start a timer and see if you can PR.
                     </p>
+                    {/* Mobile: static Step 1 preview */}
+                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <div className="flex gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                        </div>
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                          Tunnel Vision
+                        </span>
+                        <span className="w-8" />
+                      </div>
+                      <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4 space-y-4">
+                        <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
+                          <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
+                            <span className="font-mono text-lg text-gray-900">
+                              25:00
+                            </span>
+                          </div>
+                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-gray-100">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
+                                Add task...
+                              </div>
+                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                                Add
+                              </div>
+                            </div>
+                            <div className="divide-y divide-gray-100">
+                              {[
+                                "calculus homework",
+                                "take bins down",
+                                "Read Ch20 Of Mice and Men",
+                              ].map((task, index) => (
+                                <div
+                                  key={task}
+                                  className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
+                                    index === 0
+                                      ? "bg-blue-50/80 text-gray-900"
+                                      : "text-gray-700"
+                                  }`}
+                                >
+                                  <span className="tracking-tight">{task}</span>
+                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </section>
 
                   {/* Feature 2 */}
                   <section
                     ref={feature2Ref}
-                    className="space-y-5 min-h-[160vh] flex flex-col justify-center"
+                    className="space-y-5 min-h-0 lg:min-h-[160vh] flex flex-col justify-center"
                   >
                     <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-600">
                       Make improvement a priority.
@@ -1191,26 +1395,89 @@ export default function App() {
                       Step 2
                     </h2>
                     <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Use Tunnel Vision's graphs to view your productivity over weeks and set goals for yourself in the future.
+                      Use Tunnel Vision's graphs to view your productivity over
+                      weeks and set goals for yourself in the future.
                     </p>
+                    {/* Mobile: static Step 2 preview (focus mode) */}
+                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
+                      <div className="flex items-center justify-between mb-3 px-1">
+                        <div className="flex gap-1.5">
+                          <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                        </div>
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                          Tunnel Vision
+                        </span>
+                        <span className="w-8" />
+                      </div>
+                      <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4">
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-3">
+                          Focus mode · Live
+                        </div>
+                        <div className="rounded-[32px] bg-gradient-to-b from-blue-50 to-white border border-blue-200 shadow-lg px-6 py-8 space-y-4">
+                          <div className="flex flex-col items-center gap-1">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                              Deep work session
+                            </div>
+                            <div className="text-4xl font-mono tracking-tight text-gray-900">
+                              24:32
+                            </div>
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                              Focus integrity: 96.4%
+                            </div>
+                          </div>
+                          <div className="divide-y divide-gray-100 rounded-2xl bg-white border border-gray-200 overflow-hidden">
+                            {[
+                              "calculus homework",
+                              "take bins down",
+                              "Read Ch20 Of Mice and Men",
+                            ].map((task, index) => (
+                              <div
+                                key={task}
+                                className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
+                                  index === 0
+                                    ? "bg-blue-50 text-gray-900"
+                                    : "text-gray-700"
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5">
+                                  <span
+                                    className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
+                                      index === 0
+                                        ? "bg-blue-500"
+                                        : "bg-gray-400"
+                                    }`}
+                                  />
+                                  <span className="tracking-tight">{task}</span>
+                                </div>
+                                <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </section>
+
+                  {/* Step 3 mobile section removed – mobile walkthrough now has two steps total */}
                 </div>
               </div>
 
-              {/* Right: Sticky app preview container */}
-<div className="flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
-  <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
-    <div className="flex items-center justify-between mb-4 px-1">
-      <div className="flex gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-      </div>
-      <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
-        Tunnel Vision · Demo
-      </span>
-      <span className="w-8" />
-    </div>
+              {/* Right: Sticky app preview container (desktop only) */}
+              <div className="hidden lg:flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
+                <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                      Tunnel Vision · Demo
+                    </span>
+                    <span className="w-8" />
+                  </div>
 
                   {/* Scrollable simulated app */}
                   <div
@@ -1271,7 +1538,18 @@ export default function App() {
                           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex gap-2 p-2 border-b border-gray-100">
                               <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
-                                Add task...
+                                {demoInputText ? (
+                                  <>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
+                                  </>
+                                ) : (
+                                  "Add task..."
+                                )}
                               </div>
                               <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
@@ -1329,7 +1607,18 @@ export default function App() {
                           <div className="space-y-3">
                             <div className="flex gap-2">
                               <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[12px] text-gray-500 font-sans">
-                                Add task...
+                                {demoInputText ? (
+                                  <>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
+                                  </>
+                                ) : (
+                                  "Add task..."
+                                )}
                               </div>
                               <button className="px-4 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
                                 Add
@@ -1353,7 +1642,9 @@ export default function App() {
                                           : "bg-gray-400"
                                       }`}
                                     />
-                                    <span className="tracking-tight">{task}</span>
+                                    <span className="tracking-tight">
+                                      {task}
+                                    </span>
                                   </div>
                                   <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
                                 </div>
@@ -1379,11 +1670,14 @@ export default function App() {
 
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           {[
-                            "Total focus",
-                            "Best integrity",
-                            "Longest streak",
-                            "Tasks done",
-                          ].map((label, i) => (
+                            { label: "Total focus", value: "14h 22m" },
+                            {
+                              label: "Best integrity",
+                              value: `${Math.min(100, Math.max(0, bestFocusIntegrity)).toFixed(1)}%`,
+                            },
+                            { label: "Longest streak", value: "7 days" },
+                            { label: "Tasks done", value: "482" },
+                          ].map(({ label, value }) => (
                             <div
                               key={label}
                               className="rounded-2xl bg-white border border-gray-200 px-3 py-3 space-y-1"
@@ -1392,10 +1686,7 @@ export default function App() {
                                 {label}
                               </p>
                               <p className="text-sm font-mono font-bold text-gray-900">
-                                {i === 0 && "14h 22m"}
-                                {i === 1 && "99.2%"}
-                                {i === 2 && "7 days"}
-                                {i === 3 && "482"}
+                                {value}
                               </p>
                             </div>
                           ))}
@@ -1570,7 +1861,9 @@ export default function App() {
               >
                 {!showReflection ? (
                   <>
-                    <div className={`text-7xl font-mono tracking-tighter text-gray-900`}>
+                    <div
+                      className={`text-7xl font-mono tracking-tighter text-gray-900`}
+                    >
                       {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                         2,
                         "0",
@@ -1682,18 +1975,19 @@ export default function App() {
                   <button
                     disabled={isSimulation}
                     onClick={() => {
-                      if (taskInput) {
-                        setTasks((prev) => [
-                          ...prev,
-                          {
-                            id: Date.now(),
-                            text: taskInput,
-                            removing: false,
-                            createdAt: Date.now(),
-                          },
-                        ]);
-                        setTaskInput("");
-                      }
+                      if (!taskInput) return;
+                      const id = Date.now();
+                      const newTask: Task = {
+                        id,
+                        text: taskInput,
+                        removing: false,
+                        createdAt: Date.now(),
+                        workMode: "inside",
+                      };
+                      setTasks((prev) => [...prev, newTask]);
+                      setTaskInput("");
+                      setPendingWorkModeTaskId(id);
+                      setIsWorkModeModalOpen(true);
                     }}
                     className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
                   >
@@ -1702,26 +1996,54 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  {tasks.map((task, index) => (
-                    <div
-                      key={task.id}
-                      className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${task.removing ? "opacity-0 translate-x-12" : "opacity-100"} ${running && index === 0 ? "bg-blue-50/80 border-blue-300" : ""}`}
-                    >
-                      <div className="flex items-center gap-5">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${running && index === 0 ? "bg-blue-500" : "bg-gray-400"}`}
+                  {tasks.map((task, index) => {
+                    const isActive = index === 0;
+                    const isLocked = index > 0;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                          task.removing
+                            ? "opacity-0 translate-x-12"
+                            : "opacity-100"
+                        } ${
+                          running && isActive
+                            ? "bg-blue-50/80 border-blue-300"
+                            : ""
+                        } ${isLocked ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-center gap-5">
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                running && isActive
+                                  ? "bg-blue-500"
+                                  : "bg-gray-400"
+                              }`}
+                            />
+                            <span className="text-base text-gray-800">
+                              {task.text}
+                            </span>
+                          </div>
+                          {isLocked && (
+                            <span className="pl-6 text-[11px] text-gray-400">
+                              Complete the current task first
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          disabled={isSimulation || !isActive}
+                          onClick={() => completeTask(task.id)}
+                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                          title={
+                            isLocked
+                              ? "Complete the current task first"
+                              : undefined
+                          }
                         />
-                        <span className="text-base text-gray-800">
-                          {task.text}
-                        </span>
                       </div>
-                      <button
-                        disabled={isSimulation}
-                        onClick={() => completeTask(task.id)}
-                        className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1929,6 +2251,87 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Work mode selection modal */}
+        {!isSimulation && isWorkModeModalOpen && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="workmode-modal-enter w-full max-w-md mx-4 rounded-3xl bg-white/90 border border-gray-200 shadow-[0_24px_60px_rgba(15,23,42,0.45)] p-6">
+              <div className="mb-4">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-blue-600 mb-2">
+                  Working Mode
+                </p>
+                <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                  How will you work on this task?
+                </h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  Choose where you&apos;ll focus so Tunnel Vision can score your
+                  integrity fairly.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingWorkModeTaskId == null) {
+                      setIsWorkModeModalOpen(false);
+                      return;
+                    }
+                    setTasks((prev) =>
+                      prev.map((t) =>
+                        t.id === pendingWorkModeTaskId
+                          ? { ...t, workMode: "inside" }
+                          : t,
+                      ),
+                    );
+                    setPendingWorkModeTaskId(null);
+                    setIsWorkModeModalOpen(false);
+                  }}
+                  className="group relative flex flex-col items-start gap-1 rounded-2xl border border-blue-500/70 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-3 text-left text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.55)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(37,99,235,0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <span className="text-[11px] uppercase tracking-[0.22em] opacity-70">
+                    Recommended
+                  </span>
+                  <span className="text-sm font-semibold">
+                    Work inside Tunnel Vision
+                  </span>
+                  <span className="text-[11px] text-blue-100/90">
+                    Stay in this tab. Leaving will lower focus integrity.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingWorkModeTaskId == null) {
+                      setIsWorkModeModalOpen(false);
+                      return;
+                    }
+                    setTasks((prev) =>
+                      prev.map((t) =>
+                        t.id === pendingWorkModeTaskId
+                          ? { ...t, workMode: "external" }
+                          : t,
+                      ),
+                    );
+                    setPendingWorkModeTaskId(null);
+                    setIsWorkModeModalOpen(false);
+                  }}
+                  className="group flex flex-col items-start gap-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.26)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <span className="text-[11px] uppercase tracking-[0.22em] text-gray-400">
+                    Flexible
+                  </span>
+                  <span className="text-sm font-semibold">
+                    Work in another tab/app
+                  </span>
+                  <span className="text-[11px] text-gray-500">
+                    You can switch tabs freely. Integrity won&apos;t be
+                    penalized.
+                  </span>
+                </button>
               </div>
             </div>
           </div>
