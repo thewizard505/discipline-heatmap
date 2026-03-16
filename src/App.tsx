@@ -1162,7 +1162,7 @@ export default function App() {
               {/* Left: Hero copy + feature sections (full width on mobile) */}
               <div className="space-y-16 w-full max-w-xl">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
-                  Discipline Operating System
+                  Productivity App
                 </p>
                 <div className="space-y-4 animate-fade-in">
                   <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
@@ -1176,7 +1176,11 @@ export default function App() {
                     )}
                   </h1>
                   <p className="text-base md:text-lg text-gray-700 leading-relaxed mt-1 max-w-xl">
-                    Tunnel Vision times your tasks and{" "}
+                    Tunnel Vision{" "}
+                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                      times your tasks
+                    </span>{" "}
+                    and{" "}
                     <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
                       measures your focus
                     </span>{" "}
