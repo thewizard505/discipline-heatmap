@@ -925,7 +925,7 @@ export default function App() {
                 </button>
 
                 {/* Center / right controls */}
-                <div className="flex items-center gap-2 md:gap-4 text-[11px] font-medium tracking-[0.16em] uppercase">
+                <div className="flex items-center gap-2 md:gap-4 text-[11px] font-semibold tracking-[0.18em] uppercase">
                   {/* Desktop nav */}
                   <div className="hidden sm:flex items-center gap-2 md:gap-3">
                     {/* Made For dropdown - feature panel */}
@@ -942,29 +942,31 @@ export default function App() {
                             cur === "madeFor" ? null : "madeFor",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
-                          openDropdown === "madeFor" ? "bg-gray-100" : ""
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                          openDropdown === "madeFor"
+                            ? "bg-gray-100 text-gray-900"
+                            : "hover:bg-gray-100 hover:text-gray-900"
                         }`}
                       >
-                        <span>Made For</span>
-                        <span className="text-[10px]">
+                        <span className="leading-none">Made For</span>
+                        <span className="text-[10px] leading-none">
                           {openDropdown === "madeFor" ? "▲" : "▼"}
                         </span>
                       </button>
                       {openDropdown === "madeFor" && (
-                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
-                          <div className="px-6 py-5">
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500 mb-3">
+                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                          <div className="px-6 py-6 space-y-4">
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500">
                               Made For
                             </p>
-                            <div className="grid md:grid-cols-3 gap-3">
+                            <div className="grid md:grid-cols-3 gap-4">
                               <button
                                 type="button"
                                 onClick={() => {
                                   scrollToSection(performanceRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
                                   ⚡
@@ -983,7 +985,7 @@ export default function App() {
                                   scrollToSection(habitRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
                                   🌱
@@ -1001,7 +1003,7 @@ export default function App() {
                                   scrollToSection(timeRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
                                   ⏱
@@ -1033,24 +1035,26 @@ export default function App() {
                             cur === "resources" ? null : "resources",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
-                          openDropdown === "resources" ? "bg-gray-100" : ""
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                          openDropdown === "resources"
+                            ? "bg-gray-100 text-gray-900"
+                            : "hover:bg-gray-100 hover:text-gray-900"
                         }`}
                       >
-                        <span>Resources</span>
-                        <span className="text-[10px]">
+                        <span className="leading-none">Resources</span>
+                        <span className="text-[10px] leading-none">
                           {openDropdown === "resources" ? "▲" : "▼"}
                         </span>
                       </button>
                       {openDropdown === "resources" && (
-                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
-                          <div className="px-5 py-4 space-y-1">
+                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                          <div className="py-3">
                             {["Guides", "Tutorials", "Documentation"].map(
                               (item) => (
                                 <button
                                   key={item}
                                   type="button"
-                                  className="w-full text-left px-2 py-2.5 text-[11px] tracking-[0.18em] uppercase text-gray-600 rounded-2xl hover:bg-gray-100 transition-colors"
+                                  className="w-full text-left px-4 py-2.5 text-[12px] font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                                 >
                                   {item}
                                 </button>
