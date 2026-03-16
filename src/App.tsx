@@ -144,6 +144,24 @@ export default function App() {
     [],
   );
 
+  const heroVariant = useMemo(() => {
+    const variants = [
+      {
+        lines: [
+          "Most productivity apps are just glorified Google Calendars",
+        ],
+      },
+      {
+        lines: ["Stop scheduling tasks,", "Start measuring focus."],
+      },
+      {
+        lines: ["Planning isn’t productivity,", "Focused work is."],
+      },
+    ];
+    const index = Math.floor(Math.random() * variants.length);
+    return variants[index];
+  }, []);
+
   /* -----------------------------------------------------------
      DYNAMIC ANALYTICS ENGINE
   ----------------------------------------------------------- */
@@ -1081,12 +1099,25 @@ export default function App() {
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
                   Discipline Operating System
                 </p>
-                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
-                  Other options are just a glorified google calendar
-                </h1>
-                <p className="text-base md:text-lg text-gray-600 leading-relaxed mt-4">
-                  Tunnel Vision times your tasks and gives you a focus integrity score so you can take accountability.
-                </p>
+                <div className="space-y-4 animate-fade-in">
+                  <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
+                    {heroVariant.lines.length === 1 ? (
+                      heroVariant.lines[0]
+                    ) : (
+                      <>
+                        <span className="block">{heroVariant.lines[0]}</span>
+                        <span className="block">{heroVariant.lines[1]}</span>
+                      </>
+                    )}
+                  </h1>
+                  <p className="text-base md:text-lg text-gray-700 leading-relaxed mt-1 max-w-xl">
+                    Tunnel Vision times your tasks and{" "}
+                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                      measures your focus
+                    </span>{" "}
+                    so you can take accountability.
+                  </p>
+                </div>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="button"
