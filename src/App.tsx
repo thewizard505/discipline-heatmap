@@ -1301,8 +1301,7 @@ export default function App() {
                       Step 1
                     </h2>
                     <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Brain dump all your tasks that include homework, chores, and projects.
-                      Start a timer and see how many tasks you can get done.
+                      Brain dump tasks like emails, meetings, homework, or chores. Start a timer and see if you can PR.
                     </p>
                     {/* Mobile: static Step 1 preview */}
                     <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
