@@ -62,6 +62,7 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<number | null>(null);
+  const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
 
   const [selectedStat, setSelectedStat] = useState("Integrity");
   const [history, setHistory] = useState<HistoryData>({});
@@ -708,6 +709,9 @@ export default function App() {
         { value: Math.round(durationSecs / 60), date: today },
       ],
     }));
+    setBestFocusIntegrity((prev) =>
+      Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
+    );
     setSelectedTaskGraph(task.text);
     setSelectedStat("Speed");
     setTasks((prev) => {
@@ -1414,86 +1418,7 @@ export default function App() {
                     </div>
                   </section>
 
-                  {/* Step 3 (mobile only): product walkthrough */}
-                  <section className="lg:hidden space-y-5">
-                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-500/90">
-                      Track your progress.
-                    </p>
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
-                      Step 3
-                    </h2>
-                    <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Review your discipline log and weekly stats to spot trends and set goals.
-                    </p>
-                    {/* Mobile: static Step 3 preview (analytics) */}
-                    <div className="w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
-                      <div className="flex items-center justify-between mb-3 px-1">
-                        <div className="flex gap-1.5">
-                          <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-                          <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-                          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-                        </div>
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
-                          Tunnel Vision
-                        </span>
-                        <span className="w-8" />
-                      </div>
-                      <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h3 className="text-xs uppercase tracking-[0.3em] text-gray-500">
-                            Performance dashboard
-                          </h3>
-                          <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
-                            Weekly view
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 text-xs">
-                          {[
-                            { label: "Total focus", value: "14h 22m" },
-                            { label: "Best integrity", value: "99.2%" },
-                            { label: "Longest streak", value: "7 days" },
-                            { label: "Tasks done", value: "482" },
-                          ].map(({ label, value }) => (
-                            <div
-                              key={label}
-                              className="rounded-2xl bg-white border border-gray-200 px-3 py-3 space-y-1"
-                            >
-                              <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500">
-                                {label}
-                              </p>
-                              <p className="text-sm font-mono font-bold text-gray-900">
-                                {value}
-                              </p>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="rounded-3xl bg-white border border-gray-200 p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
-                              Discipline log
-                            </p>
-                            <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
-                              Month view
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-7 gap-1">
-                            {Array.from({ length: 21 }).map((_, i) => (
-                              <div
-                                key={i}
-                                className={`aspect-square rounded-md border border-gray-200 ${
-                                  i % 5 === 0
-                                    ? "bg-blue-500"
-                                    : i % 3 === 0
-                                      ? "bg-blue-300"
-                                      : "bg-gray-100"
-                                }`}
-                              />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </section>
+                  {/* Step 3 mobile section removed – mobile walkthrough now has two steps total */}
                 </div>
               </div>
 
@@ -1693,11 +1618,14 @@ export default function App() {
 
                         <div className="grid grid-cols-2 gap-3 text-xs">
                           {[
-                            "Total focus",
-                            "Best integrity",
-                            "Longest streak",
-                            "Tasks done",
-                          ].map((label, i) => (
+                            { label: "Total focus", value: "14h 22m" },
+                            {
+                              label: "Best integrity",
+                              value: `${Math.min(100, Math.max(0, bestFocusIntegrity)).toFixed(1)}%`,
+                            },
+                            { label: "Longest streak", value: "7 days" },
+                            { label: "Tasks done", value: "482" },
+                          ].map(({ label, value }) => (
                             <div
                               key={label}
                               className="rounded-2xl bg-white border border-gray-200 px-3 py-3 space-y-1"
@@ -1706,10 +1634,7 @@ export default function App() {
                                 {label}
                               </p>
                               <p className="text-sm font-mono font-bold text-gray-900">
-                                {i === 0 && "14h 22m"}
-                                {i === 1 && "99.2%"}
-                                {i === 2 && "7 days"}
-                                {i === 3 && "482"}
+                                {value}
                               </p>
                             </div>
                           ))}
