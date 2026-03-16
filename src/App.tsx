@@ -27,7 +27,13 @@ async function typeText(
 }
 
 /* --- DATA MODELS --- */
-type Task = { id: number; text: string; removing: boolean; createdAt: number };
+type Task = {
+  id: number;
+  text: string;
+  removing: boolean;
+  createdAt: number;
+  workMode: "inside" | "external";
+};
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
@@ -54,6 +60,8 @@ export default function App() {
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
+  const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<number | null>(null);
 
   const [selectedStat, setSelectedStat] = useState("Integrity");
   const [history, setHistory] = useState<HistoryData>({});
@@ -297,11 +305,20 @@ export default function App() {
 
   /* ------------------- FOCUS INTEGRITY ENGINE ------------------- */
   useEffect(() => {
-    if (!running) return;
+    if (!running || isSimulation) return;
     const handleVisibilityChange = () => {
+      const activeTask = tasks.find((t) => !t.removing);
       if (document.hidden) {
+        if (!activeTask || activeTask.workMode !== "inside") {
+          hiddenTimeRef.current = null;
+          return;
+        }
         hiddenTimeRef.current = Date.now();
       } else if (hiddenTimeRef.current) {
+        if (!activeTask || activeTask.workMode !== "inside") {
+          hiddenTimeRef.current = null;
+          return;
+        }
         const msAway = Date.now() - hiddenTimeRef.current;
         const secondsAway = Math.floor(msAway / 1000);
         if (secondsAway > 0) {
@@ -321,7 +338,7 @@ export default function App() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [running]);
+  }, [running, isSimulation, tasks]);
 
   const integrityScoreNum = useMemo(
     () => Math.max(0, 100 - integrityPenalty),
@@ -457,7 +474,13 @@ export default function App() {
         if (isSimAborted.current) return;
         setTasks((prev) => [
           ...prev,
-          { id: Date.now(), text: t, removing: false, createdAt: Date.now() },
+          {
+            id: Date.now(),
+            text: t,
+            removing: false,
+            createdAt: Date.now(),
+            workMode: "inside",
+          },
         ]);
         setTaskInput("");
         await wait(600);
@@ -817,6 +840,8 @@ export default function App() {
         .animate-fade-in{ animation:fadein .4s ease; }
         @keyframes fadein{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes chevron-bounce{ 0%,100%{ transform:translateY(0); opacity:0.7 } 50%{ transform:translateY(6px); opacity:1 } }
+        @keyframes workmode-modal-in{ from{ opacity:0; transform:translateY(8px) scale(.96) } to{ opacity:1; transform:translateY(0) scale(1) } }
+        .workmode-modal-enter{ animation:workmode-modal-in .18s ease-out; }
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
       `}</style>
 
@@ -1971,18 +1996,19 @@ export default function App() {
                   <button
                     disabled={isSimulation}
                     onClick={() => {
-                      if (taskInput) {
-                        setTasks((prev) => [
-                          ...prev,
-                          {
-                            id: Date.now(),
-                            text: taskInput,
-                            removing: false,
-                            createdAt: Date.now(),
-                          },
-                        ]);
-                        setTaskInput("");
-                      }
+                      if (!taskInput) return;
+                      const id = Date.now();
+                      const newTask: Task = {
+                        id,
+                        text: taskInput,
+                        removing: false,
+                        createdAt: Date.now(),
+                        workMode: "inside",
+                      };
+                      setTasks((prev) => [...prev, newTask]);
+                      setTaskInput("");
+                      setPendingWorkModeTaskId(id);
+                      setIsWorkModeModalOpen(true);
                     }}
                     className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
                   >
@@ -1991,26 +2017,44 @@ export default function App() {
                 </div>
 
                 <div className="flex flex-col gap-3">
-                  {tasks.map((task, index) => (
-                    <div
-                      key={task.id}
-                      className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${task.removing ? "opacity-0 translate-x-12" : "opacity-100"} ${running && index === 0 ? "bg-blue-50/80 border-blue-300" : ""}`}
-                    >
-                      <div className="flex items-center gap-5">
-                        <div
-                          className={`w-1.5 h-1.5 rounded-full ${running && index === 0 ? "bg-blue-500" : "bg-gray-400"}`}
+                  {tasks.map((task, index) => {
+                    const isActive = index === 0;
+                    const isLocked = index > 0;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                          task.removing ? "opacity-0 translate-x-12" : "opacity-100"
+                        } ${
+                          running && isActive ? "bg-blue-50/80 border-blue-300" : ""
+                        } ${isLocked ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-center gap-5">
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                running && isActive ? "bg-blue-500" : "bg-gray-400"
+                              }`}
+                            />
+                            <span className="text-base text-gray-800">
+                              {task.text}
+                            </span>
+                          </div>
+                          {isLocked && (
+                            <span className="pl-6 text-[11px] text-gray-400">
+                              Complete the current task first
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          disabled={isSimulation || !isActive}
+                          onClick={() => completeTask(task.id)}
+                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                          title={isLocked ? "Complete the current task first" : undefined}
                         />
-                        <span className="text-base text-gray-800">
-                          {task.text}
-                        </span>
                       </div>
-                      <button
-                        disabled={isSimulation}
-                        onClick={() => completeTask(task.id)}
-                        className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all"
-                      />
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
@@ -2218,6 +2262,77 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Work mode selection modal */}
+        {!isSimulation && isWorkModeModalOpen && (
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm">
+            <div className="workmode-modal-enter w-full max-w-md mx-4 rounded-3xl bg-white/90 border border-gray-200 shadow-[0_24px_60px_rgba(15,23,42,0.45)] p-6">
+              <div className="mb-4">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-blue-600 mb-2">
+                  Working Mode
+                </p>
+                <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                  How will you work on this task?
+                </h2>
+                <p className="mt-2 text-sm text-gray-500">
+                  Choose where you&apos;ll focus so Tunnel Vision can score your integrity fairly.
+                </p>
+              </div>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingWorkModeTaskId == null) {
+                      setIsWorkModeModalOpen(false);
+                      return;
+                    }
+                    setTasks((prev) =>
+                      prev.map((t) =>
+                        t.id === pendingWorkModeTaskId ? { ...t, workMode: "inside" } : t,
+                      ),
+                    );
+                    setPendingWorkModeTaskId(null);
+                    setIsWorkModeModalOpen(false);
+                  }}
+                  className="group relative flex flex-col items-start gap-1 rounded-2xl border border-blue-500/70 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-3 text-left text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.55)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(37,99,235,0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <span className="text-[11px] uppercase tracking-[0.22em] opacity-70">
+                    Recommended
+                  </span>
+                  <span className="text-sm font-semibold">Work inside Tunnel Vision</span>
+                  <span className="text-[11px] text-blue-100/90">
+                    Stay in this tab. Leaving will lower focus integrity.
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (pendingWorkModeTaskId == null) {
+                      setIsWorkModeModalOpen(false);
+                      return;
+                    }
+                    setTasks((prev) =>
+                      prev.map((t) =>
+                        t.id === pendingWorkModeTaskId ? { ...t, workMode: "external" } : t,
+                      ),
+                    );
+                    setPendingWorkModeTaskId(null);
+                    setIsWorkModeModalOpen(false);
+                  }}
+                  className="group flex flex-col items-start gap-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.26)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                >
+                  <span className="text-[11px] uppercase tracking-[0.22em] text-gray-400">
+                    Flexible
+                  </span>
+                  <span className="text-sm font-semibold">Work in another tab/app</span>
+                  <span className="text-[11px] text-gray-500">
+                    You can switch tabs freely. Integrity won&apos;t be penalized.
+                  </span>
+                </button>
               </div>
             </div>
           </div>
