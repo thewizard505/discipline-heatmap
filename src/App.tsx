@@ -18,7 +18,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 async function typeText(
   setText: (value: React.SetStateAction<string>) => void,
   text: string,
-  msPerChar: number = 50
+  msPerChar: number = 50,
 ): Promise<void> {
   for (let i = 0; i <= text.length; i++) {
     setText(text.slice(0, i));
@@ -61,7 +61,9 @@ export default function App() {
   const [taskInput, setTaskInput] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
-  const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<number | null>(null);
+  const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
+    number | null
+  >(null);
   const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
   const [isTaskPageOpen, setIsTaskPageOpen] = useState(false);
   const [isSecondarySidebarCollapsed, setIsSecondarySidebarCollapsed] = useState(false);
@@ -164,10 +166,55 @@ export default function App() {
     "What grade would you give yourself?",
   ];
 
+  type AppView = "today" | "calendar" | "analytics" | "notifications" | "help";
+  const [activeView, setActiveView] = useState<AppView>("today");
+
+  type TodayList = { id: string; label: string; icon: string };
+  const DEFAULT_LIST_ICON = "≡";
+  const [todayLists, setTodayLists] = useState<TodayList[]>([
+    { id: "work", label: "Work", icon: "💼" },
+    { id: "shopping", label: "Shopping", icon: "🧾" },
+    { id: "study", label: "Study", icon: "📚" },
+    { id: "exercise", label: "Exercise", icon: "🏃‍♂️" },
+  ]);
+  const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
+  const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const listMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!openListMenuId) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (listMenuRef.current && !listMenuRef.current.contains(target)) {
+        setOpenListMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openListMenuId]);
+
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
     [],
   );
+
+  const heroVariant = useMemo(() => {
+    const variants = [
+      {
+        lines: ["Most productivity apps are just glorified Google Calendars"],
+      },
+      {
+        lines: ["Stop scheduling tasks,", "Start measuring focus."],
+      },
+      {
+        lines: ["Planning isn’t productivity,", "Focused work is."],
+      },
+    ];
+    const index = Math.floor(Math.random() * variants.length);
+    return variants[index];
+  }, []);
 
   /* -----------------------------------------------------------
      DYNAMIC ANALYTICS ENGINE
@@ -616,8 +663,7 @@ export default function App() {
             setDemoInputText("");
           };
 
-          const delay = (ms: number) =>
-            new Promise((r) => setTimeout(r, ms));
+          const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
           const msPerChar = 40 + Math.random() * 20;
 
@@ -631,14 +677,18 @@ export default function App() {
           addTask("take bins down");
           await delay(700);
 
-          await typeText(setDemoInputText, "Read Ch20 Of Mice and Men", msPerChar);
+          await typeText(
+            setDemoInputText,
+            "Read Ch20 Of Mice and Men",
+            msPerChar,
+          );
           if (cancelled) return;
           addTask("Read Ch20 Of Mice and Men");
 
           if (!cancelled) setDemoRunning(true);
         })();
       },
-      { threshold: 0.2, rootMargin: "0px" }
+      { threshold: 0.2, rootMargin: "0px" },
     );
 
     observer.observe(feature1Ref.current);
@@ -797,8 +847,7 @@ export default function App() {
       return "bg-blue-100 border-blue-400 shadow-md";
     if (symbol === "⬜") return "bg-gray-100 border-gray-200 shadow-none";
     if (symbol === "🔹") return "bg-blue-100 border-blue-300";
-    if (symbol === "🔷")
-      return "bg-blue-200 border-blue-400 shadow-sm";
+    if (symbol === "🔷") return "bg-blue-200 border-blue-400 shadow-sm";
     if (symbol === "🔵")
       return "bg-blue-400 border-blue-500 text-white shadow-md";
     if (symbol === "🔥")
@@ -907,7 +956,7 @@ export default function App() {
                 </button>
 
                 {/* Center / right controls */}
-                <div className="flex items-center gap-2 md:gap-4 text-[11px] font-medium tracking-[0.16em] uppercase">
+                <div className="flex items-center gap-2 md:gap-4 text-[11px] font-semibold tracking-[0.18em] uppercase">
                   {/* Desktop nav */}
                   <div className="hidden sm:flex items-center gap-2 md:gap-3">
                     {/* Made For dropdown - feature panel */}
@@ -924,29 +973,31 @@ export default function App() {
                             cur === "madeFor" ? null : "madeFor",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
-                          openDropdown === "madeFor" ? "bg-gray-100" : ""
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                          openDropdown === "madeFor"
+                            ? "bg-gray-100 text-gray-900"
+                            : "hover:bg-gray-100 hover:text-gray-900"
                         }`}
                       >
-                        <span>Made For</span>
-                        <span className="text-[10px]">
+                        <span className="leading-none">Made For</span>
+                        <span className="text-[10px] leading-none">
                           {openDropdown === "madeFor" ? "▲" : "▼"}
                         </span>
                       </button>
                       {openDropdown === "madeFor" && (
-                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
-                          <div className="px-6 py-5">
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500 mb-3">
+                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                          <div className="px-6 py-6 space-y-4">
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500">
                               Made For
                             </p>
-                            <div className="grid md:grid-cols-3 gap-3">
+                            <div className="grid md:grid-cols-3 gap-4">
                               <button
                                 type="button"
                                 onClick={() => {
                                   scrollToSection(performanceRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
                                   ⚡
@@ -965,7 +1016,7 @@ export default function App() {
                                   scrollToSection(habitRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
                                   🌱
@@ -983,7 +1034,7 @@ export default function App() {
                                   scrollToSection(timeRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
                               >
                                 <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
                                   ⏱
@@ -1015,24 +1066,26 @@ export default function App() {
                             cur === "resources" ? null : "resources",
                           )
                         }
-                        className={`inline-flex items-center gap-1 rounded-full px-4 py-2 border border-gray-200 bg-transparent text-gray-600 transition-all duration-200 hover:bg-gray-100 hover:scale-105 ${
-                          openDropdown === "resources" ? "bg-gray-100" : ""
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                          openDropdown === "resources"
+                            ? "bg-gray-100 text-gray-900"
+                            : "hover:bg-gray-100 hover:text-gray-900"
                         }`}
                       >
-                        <span>Resources</span>
-                        <span className="text-[10px]">
+                        <span className="leading-none">Resources</span>
+                        <span className="text-[10px] leading-none">
                           {openDropdown === "resources" ? "▲" : "▼"}
                         </span>
                       </button>
                       {openDropdown === "resources" && (
-                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-xl backdrop-blur-2xl overflow-hidden animate-fade-in">
-                          <div className="px-5 py-4 space-y-1">
+                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                          <div className="py-3">
                             {["Guides", "Tutorials", "Documentation"].map(
                               (item) => (
                                 <button
                                   key={item}
                                   type="button"
-                                  className="w-full text-left px-2 py-2.5 text-[11px] tracking-[0.18em] uppercase text-gray-600 rounded-2xl hover:bg-gray-100 transition-colors"
+                                  className="w-full text-left px-4 py-2.5 text-[12px] font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-150"
                                 >
                                   {item}
                                 </button>
@@ -1126,6 +1179,413 @@ export default function App() {
           </nav>
         )}
 
+        {/* APP SHELL SIDEBAR (only when app view is active) */}
+        {!isSimulation && (
+          <>
+            {/* Left sidebar (main) */}
+            <aside className="fixed left-0 top-0 h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250]">
+              {/* Top: profile */}
+              <div className="flex flex-col items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setActiveView("today")}
+                  className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#25272d] border border-white/10 hover:border-blue-400/60 hover:bg-[#2b2e34] transition-all duration-200"
+                >
+                  <svg
+                    className="w-6 h-6 text-gray-200"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="8" r="3.2" />
+                    <path d="M5.5 19a6.5 6.5 0 0 1 13 0" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-16 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                      Profile
+                    </div>
+                  </div>
+                </button>
+
+                {/* Main nav */}
+                <nav className="flex flex-col items-center gap-3 mt-3">
+                  {/* Today */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("today")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "today"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="4" y="5" width="16" height="15" rx="3" />
+                      <path d="M9 3v4M15 3v4" />
+                      <path d="M7 11h10" />
+                      <circle cx="12" cy="15" r="1.4" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Today
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Calendar */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("calendar")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "calendar"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="4" y="5" width="16" height="15" rx="3" />
+                      <path d="M9 3v4M15 3v4M4 10h16" />
+                      <path d="M8 14h2M12 14h2M16 14h2M8 17h2M12 17h2M16 17h2" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Calendar
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Analytics */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("analytics")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "analytics"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 19h16" />
+                      <polyline points="5 15 10 10 14 14 19 8" />
+                      <circle cx="10" cy="10" r="0.9" />
+                      <circle cx="14" cy="14" r="0.9" />
+                      <circle cx="19" cy="8" r="0.9" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Analytics
+                      </div>
+                    </div>
+                  </button>
+                </nav>
+              </div>
+
+              {/* Bottom nav */}
+              <div className="flex flex-col items-center gap-3">
+                {/* Notifications */}
+                <button
+                  type="button"
+                  onClick={() => setActiveView("notifications")}
+                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                    activeView === "notifications"
+                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 16v-5a6 6 0 0 0-12 0v5" />
+                    <path d="M5 16h14" />
+                    <path d="M10 19a2 2 0 0 0 4 0" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                      Notifications
+                    </div>
+                  </div>
+                </button>
+
+                {/* Help */}
+                <button
+                  type="button"
+                  onClick={() => setActiveView("help")}
+                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                    activeView === "help"
+                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.75 9a2.25 2.25 0 0 1 4.5 0c0 1.5-2.25 1.5-2.25 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                      Help
+                    </div>
+                  </div>
+                </button>
+              </div>
+            </aside>
+
+            {/* Second sidebar: Today panel (only when Today is active) */}
+            {!isSimulation && activeView === "today" && (
+              <aside className="fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245]">
+                {/* Top: Start focus session */}
+                <div className="space-y-6">
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
+                  >
+                    Start Focus Session
+                  </button>
+
+                  {/* Lists section */}
+                  <div className="pt-4 border-t border-white/5 space-y-3">
+                    <div className="flex items-center justify-between group">
+                      <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
+                        Lists
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewListName("");
+                          setIsAddListModalOpen(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
+                        aria-label="Add List"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      {todayLists.map((list) => (
+                        <div
+                          key={list.id}
+                          className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-base">{list.icon}</span>
+                            <span className="truncate">{list.label}</span>
+                          </div>
+
+                          <div className="flex items-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenListMenuId((cur) =>
+                                  cur === list.id ? null : list.id,
+                                );
+                              }}
+                              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
+                              aria-label="List menu"
+                            >
+                              •••
+                            </button>
+                          </div>
+
+                          {openListMenuId === list.id && (
+                            <div
+                              ref={listMenuRef}
+                              className="absolute right-2 top-10 z-[260] w-44 rounded-xl bg-[#18191f] border border-white/10 shadow-xl overflow-hidden"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTodayLists((prev) =>
+                                    prev.filter((l) => l.id !== list.id),
+                                  );
+                                  setOpenListMenuId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
+                              >
+                                Delete List
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {isAddListModalOpen && (
+                    <div className="fixed inset-0 z-[600] bg-black/50 flex items-center justify-center px-6">
+                      <div className="w-full max-w-2xl rounded-2xl bg-[#18191f] border border-white/10 shadow-2xl p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-sm font-semibold text-gray-100">
+                            Add List
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                            }}
+                            className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
+                            aria-label="Close"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="grid md:grid-cols-[1fr_220px] gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                              List Name
+                            </label>
+                            <input
+                              autoFocus
+                              value={newListName}
+                              onChange={(e) => setNewListName(e.target.value)}
+                              placeholder="List Name"
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
+                            />
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                            <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                              Preview
+                            </p>
+                            <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
+                              <span className="mr-2">{DEFAULT_LIST_ICON}</span>
+                              {newListName ? newListName : "List Name"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                            }}
+                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!newListName.trim()}
+                            onClick={() => {
+                              const trimmed = newListName.trim();
+                              if (!trimmed) return;
+                              setTodayLists((prev) => [
+                                ...prev,
+                                {
+                                  id: `list-${Date.now()}`,
+                                  label: trimmed,
+                                  icon: DEFAULT_LIST_ICON,
+                                },
+                              ]);
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                              setOpenListMenuId(null);
+                            }}
+                            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bottom: Completed */}
+                <div className="border-t border-white/5 pt-3">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
+                  >
+                    <span className="tracking-[0.18em] uppercase">Completed</span>
+                    <span className="text-[11px] text-gray-500">Soon</span>
+                  </button>
+                </div>
+              </aside>
+            )}
+
+            {/* Content panel overlay */}
+            <section
+              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
+                !isSimulation && activeView === "today" ? "left-80" : "left-16"
+              }`}
+            >
+              <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-8 pointer-events-auto">
+                  <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                    {activeView === "today" && "Today View"}
+                    {activeView === "calendar" && "Calendar View"}
+                    {activeView === "analytics" && "Analytics View"}
+                    {activeView === "notifications" && "Notifications"}
+                    {activeView === "help" && "Help & Support"}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={handleGoHome}
+                    className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                  >
+                    Back to Hero
+                  </button>
+                </div>
+                <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
+                  <p className="text-sm md:text-base text-gray-500">
+                    {activeView === "today" && "Today View"}
+                    {activeView === "calendar" && "Calendar View"}
+                    {activeView === "analytics" && "Analytics View"}
+                    {activeView === "notifications" && "Notifications Center"}
+                    {activeView === "help" && "Help & Support"}
+                  </p>
+                </div>
+              </div>
+            </section>
+          </>
+        )}
+
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
         {isSimulation && (
           <section
@@ -1144,14 +1604,31 @@ export default function App() {
               {/* Left: Hero copy + feature sections (full width on mobile) */}
               <div className="space-y-16 w-full max-w-xl">
                 <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
-                  Discipline Operating System
+                  Productivity App
                 </p>
-                <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
-                  Other options are just a glorified Google Calendar
-                </h1>
-                <p className="text-base md:text-lg text-gray-600 leading-relaxed mt-4">
-                  Tunnel Vision times your tasks and gives you a focus integrity score so you can take accountability.
-                </p>
+                <div className="space-y-4 animate-fade-in">
+                  <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
+                    {heroVariant.lines.length === 1 ? (
+                      heroVariant.lines[0]
+                    ) : (
+                      <>
+                        <span className="block">{heroVariant.lines[0]}</span>
+                        <span className="block">{heroVariant.lines[1]}</span>
+                      </>
+                    )}
+                  </h1>
+                  <p className="text-base md:text-lg text-gray-700 leading-relaxed mt-1 max-w-xl">
+                    Tunnel Vision{" "}
+                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                      times your tasks
+                    </span>{" "}
+                    and{" "}
+                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                      measures your focus
+                    </span>{" "}
+                    so you can take accountability.
+                  </p>
+                </div>
                 <div className="flex flex-wrap gap-3 pt-2">
                   <button
                     type="button"
@@ -1251,8 +1728,12 @@ export default function App() {
                               <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">{demoInputText}</span>
-                                    <span className="demo-cursor-blink ml-0.5 align-middle">|</span>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
                                   </>
                                 ) : (
                                   "Add task..."
@@ -1303,7 +1784,8 @@ export default function App() {
                       Step 1
                     </h2>
                     <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Brain dump tasks like emails, meetings, homework, or chores. Start a timer and see if you can PR.
+                      Brain dump tasks like emails, meetings, homework, or
+                      chores. Start a timer and see if you can PR.
                     </p>
                     {/* Mobile: static Step 1 preview */}
                     <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
@@ -1321,7 +1803,9 @@ export default function App() {
                       <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4 space-y-4">
                         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
                           <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
-                            <span className="font-mono text-lg text-gray-900">25:00</span>
+                            <span className="font-mono text-lg text-gray-900">
+                              25:00
+                            </span>
                           </div>
                           <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex gap-2 p-2 border-b border-gray-100">
@@ -1333,11 +1817,17 @@ export default function App() {
                               </div>
                             </div>
                             <div className="divide-y divide-gray-100">
-                              {["calculus homework", "take bins down", "Read Ch20 Of Mice and Men"].map((task, index) => (
+                              {[
+                                "calculus homework",
+                                "take bins down",
+                                "Read Ch20 Of Mice and Men",
+                              ].map((task, index) => (
                                 <div
                                   key={task}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
-                                    index === 0 ? "bg-blue-50/80 text-gray-900" : "text-gray-700"
+                                    index === 0
+                                      ? "bg-blue-50/80 text-gray-900"
+                                      : "text-gray-700"
                                   }`}
                                 >
                                   <span className="tracking-tight">{task}</span>
@@ -1363,7 +1853,8 @@ export default function App() {
                       Step 2
                     </h2>
                     <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
-                      Use Tunnel Vision's graphs to view your productivity over weeks and set goals for yourself in the future.
+                      Use Tunnel Vision's graphs to view your productivity over
+                      weeks and set goals for yourself in the future.
                     </p>
                     {/* Mobile: static Step 2 preview (focus mode) */}
                     <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
@@ -1395,17 +1886,25 @@ export default function App() {
                             </div>
                           </div>
                           <div className="divide-y divide-gray-100 rounded-2xl bg-white border border-gray-200 overflow-hidden">
-                            {["calculus homework", "take bins down", "Read Ch20 Of Mice and Men"].map((task, index) => (
+                            {[
+                              "calculus homework",
+                              "take bins down",
+                              "Read Ch20 Of Mice and Men",
+                            ].map((task, index) => (
                               <div
                                 key={task}
                                 className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
-                                  index === 0 ? "bg-blue-50 text-gray-900" : "text-gray-700"
+                                  index === 0
+                                    ? "bg-blue-50 text-gray-900"
+                                    : "text-gray-700"
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5">
                                   <span
                                     className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
-                                      index === 0 ? "bg-blue-500" : "bg-gray-400"
+                                      index === 0
+                                        ? "bg-blue-500"
+                                        : "bg-gray-400"
                                     }`}
                                   />
                                   <span className="tracking-tight">{task}</span>
@@ -1425,18 +1924,18 @@ export default function App() {
 
               {/* Right: Sticky app preview container (desktop only) */}
               <div className="hidden lg:flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
-  <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
-    <div className="flex items-center justify-between mb-4 px-1">
-      <div className="flex gap-1.5">
-        <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
-        <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
-        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
-      </div>
-      <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
-        Tunnel Vision · Demo
-      </span>
-      <span className="w-8" />
-    </div>
+                <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
+                  <div className="flex items-center justify-between mb-4 px-1">
+                    <div className="flex gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
+                    </div>
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                      Tunnel Vision · Demo
+                    </span>
+                    <span className="w-8" />
+                  </div>
 
                   {/* Scrollable simulated app */}
                   <div
@@ -1499,8 +1998,12 @@ export default function App() {
                               <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">{demoInputText}</span>
-                                    <span className="demo-cursor-blink ml-0.5 align-middle">|</span>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
                                   </>
                                 ) : (
                                   "Add task..."
@@ -1564,8 +2067,12 @@ export default function App() {
                               <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[12px] text-gray-500 font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">{demoInputText}</span>
-                                    <span className="demo-cursor-blink ml-0.5 align-middle">|</span>
+                                    <span className="text-gray-700">
+                                      {demoInputText}
+                                    </span>
+                                    <span className="demo-cursor-blink ml-0.5 align-middle">
+                                      |
+                                    </span>
                                   </>
                                 ) : (
                                   "Add task..."
@@ -1593,7 +2100,9 @@ export default function App() {
                                           : "bg-gray-400"
                                       }`}
                                     />
-                                    <span className="tracking-tight">{task}</span>
+                                    <span className="tracking-tight">
+                                      {task}
+                                    </span>
                                   </div>
                                   <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
                                 </div>
@@ -1810,7 +2319,9 @@ export default function App() {
               >
                 {!showReflection ? (
                   <>
-                    <div className={`text-7xl font-mono tracking-tighter text-gray-900`}>
+                    <div
+                      className={`text-7xl font-mono tracking-tighter text-gray-900`}
+                    >
                       {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                         2,
                         "0",
@@ -1909,11 +2420,85 @@ export default function App() {
               <div
                 className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || showReflection ? "opacity-40" : "opacity-100"}`}
               >
-                {isTaskPageOpen ? (
-                  <>
-                    <div className="flex items-center justify-between gap-3 px-2">
-                      <div className="text-sm font-bold text-gray-100 truncate">
-                        {selectedTaskGraph || "List"}
+                <div className="flex gap-3">
+                  <input
+                    disabled={isSimulation}
+                    value={taskInput}
+                    onChange={(e) => setTaskInput(e.target.value)}
+                    placeholder={
+                      isSimulation ? "Simulating input..." : "Next objective..."
+                    }
+                    className="flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all placeholder-gray-400"
+                  />
+                  <button
+                    disabled={isSimulation}
+                    onClick={() => {
+                      if (!taskInput) return;
+                      const id = Date.now();
+                      const newTask: Task = {
+                        id,
+                        text: taskInput,
+                        removing: false,
+                        createdAt: Date.now(),
+                        workMode: "inside",
+                      };
+                      setTasks((prev) => [...prev, newTask]);
+                      setTaskInput("");
+                      setPendingWorkModeTaskId(id);
+                      setIsWorkModeModalOpen(true);
+                    }}
+                    className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
+                  >
+                    ADD
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {tasks.map((task, index) => {
+                    const isActive = index === 0;
+                    const isLocked = index > 0;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                          task.removing
+                            ? "opacity-0 translate-x-12"
+                            : "opacity-100"
+                        } ${
+                          running && isActive
+                            ? "bg-blue-50/80 border-blue-300"
+                            : ""
+                        } ${isLocked ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-center gap-5">
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                running && isActive
+                                  ? "bg-blue-500"
+                                  : "bg-gray-400"
+                              }`}
+                            />
+                            <span className="text-base text-gray-800">
+                              {task.text}
+                            </span>
+                          </div>
+                          {isLocked && (
+                            <span className="pl-6 text-[11px] text-gray-400">
+                              Complete the current task first
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          disabled={isSimulation || !isActive}
+                          onClick={() => completeTask(task.id)}
+                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                          title={
+                            isLocked
+                              ? "Complete the current task first"
+                              : undefined
+                          }
+                        />
                       </div>
                       <button
                         type="button"
@@ -2353,7 +2938,8 @@ export default function App() {
                   How will you work on this task?
                 </h2>
                 <p className="mt-2 text-sm text-gray-500">
-                  Choose where you&apos;ll focus so Tunnel Vision can score your integrity fairly.
+                  Choose where you&apos;ll focus so Tunnel Vision can score your
+                  integrity fairly.
                 </p>
               </div>
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
@@ -2366,7 +2952,9 @@ export default function App() {
                     }
                     setTasks((prev) =>
                       prev.map((t) =>
-                        t.id === pendingWorkModeTaskId ? { ...t, workMode: "inside" } : t,
+                        t.id === pendingWorkModeTaskId
+                          ? { ...t, workMode: "inside" }
+                          : t,
                       ),
                     );
                     setPendingWorkModeTaskId(null);
@@ -2377,7 +2965,9 @@ export default function App() {
                   <span className="text-[11px] uppercase tracking-[0.22em] opacity-70">
                     Recommended
                   </span>
-                  <span className="text-sm font-semibold">Work inside Tunnel Vision</span>
+                  <span className="text-sm font-semibold">
+                    Work inside Tunnel Vision
+                  </span>
                   <span className="text-[11px] text-blue-100/90">
                     Stay in this tab. Leaving will lower focus integrity.
                   </span>
@@ -2391,7 +2981,9 @@ export default function App() {
                     }
                     setTasks((prev) =>
                       prev.map((t) =>
-                        t.id === pendingWorkModeTaskId ? { ...t, workMode: "external" } : t,
+                        t.id === pendingWorkModeTaskId
+                          ? { ...t, workMode: "external" }
+                          : t,
                       ),
                     );
                     setPendingWorkModeTaskId(null);
@@ -2402,9 +2994,12 @@ export default function App() {
                   <span className="text-[11px] uppercase tracking-[0.22em] text-gray-400">
                     Flexible
                   </span>
-                  <span className="text-sm font-semibold">Work in another tab/app</span>
+                  <span className="text-sm font-semibold">
+                    Work in another tab/app
+                  </span>
                   <span className="text-[11px] text-gray-500">
-                    You can switch tabs freely. Integrity won&apos;t be penalized.
+                    You can switch tabs freely. Integrity won&apos;t be
+                    penalized.
                   </span>
                 </button>
               </div>
