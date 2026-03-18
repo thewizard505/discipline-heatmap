@@ -164,6 +164,9 @@ export default function App() {
     "What grade would you give yourself?",
   ];
 
+  type AppView = "today" | "calendar" | "analytics" | "notifications" | "help";
+  const [activeView, setActiveView] = useState<AppView>("today");
+
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
     [],
@@ -1146,6 +1149,122 @@ export default function App() {
               </div>
             </div>
           </nav>
+        )}
+
+        {/* APP SHELL SIDEBAR (only when app view is active) */}
+        {!isSimulation && (
+          <>
+            {/* Left sidebar */}
+            <aside className="fixed left-0 top-0 h-screen w-16 bg-gray-100 border-r border-gray-200 flex flex-col items-center justify-between py-4 z-[250]">
+              {/* Top: profile */}
+              <div className="flex flex-col items-center gap-6">
+                <button
+                  type="button"
+                  onClick={() => setActiveView("today")}
+                  className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-white shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+                >
+                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
+                    TV
+                  </div>
+                  <div className="pointer-events-none absolute left-16 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
+                      Profile
+                    </div>
+                  </div>
+                </button>
+
+                {/* Main nav */}
+                <nav className="flex flex-col items-center gap-4 mt-6">
+                  {[
+                    { id: "today" as AppView, label: "Today", icon: "📅" },
+                    { id: "calendar" as AppView, label: "Calendar", icon: "🗓️" },
+                    { id: "analytics" as AppView, label: "Analytics", icon: "📈" },
+                  ].map((item) => {
+                    const isActive = activeView === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => setActiveView(item.id)}
+                        className={`group relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 ${
+                          isActive
+                            ? "bg-blue-50 text-blue-600 shadow-sm"
+                            : "text-gray-500 hover:bg-gray-200/60 hover:text-gray-900"
+                        }`}
+                      >
+                        <span className="text-lg">{item.icon}</span>
+                        <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                          <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
+                            {item.label}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+
+              {/* Bottom nav */}
+              <div className="flex flex-col items-center gap-4">
+                {[
+                  { id: "notifications" as AppView, label: "Notifications", icon: "🔔" },
+                  { id: "help" as AppView, label: "Help", icon: "?" },
+                ].map((item) => {
+                  const isActive = activeView === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveView(item.id)}
+                      className={`group relative flex items-center justify-center w-9 h-9 rounded-2xl transition-all duration-200 ${
+                        isActive
+                          ? "bg-blue-50 text-blue-600 shadow-sm"
+                          : "text-gray-500 hover:bg-gray-200/60 hover:text-gray-900"
+                      }`}
+                    >
+                      <span className="text-base font-semibold">{item.icon}</span>
+                      <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                        <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
+                          {item.label}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </aside>
+
+            {/* Content panel overlay */}
+            <section className="fixed left-16 right-0 top-0 bottom-0 z-[240] pointer-events-none">
+              <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
+                <div className="flex items-center justify-between mb-8 pointer-events-auto">
+                  <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                    {activeView === "today" && "Today View"}
+                    {activeView === "calendar" && "Calendar View"}
+                    {activeView === "analytics" && "Analytics View"}
+                    {activeView === "notifications" && "Notifications"}
+                    {activeView === "help" && "Help & Support"}
+                  </h1>
+                  <button
+                    type="button"
+                    onClick={handleGoHome}
+                    className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                  >
+                    Back to Hero
+                  </button>
+                </div>
+                <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
+                  <p className="text-sm md:text-base text-gray-500">
+                    {activeView === "today" && "Today View"}
+                    {activeView === "calendar" && "Calendar View"}
+                    {activeView === "analytics" && "Analytics View"}
+                    {activeView === "notifications" && "Notifications Center"}
+                    {activeView === "help" && "Help & Support"}
+                  </p>
+                </div>
+              </div>
+            </section>
+          </>
         )}
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
