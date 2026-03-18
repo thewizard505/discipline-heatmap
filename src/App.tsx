@@ -1154,7 +1154,7 @@ export default function App() {
         {/* APP SHELL SIDEBAR (only when app view is active) */}
         {!isSimulation && (
           <>
-            {/* Left sidebar */}
+            {/* Left sidebar (main) */}
             <aside className="fixed left-0 top-0 h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250]">
               {/* Top: profile */}
               <div className="flex flex-col items-center gap-4">
@@ -1343,8 +1343,61 @@ export default function App() {
               </div>
             </aside>
 
+            {/* Second sidebar: Today panel (only when Today is active) */}
+            {!isSimulation && activeView === "today" && (
+              <aside className="fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245]">
+                {/* Top: Start focus session */}
+                <div className="space-y-6">
+                  <button
+                    type="button"
+                    className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
+                  >
+                    Start Focus Session
+                  </button>
+
+                  {/* Lists section */}
+                  <div className="pt-4 border-t border-white/5 space-y-3">
+                    <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
+                      Lists
+                    </p>
+                    <div className="space-y-1">
+                      {["Work", "Shopping", "Study", "Exercise"].map((label) => (
+                        <div
+                          key={label}
+                          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150 cursor-default"
+                        >
+                          <span className="text-base">
+                            {label === "Work" && "💼"}
+                            {label === "Shopping" && "🧾"}
+                            {label === "Study" && "📚"}
+                            {label === "Exercise" && "🏃‍♂️"}
+                          </span>
+                          <span className="truncate">{label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Bottom: Completed */}
+                <div className="border-t border-white/5 pt-3">
+                  <button
+                    type="button"
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
+                  >
+                    <span className="tracking-[0.18em] uppercase">Completed</span>
+                    <span className="text-[11px] text-gray-500">Soon</span>
+                  </button>
+                </div>
+              </aside>
+            )}
+
             {/* Content panel overlay */}
-            <section className="fixed left-16 right-0 top-0 bottom-0 z-[240] pointer-events-none">
+            <section
+              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
+                !isSimulation && activeView === "today" ? "left-80" : "left-16"
+              }`}
+            >
               <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
                   <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
