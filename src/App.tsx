@@ -1155,82 +1155,191 @@ export default function App() {
         {!isSimulation && (
           <>
             {/* Left sidebar */}
-            <aside className="fixed left-0 top-0 h-screen w-16 bg-gray-100 border-r border-gray-200 flex flex-col items-center justify-between py-4 z-[250]">
+            <aside className="fixed left-0 top-0 h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250]">
               {/* Top: profile */}
-              <div className="flex flex-col items-center gap-6">
+              <div className="flex flex-col items-center gap-4">
                 <button
                   type="button"
                   onClick={() => setActiveView("today")}
-                  className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-white shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+                  className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#25272d] border border-white/10 hover:border-blue-400/60 hover:bg-[#2b2e34] transition-all duration-200"
                 >
-                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-indigo-500 flex items-center justify-center text-white text-xs font-semibold">
-                    TV
-                  </div>
+                  <svg
+                    className="w-6 h-6 text-gray-200"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="8" r="3.2" />
+                    <path d="M5.5 19a6.5 6.5 0 0 1 13 0" />
+                  </svg>
                   <div className="pointer-events-none absolute left-16 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
-                    <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
                       Profile
                     </div>
                   </div>
                 </button>
 
                 {/* Main nav */}
-                <nav className="flex flex-col items-center gap-4 mt-6">
-                  {[
-                    { id: "today" as AppView, label: "Today", icon: "📅" },
-                    { id: "calendar" as AppView, label: "Calendar", icon: "🗓️" },
-                    { id: "analytics" as AppView, label: "Analytics", icon: "📈" },
-                  ].map((item) => {
-                    const isActive = activeView === item.id;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveView(item.id)}
-                        className={`group relative flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200 ${
-                          isActive
-                            ? "bg-blue-50 text-blue-600 shadow-sm"
-                            : "text-gray-500 hover:bg-gray-200/60 hover:text-gray-900"
-                        }`}
-                      >
-                        <span className="text-lg">{item.icon}</span>
-                        <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
-                          <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
-                            {item.label}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
+                <nav className="flex flex-col items-center gap-3 mt-3">
+                  {/* Today */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("today")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "today"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="4" y="5" width="16" height="15" rx="3" />
+                      <path d="M9 3v4M15 3v4" />
+                      <path d="M7 11h10" />
+                      <circle cx="12" cy="15" r="1.4" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Today
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Calendar */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("calendar")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "calendar"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <rect x="4" y="5" width="16" height="15" rx="3" />
+                      <path d="M9 3v4M15 3v4M4 10h16" />
+                      <path d="M8 14h2M12 14h2M16 14h2M8 17h2M12 17h2M16 17h2" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Calendar
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Analytics */}
+                  <button
+                    type="button"
+                    onClick={() => setActiveView("analytics")}
+                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                      activeView === "analytics"
+                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                    }`}
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.7"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M4 19h16" />
+                      <polyline points="5 15 10 10 14 14 19 8" />
+                      <circle cx="10" cy="10" r="0.9" />
+                      <circle cx="14" cy="14" r="0.9" />
+                      <circle cx="19" cy="8" r="0.9" />
+                    </svg>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Analytics
+                      </div>
+                    </div>
+                  </button>
                 </nav>
               </div>
 
               {/* Bottom nav */}
-              <div className="flex flex-col items-center gap-4">
-                {[
-                  { id: "notifications" as AppView, label: "Notifications", icon: "🔔" },
-                  { id: "help" as AppView, label: "Help", icon: "?" },
-                ].map((item) => {
-                  const isActive = activeView === item.id;
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setActiveView(item.id)}
-                      className={`group relative flex items-center justify-center w-9 h-9 rounded-2xl transition-all duration-200 ${
-                        isActive
-                          ? "bg-blue-50 text-blue-600 shadow-sm"
-                          : "text-gray-500 hover:bg-gray-200/60 hover:text-gray-900"
-                      }`}
-                    >
-                      <span className="text-base font-semibold">{item.icon}</span>
-                      <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
-                        <div className="rounded-xl bg-white shadow-lg border border-gray-200 px-3 py-1 text-xs text-gray-800">
-                          {item.label}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="flex flex-col items-center gap-3">
+                {/* Notifications */}
+                <button
+                  type="button"
+                  onClick={() => setActiveView("notifications")}
+                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                    activeView === "notifications"
+                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 16v-5a6 6 0 0 0-12 0v5" />
+                    <path d="M5 16h14" />
+                    <path d="M10 19a2 2 0 0 0 4 0" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                      Notifications
+                    </div>
+                  </div>
+                </button>
+
+                {/* Help */}
+                <button
+                  type="button"
+                  onClick={() => setActiveView("help")}
+                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                    activeView === "help"
+                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
+                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.75 9a2.25 2.25 0 0 1 4.5 0c0 1.5-2.25 1.5-2.25 3" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
+                    <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                      Help
+                    </div>
+                  </div>
+                </button>
               </div>
             </aside>
 
