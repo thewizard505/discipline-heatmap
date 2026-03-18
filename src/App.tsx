@@ -167,6 +167,32 @@ export default function App() {
   type AppView = "today" | "calendar" | "analytics" | "notifications" | "help";
   const [activeView, setActiveView] = useState<AppView>("today");
 
+  type TodayList = { id: string; label: string; icon: string };
+  const DEFAULT_LIST_ICON = "≡";
+  const [todayLists, setTodayLists] = useState<TodayList[]>([
+    { id: "work", label: "Work", icon: "💼" },
+    { id: "shopping", label: "Shopping", icon: "🧾" },
+    { id: "study", label: "Study", icon: "📚" },
+    { id: "exercise", label: "Exercise", icon: "🏃‍♂️" },
+  ]);
+  const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
+  const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
+  const [newListName, setNewListName] = useState("");
+  const listMenuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!openListMenuId) return;
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!target) return;
+      if (listMenuRef.current && !listMenuRef.current.contains(target)) {
+        setOpenListMenuId(null);
+      }
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openListMenuId]);
+
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
     [],
@@ -1357,26 +1383,155 @@ export default function App() {
 
                   {/* Lists section */}
                   <div className="pt-4 border-t border-white/5 space-y-3">
-                    <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
-                      Lists
-                    </p>
+                    <div className="flex items-center justify-between group">
+                      <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
+                        Lists
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewListName("");
+                          setIsAddListModalOpen(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
+                        aria-label="Add List"
+                      >
+                        +
+                      </button>
+                    </div>
+
                     <div className="space-y-1">
-                      {["Work", "Shopping", "Study", "Exercise"].map((label) => (
+                      {todayLists.map((list) => (
                         <div
-                          key={label}
-                          className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150 cursor-default"
+                          key={list.id}
+                          className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
                         >
-                          <span className="text-base">
-                            {label === "Work" && "💼"}
-                            {label === "Shopping" && "🧾"}
-                            {label === "Study" && "📚"}
-                            {label === "Exercise" && "🏃‍♂️"}
-                          </span>
-                          <span className="truncate">{label}</span>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-base">{list.icon}</span>
+                            <span className="truncate">{list.label}</span>
+                          </div>
+
+                          <div className="flex items-center">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenListMenuId((cur) =>
+                                  cur === list.id ? null : list.id,
+                                );
+                              }}
+                              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
+                              aria-label="List menu"
+                            >
+                              •••
+                            </button>
+                          </div>
+
+                          {openListMenuId === list.id && (
+                            <div
+                              ref={listMenuRef}
+                              className="absolute right-2 top-10 z-[260] w-44 rounded-xl bg-[#18191f] border border-white/10 shadow-xl overflow-hidden"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTodayLists((prev) =>
+                                    prev.filter((l) => l.id !== list.id),
+                                  );
+                                  setOpenListMenuId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
+                              >
+                                Delete List
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
                   </div>
+
+                  {isAddListModalOpen && (
+                    <div className="fixed inset-0 z-[600] bg-black/50 flex items-center justify-center px-6">
+                      <div className="w-full max-w-2xl rounded-2xl bg-[#18191f] border border-white/10 shadow-2xl p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <p className="text-sm font-semibold text-gray-100">
+                            Add List
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                            }}
+                            className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
+                            aria-label="Close"
+                          >
+                            ✕
+                          </button>
+                        </div>
+
+                        <div className="grid md:grid-cols-[1fr_220px] gap-4">
+                          <div className="space-y-2">
+                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                              List Name
+                            </label>
+                            <input
+                              autoFocus
+                              value={newListName}
+                              onChange={(e) => setNewListName(e.target.value)}
+                              placeholder="List Name"
+                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
+                            />
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                            <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                              Preview
+                            </p>
+                            <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
+                              <span className="mr-2">{DEFAULT_LIST_ICON}</span>
+                              {newListName ? newListName : "List Name"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-3 mt-4">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                            }}
+                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
+                          >
+                            Cancel
+                          </button>
+                          <button
+                            type="button"
+                            disabled={!newListName.trim()}
+                            onClick={() => {
+                              const trimmed = newListName.trim();
+                              if (!trimmed) return;
+                              setTodayLists((prev) => [
+                                ...prev,
+                                {
+                                  id: `list-${Date.now()}`,
+                                  label: trimmed,
+                                  icon: DEFAULT_LIST_ICON,
+                                },
+                              ]);
+                              setIsAddListModalOpen(false);
+                              setNewListName("");
+                              setOpenListMenuId(null);
+                            }}
+                            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Bottom: Completed */}
