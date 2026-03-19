@@ -1776,6 +1776,7 @@ export default function App() {
             )}
 
             {/* Content panel overlay */}
+            {!isFocusSessionActive && (
             <section
               className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
                 !isSimulation && activeView === "today" && !isTodayPanelCollapsed
@@ -1958,6 +1959,7 @@ export default function App() {
                 )}
               </div>
             </section>
+            )}
           </>
         )}
 
@@ -2570,9 +2572,11 @@ export default function App() {
           </section>
         )}
 
-        {!isSimulation && (
+        {!isSimulation && isFocusSessionActive && (
           <div
-            className="flex flex-col items-center gap-10 relative z-20"
+            className={`flex flex-col items-center gap-10 relative z-20 ${
+              activeView === "today" && !isTodayPanelCollapsed ? "ml-80" : "ml-16"
+            }`}
             style={{
               paddingTop: "5rem",
               transform: "none",
