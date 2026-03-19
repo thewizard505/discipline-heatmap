@@ -1489,7 +1489,7 @@ export default function App() {
 
         {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
         {!isSimulation && !isFocusSessionActive && (
-          <div className="min-h-screen flex w-full bg-black text-white">
+          <div className="min-h-screen flex w-full bg-black text-white pl-16 overflow-x-hidden">
             {/* Left sidebar (main) */}
             <aside className="h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250] shrink-0">
               {/* Top: profile */}
@@ -1926,10 +1926,10 @@ export default function App() {
               }`}
             >
               <div
-                className={`w-full px-6 h-full flex flex-col ${
+                className={`w-full h-full flex flex-col ${
                   activeView === "today" && selectedListId && todayMainMode === "tasks"
-                    ? "py-6"
-                    : "py-16"
+                    ? "px-0 py-0"
+                    : "px-6 py-16"
                 }`}
               >
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
@@ -2084,52 +2084,32 @@ export default function App() {
                     </div>
                   </div>
                 ) : activeView === "today" && selectedListId ? (
-                  <div className="w-full rounded-3xl bg-zinc-950/70 border border-zinc-800/70 shadow-sm h-full overflow-hidden">
+                  <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm overflow-hidden">
                     <div className="grid grid-cols-[70%_30%] h-full">
                       {/* LEFT PANEL: tasks */}
                       <div className="p-5 md:p-7 flex flex-col h-full">
                         {/* Header + actions */}
                         <div className="flex items-start justify-between gap-4 mb-4">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span className="text-lg">{selectedList?.icon}</span>
-                          <h2 className="text-lg font-semibold text-gray-100 truncate">
-                            {selectedList?.label}
-                          </h2>
-                          <button
-                            type="button"
-                            onClick={handleToggleTodaySidebar}
-                            disabled={isTodayPanelAnimatingOut}
-                            className="hidden sm:inline-flex items-center justify-center px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold tracking-[0.18em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
-                            aria-label="Toggle Today sidebar"
-                          >
-                            {isTodayPanelCollapsed ? "Expand" : "Collapse"}
-                          </button>
-                        </div>
-                          <div className="flex gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
                             <button
                               type="button"
-                              onClick={handleStartFocusSession}
-                              disabled={tasks.filter((t) => !t.removing).length === 0}
-                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/30 to-indigo-500/30 border border-blue-400/20 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
+                              onClick={handleToggleTodaySidebar}
+                              disabled={isTodayPanelAnimatingOut}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-[11px] font-semibold tracking-[0.12em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
+                              aria-label="Collapse Today sidebar"
+                              title="Collapse Today sidebar"
                             >
-                              Start
+                              {isTodayPanelCollapsed ? ">" : "<"}
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setTasks([]);
-                                setSelectedTaskId(null);
-                              }}
-                              disabled={tasks.filter((t) => !t.removing).length === 0}
-                              className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
-                            >
-                              Clear
-                            </button>
+                            <span className="text-lg">{selectedList?.icon}</span>
+                            <h2 className="text-lg font-semibold text-gray-100 truncate">
+                              {selectedList?.label}
+                            </h2>
                           </div>
                         </div>
 
                         {/* Task input bar */}
-                        <div className="bg-zinc-800/80 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+                        <div className="bg-zinc-800 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
                           <input
                             value={taskInput}
                             onChange={(e) => setTaskInput(e.target.value)}
@@ -2223,7 +2203,7 @@ export default function App() {
                                       className={`group rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
                                         isSelected
                                           ? "border-blue-500/30 bg-blue-500/10"
-                                          : "border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/70"
+                                          : "border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60"
                                       } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
                                     >
                                       <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -2242,7 +2222,7 @@ export default function App() {
                                             lastDragOverIdRef.current = null;
                                             setDraggingTaskId(null);
                                           }}
-                                          className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/30 text-zinc-400 opacity-50 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
+                                          className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/20 text-zinc-400 opacity-60 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
                                           aria-label="Drag to reorder"
                                         >
                                           ≡
@@ -2276,14 +2256,14 @@ export default function App() {
                       </div>
 
                       {/* RIGHT PANEL: task details */}
-                      <div className="border-l border-zinc-800/70 bg-zinc-950/20 p-5 md:p-7 flex flex-col h-full">
+                      <div className="border-l border-zinc-800/70 bg-zinc-900 p-5 md:p-7 flex flex-col h-full">
                         <div
                           className={`transition-all duration-200 ${
                             selectedTask ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
                           } ${selectedTask ? "" : "pointer-events-none"}`}
                         >
                           {selectedTask ? (
-                            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4 md:p-5">
+                            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 md:p-5">
                               <div className="mb-4">
                                 <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
                                   Task
