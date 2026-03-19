@@ -182,6 +182,27 @@ export default function App() {
   const [newListName, setNewListName] = useState("");
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
+  const [taskDraft, setTaskDraft] = useState("");
+
+  const selectedList = useMemo(
+    () => todayLists.find((l) => l.id === selectedListId) || null,
+    [todayLists, selectedListId],
+  );
+
+  useEffect(() => {
+    if (!todayLists.length) {
+      setSelectedListId(null);
+      return;
+    }
+
+    if (selectedListId && todayLists.some((l) => l.id === selectedListId))
+      return;
+
+    setSelectedListId(todayLists[0].id);
+  }, [todayLists, selectedListId]);
+
   useEffect(() => {
     if (!openListMenuId) return;
     const onDown = (e: MouseEvent) => {
@@ -1372,7 +1393,7 @@ export default function App() {
             </aside>
 
             {/* Second sidebar: Today panel (only when Today is active) */}
-            {!isSimulation && activeView === "today" && (
+            {!isSimulation && activeView === "today" && !isTodayPanelCollapsed && (
               <aside className="fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245]">
                 {/* Top: Start focus session */}
                 <div className="space-y-6">
@@ -1406,7 +1427,20 @@ export default function App() {
                       {todayLists.map((list) => (
                         <div
                           key={list.id}
-                          className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => setSelectedListId(list.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              setSelectedListId(list.id);
+                            }
+                          }}
+                          className={`group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150 cursor-pointer ${
+                            selectedListId === list.id
+                              ? "bg-blue-500/10 border border-blue-400/20"
+                              : "border border-transparent"
+                          }`}
                         >
                           <div className="flex items-center gap-3 min-w-0">
                             <span className="text-base">{list.icon}</span>
@@ -1513,15 +1547,17 @@ export default function App() {
                             disabled={!newListName.trim()}
                             onClick={() => {
                               const trimmed = newListName.trim();
+                              const id = `list-${Date.now()}`;
                               if (!trimmed) return;
                               setTodayLists((prev) => [
                                 ...prev,
                                 {
-                                  id: `list-${Date.now()}`,
+                                  id,
                                   label: trimmed,
                                   icon: DEFAULT_LIST_ICON,
                                 },
                               ]);
+                              setSelectedListId(id);
                               setIsAddListModalOpen(false);
                               setNewListName("");
                               setOpenListMenuId(null);
@@ -1552,35 +1588,68 @@ export default function App() {
             {/* Content panel overlay */}
             <section
               className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
-                !isSimulation && activeView === "today" ? "left-80" : "left-16"
+                !isSimulation && activeView === "today" && !isTodayPanelCollapsed ? "left-80" : "left-16"
               }`}
             >
               <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
-                  <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                    {activeView === "today" && "Today View"}
-                    {activeView === "calendar" && "Calendar View"}
-                    {activeView === "analytics" && "Analytics View"}
-                    {activeView === "notifications" && "Notifications"}
-                    {activeView === "help" && "Help & Support"}
-                  </h1>
-                  <button
-                    type="button"
-                    onClick={handleGoHome}
-                    className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
-                  >
-                    Back to Hero
-                  </button>
+                  {activeView === "today" ? (
+                    <>
+                      <h1 className="text-xl md:text-2xl font-semibold text-gray-100">
+                        {selectedList?.label ?? "Today"}
+                      </h1>
+                      <button
+                        type="button"
+                        onClick={() => setIsTodayPanelCollapsed((v) => !v)}
+                        className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#1f2125] border border-white/10 text-gray-200 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                      >
+                        {isTodayPanelCollapsed ? "Expand" : "Collapse"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                        {activeView === "calendar" && "Calendar View"}
+                        {activeView === "analytics" && "Analytics View"}
+                        {activeView === "notifications" && "Notifications"}
+                        {activeView === "help" && "Help & Support"}
+                      </h1>
+                      <button
+                        type="button"
+                        onClick={handleGoHome}
+                        className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                      >
+                        Back to Hero
+                      </button>
+                    </>
+                  )}
                 </div>
-                <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
-                  <p className="text-sm md:text-base text-gray-500">
-                    {activeView === "today" && "Today View"}
-                    {activeView === "calendar" && "Calendar View"}
-                    {activeView === "analytics" && "Analytics View"}
-                    {activeView === "notifications" && "Notifications Center"}
-                    {activeView === "help" && "Help & Support"}
-                  </p>
-                </div>
+                {activeView === "today" ? (
+                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                    <div className="p-6 md:p-8">
+                      <input
+                        value={taskDraft}
+                        onChange={(e) => setTaskDraft(e.target.value)}
+                        placeholder="Add task"
+                        className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-100 outline-none placeholder:text-gray-400 focus:border-blue-500/40 transition-all"
+                      />
+                      <div className="mt-6 flex items-center justify-center py-10">
+                        <div className="text-center">
+                          <div className="text-sm text-gray-400">No tasks</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
+                    <p className="text-sm md:text-base text-gray-500">
+                      {activeView === "calendar" && "Calendar View"}
+                      {activeView === "analytics" && "Analytics View"}
+                      {activeView === "notifications" && "Notifications Center"}
+                      {activeView === "help" && "Help & Support"}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           </>
