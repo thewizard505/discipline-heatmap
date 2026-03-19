@@ -148,6 +148,13 @@ export default function App() {
   const getCurrentMonthName = () =>
     new Date().toLocaleString("default", { month: "long" });
 
+  const formatFocusSeconds = (s: number) => {
+    const clamped = Math.max(0, Math.floor(s));
+    const mm = Math.floor(clamped / 60);
+    const ss = clamped % 60;
+    return `${mm.toString().padStart(2, "0")}:${ss.toString().padStart(2, "0")}`;
+  };
+
   /* ------------------- STATIC CONTENT ------------------- */
   const greetings = [
     "What’s on your list today?",
@@ -166,6 +173,16 @@ export default function App() {
 
   type AppView = "today" | "calendar" | "analytics" | "notifications" | "help";
   const [activeView, setActiveView] = useState<AppView>("today");
+
+  /* --- Focus Session Mode STATE --- */
+  const FOCUS_SESSION_DURATION_SECONDS = 25 * 60;
+  const [isFocusSessionActive, setIsFocusSessionActive] = useState(false);
+  const [isFocusSidebarLimited, setIsFocusSidebarLimited] = useState(false);
+  const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
+  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] = useState(false);
+  const [focusSeconds, setFocusSeconds] = useState(
+    FOCUS_SESSION_DURATION_SECONDS,
+  );
 
   type TodayList = { id: string; label: string; icon: string };
   const DEFAULT_LIST_ICON = "≡";
@@ -304,6 +321,14 @@ export default function App() {
     () => greetings[Math.floor(Math.random() * greetings.length)],
     [],
   );
+
+  useEffect(() => {
+    if (!isFocusSessionActive) return;
+    const id = window.setInterval(() => {
+      setFocusSeconds((s) => (s > 0 ? s - 1 : 0));
+    }, 1000);
+    return () => window.clearInterval(id);
+  }, [isFocusSessionActive]);
 
   const heroVariant = useMemo(() => {
     const variants = [
@@ -538,6 +563,47 @@ export default function App() {
       setReflectionText("");
       window.scrollTo({ top: 0, behavior: "instant" });
     }, 600);
+  };
+
+  const handleSidebarNavClick = (view: AppView) => {
+    if (isFocusSessionActive) {
+      // Lock navigation: show limited “Quit Session?” sidebar only.
+      setIsFocusSidebarLimited(true);
+      setIsTodayPanelAnimatingOut(false);
+      setIsTodayPanelCollapsed(false);
+      setIsAddListModalOpen(false);
+      setOpenListMenuId(null);
+      setTodayMainMode("tasks");
+      return;
+    }
+    setActiveView(view);
+  };
+
+  const handleStartFocusSession = () => {
+    setIsFocusSessionActive(true);
+    setIsFocusSidebarLimited(false);
+    setIsAddListModalOpen(false);
+    setOpenListMenuId(null);
+    setTodayMainMode("tasks");
+    setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
+
+    // Animate the second sidebar away, then remove it.
+    setIsTodayPanelAnimatingOut(true);
+    window.setTimeout(() => {
+      setIsTodayPanelCollapsed(true);
+      setIsTodayPanelAnimatingOut(false);
+    }, 220);
+  };
+
+  const handleQuitFocusSession = () => {
+    setIsFocusSessionActive(false);
+    setIsFocusSidebarLimited(false);
+    setIsTodayPanelCollapsed(false);
+    setIsTodayPanelAnimatingOut(false);
+    setTodayMainMode("tasks");
+    setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
+    setIsAddListModalOpen(false);
+    setOpenListMenuId(null);
   };
 
   const resetAllData = () => {
@@ -1293,7 +1359,7 @@ export default function App() {
               <div className="flex flex-col items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => setActiveView("today")}
+                  onClick={() => handleSidebarNavClick("today")}
                   className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#25272d] border border-white/10 hover:border-blue-400/60 hover:bg-[#2b2e34] transition-all duration-200"
                 >
                   <svg
@@ -1320,7 +1386,7 @@ export default function App() {
                   {/* Today */}
                   <button
                     type="button"
-                    onClick={() => setActiveView("today")}
+                    onClick={() => handleSidebarNavClick("today")}
                     className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
                       activeView === "today"
                         ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
@@ -1351,7 +1417,7 @@ export default function App() {
                   {/* Calendar */}
                   <button
                     type="button"
-                    onClick={() => setActiveView("calendar")}
+                    onClick={() => handleSidebarNavClick("calendar")}
                     className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
                       activeView === "calendar"
                         ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
@@ -1381,7 +1447,7 @@ export default function App() {
                   {/* Analytics */}
                   <button
                     type="button"
-                    onClick={() => setActiveView("analytics")}
+                    onClick={() => handleSidebarNavClick("analytics")}
                     className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
                       activeView === "analytics"
                         ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
@@ -1417,7 +1483,7 @@ export default function App() {
                 {/* Notifications */}
                 <button
                   type="button"
-                  onClick={() => setActiveView("notifications")}
+                  onClick={() => handleSidebarNavClick("notifications")}
                   className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
                     activeView === "notifications"
                       ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
@@ -1447,7 +1513,7 @@ export default function App() {
                 {/* Help */}
                 <button
                   type="button"
-                  onClick={() => setActiveView("help")}
+                  onClick={() => handleSidebarNavClick("help")}
                   className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
                     activeView === "help"
                       ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
@@ -1477,19 +1543,48 @@ export default function App() {
             </aside>
 
             {/* Second sidebar: Today panel (only when Today is active) */}
-            {!isSimulation && activeView === "today" && (
-              <aside className="fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245]">
+            {!isSimulation &&
+              activeView === "today" &&
+              (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
+                <aside
+                  className={`fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245] transition-all duration-200 ease-out ${
+                    isTodayPanelAnimatingOut
+                      ? "opacity-0 translate-x-2 pointer-events-none"
+                      : "opacity-100 translate-x-0"
+                  }`}
+                >
                 {/* Top: Start focus session */}
-                <div className="space-y-6">
-                  <button
-                    type="button"
-                    className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
-                  >
-                    Start Focus Session
-                  </button>
+                <div
+                  className={
+                    isFocusSessionActive && isFocusSidebarLimited
+                      ? "flex-1 flex items-center"
+                      : "space-y-6"
+                  }
+                >
+                  {isFocusSessionActive && isFocusSidebarLimited ? (
+                    <button
+                      type="button"
+                      onClick={handleQuitFocusSession}
+                      className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
+                    >
+                      Quit Session?
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleStartFocusSession}
+                      className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
+                    >
+                      Start Focus Session
+                    </button>
+                  )}
 
                   {/* Lists section */}
-                  <div className="pt-4 border-t border-white/5 space-y-3">
+                  <div
+                    className={`pt-4 border-t border-white/5 space-y-3 ${
+                      isFocusSessionActive && isFocusSidebarLimited ? "hidden" : ""
+                    }`}
+                  >
                     <div className="flex items-center justify-between group">
                       <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
                         Lists
@@ -1574,7 +1669,8 @@ export default function App() {
                     </div>
                   </div>
 
-                  {isAddListModalOpen && (
+                  {isAddListModalOpen &&
+                    !(isFocusSessionActive && isFocusSidebarLimited) && (
                     <div className="fixed inset-0 z-[600] bg-black/50 flex items-center justify-center px-6">
                       <div className="w-full max-w-2xl rounded-2xl bg-[#18191f] border border-white/10 shadow-2xl p-4">
                         <div className="flex items-center justify-between mb-4">
@@ -1657,8 +1753,14 @@ export default function App() {
                   )}
                 </div>
 
-                {/* Bottom: Completed */}
-                <div className="border-t border-white/5 pt-3">
+                  {/* Bottom: Completed */}
+                  <div
+                    className={`border-t border-white/5 pt-3 ${
+                      isFocusSessionActive && isFocusSidebarLimited
+                        ? "hidden"
+                        : ""
+                    }`}
+                  >
                   <button
                     type="button"
                     onClick={() => {
@@ -1679,12 +1781,18 @@ export default function App() {
             {/* Content panel overlay */}
             <section
               className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
-                !isSimulation && activeView === "today" ? "left-80" : "left-16"
+                !isSimulation && activeView === "today" && !isTodayPanelCollapsed
+                  ? "left-80"
+                  : "left-16"
               }`}
             >
               <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
-                  {activeView === "today" ? (
+                  {isFocusSessionActive ? (
+                    <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                      Hello {name}
+                    </h1>
+                  ) : activeView === "today" ? (
                     <>
                       <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
                         {todayMainMode === "completed"
@@ -1719,7 +1827,62 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {activeView === "today" && todayMainMode === "completed" ? (
+                {isFocusSessionActive ? (
+                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                    <div className="p-6 md:p-8">
+                      <div className="flex items-start justify-between gap-8">
+                        <div>
+                          <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                            Current Timer
+                          </p>
+                          <div className="mt-3 text-4xl md:text-5xl font-semibold text-white tabular-nums">
+                            {formatFocusSeconds(focusSeconds)}
+                          </div>
+                          <p className="mt-4 text-sm text-gray-300">
+                            Hello {name}...
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                            Percent Improvement
+                          </p>
+                          <div className="mt-3 flex items-baseline justify-end gap-3">
+                            <span
+                              className={`text-3xl font-semibold ${
+                                parseInt(improvementDelta) >= 0
+                                  ? "text-emerald-400"
+                                  : "text-red-400"
+                              }`}
+                            >
+                              {improvementDelta}%
+                            </span>
+                            <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
+                              {parseInt(improvementDelta) >= 0 ? "UP" : "DOWN"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-10 pt-6 border-t border-white/5">
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                          Next Objectives
+                        </p>
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            1) Choose your top task and begin.
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            2) Stay in the block until the timer ends.
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            3) When done, log completion to build integrity.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : activeView === "today" && todayMainMode === "completed" ? (
                   <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
                     <div className="p-6 md:p-8">
                       {completedGroups.length === 0 ? (
