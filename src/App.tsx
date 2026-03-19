@@ -181,10 +181,104 @@ export default function App() {
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [todayMainMode, setTodayMainMode] = useState<"tasks" | "completed">(
+    "tasks",
+  );
+  const [collapsedCompletedDates, setCollapsedCompletedDates] = useState<
+    Record<string, boolean>
+  >({});
   const selectedList = useMemo(
     () => todayLists.find((l) => l.id === selectedListId) ?? null,
     [todayLists, selectedListId],
   );
+
+  const completedEntries = useMemo(() => {
+    const entries: Array<{
+      key: string;
+      taskName: string;
+      dateStr: string;
+      minutes: number;
+    }> = [];
+
+    Object.entries(taskHistory).forEach(([taskName, points]) => {
+      points.forEach((p, idx) => {
+        entries.push({
+          key: `${taskName}-${p.date}-${idx}`,
+          taskName,
+          dateStr: p.date,
+          minutes: p.value,
+        });
+      });
+    });
+
+    const parseDate = (dateStr: string) => {
+      // dateStr is "Mon 13" style (month short + day numeric)
+      const year = new Date().getFullYear();
+      const dt = new Date(`${dateStr} ${year}`);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    };
+
+    entries.sort((a, b) => {
+      const da = parseDate(a.dateStr);
+      const db = parseDate(b.dateStr);
+      if (da && db) return db.getTime() - da.getTime();
+      if (da) return -1;
+      if (db) return 1;
+      return b.dateStr.localeCompare(a.dateStr);
+    });
+
+    return entries;
+  }, [taskHistory]);
+
+  const completedGroups = useMemo(() => {
+    const todayStr = getTodayStr();
+
+    const parseDate = (dateStr: string) => {
+      const year = new Date().getFullYear();
+      const dt = new Date(`${dateStr} ${year}`);
+      return Number.isNaN(dt.getTime()) ? null : dt;
+    };
+
+    const formatGroupLabel = (dateStr: string) => {
+      if (dateStr === todayStr) {
+        const dt = parseDate(dateStr);
+        const weekday = dt
+          ? dt.toLocaleDateString(undefined, { weekday: "long" })
+          : "";
+        return weekday ? `${weekday}, Today` : "Today";
+      }
+      const dt = parseDate(dateStr);
+      const weekday = dt
+        ? dt.toLocaleDateString(undefined, { weekday: "long" })
+        : "";
+      return weekday ? `${weekday}, ${dateStr}` : dateStr;
+    };
+
+    const map = new Map<string, { dateStr: string; label: string; items: typeof completedEntries }>();
+    completedEntries.forEach((e) => {
+      if (!map.has(e.dateStr)) {
+        map.set(e.dateStr, {
+          dateStr: e.dateStr,
+          label: formatGroupLabel(e.dateStr),
+          items: [],
+        });
+      }
+      map.get(e.dateStr)!.items.push(e);
+    });
+
+    const groups = Array.from(map.values());
+    // completedEntries are already sorted; preserve order of first appearance
+    groups.sort((a, b) => {
+      const da = parseDate(a.dateStr);
+      const db = parseDate(b.dateStr);
+      if (da && db) return db.getTime() - da.getTime();
+      if (da) return -1;
+      if (db) return 1;
+      return b.dateStr.localeCompare(a.dateStr);
+    });
+
+    return groups;
+  }, [completedEntries, getTodayStr]);
 
   useEffect(() => {
     if (!selectedListId) return;
@@ -1422,12 +1516,14 @@ export default function App() {
                         onClick={() => {
                           setSelectedListId(list.id);
                           setOpenListMenuId(null);
+                            setTodayMainMode("tasks");
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             setSelectedListId(list.id);
                             setOpenListMenuId(null);
+                              setTodayMainMode("tasks");
                           }
                         }}
                           className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
@@ -1565,6 +1661,10 @@ export default function App() {
                 <div className="border-t border-white/5 pt-3">
                   <button
                     type="button"
+                    onClick={() => {
+                      setCollapsedCompletedDates({});
+                      setTodayMainMode("completed");
+                    }}
                     className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
                   >
                     <span className="tracking-[0.18em] uppercase">
@@ -1587,9 +1687,11 @@ export default function App() {
                   {activeView === "today" ? (
                     <>
                       <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                        {selectedListId
-                          ? selectedList?.label ?? "Today"
-                          : "Today View"}
+                        {todayMainMode === "completed"
+                          ? "Completed"
+                          : selectedListId
+                            ? selectedList?.label ?? "Today"
+                            : "Today View"}
                       </h1>
                       <button
                         type="button"
@@ -1617,7 +1719,63 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {activeView === "today" && selectedListId ? (
+                {activeView === "today" && todayMainMode === "completed" ? (
+                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                    <div className="p-6 md:p-8">
+                      {completedGroups.length === 0 ? (
+                        <div className="mt-6 text-sm text-gray-400">No completed tasks</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {completedGroups.map((group) => {
+                            const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
+                            return (
+                              <div
+                                key={group.dateStr}
+                                className="rounded-2xl border border-white/5 overflow-hidden"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setCollapsedCompletedDates((prev) => ({
+                                      ...prev,
+                                      [group.dateStr]: !isCollapsed,
+                                    }))
+                                  }
+                                  className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
+                                >
+                                  <span className="text-sm font-semibold text-gray-200">
+                                    {group.label}
+                                  </span>
+                                  <span className="text-xs text-gray-400">
+                                    {isCollapsed ? "Expand" : "Collapse"}
+                                  </span>
+                                </button>
+
+                                {!isCollapsed && (
+                                  <div className="divide-y divide-white/5">
+                                    {group.items.map((item) => (
+                                      <div
+                                        key={item.key}
+                                        className="px-7 py-2.5 flex items-start justify-between gap-4"
+                                      >
+                                        <span className="text-sm text-gray-100">
+                                          {item.taskName}
+                                        </span>
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          {item.minutes}m
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : activeView === "today" && selectedListId ? (
                   <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
                     <div className="p-6 md:p-8">
                       <input
