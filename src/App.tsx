@@ -180,6 +180,19 @@ export default function App() {
   const [newListName, setNewListName] = useState("");
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
+  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const selectedList = useMemo(
+    () => todayLists.find((l) => l.id === selectedListId) ?? null,
+    [todayLists, selectedListId],
+  );
+
+  useEffect(() => {
+    if (!selectedListId) return;
+    if (!todayLists.some((l) => l.id === selectedListId)) {
+      setSelectedListId(null);
+    }
+  }, [todayLists, selectedListId]);
+
   useEffect(() => {
     if (!openListMenuId) return;
     const onDown = (e: MouseEvent) => {
@@ -1404,6 +1417,19 @@ export default function App() {
                       {todayLists.map((list) => (
                         <div
                           key={list.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          setSelectedListId(list.id);
+                          setOpenListMenuId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedListId(list.id);
+                            setOpenListMenuId(null);
+                          }
+                        }}
                           className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -1438,6 +1464,7 @@ export default function App() {
                                   setTodayLists((prev) =>
                                     prev.filter((l) => l.id !== list.id),
                                   );
+                                  if (selectedListId === list.id) setSelectedListId(null);
                                   setOpenListMenuId(null);
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
@@ -1557,30 +1584,60 @@ export default function App() {
             >
               <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
-                  <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                    {activeView === "today" && "Today View"}
-                    {activeView === "calendar" && "Calendar View"}
-                    {activeView === "analytics" && "Analytics View"}
-                    {activeView === "notifications" && "Notifications"}
-                    {activeView === "help" && "Help & Support"}
-                  </h1>
-                  <button
-                    type="button"
-                    onClick={handleGoHome}
-                    className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
-                  >
-                    Back to Hero
-                  </button>
+                  {activeView === "today" ? (
+                    <>
+                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                        {selectedListId
+                          ? selectedList?.label ?? "Today"
+                          : "Today View"}
+                      </h1>
+                      <button
+                        type="button"
+                        disabled
+                        className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto"
+                      >
+                        Collapse
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                        {activeView === "calendar" && "Calendar View"}
+                        {activeView === "analytics" && "Analytics View"}
+                        {activeView === "notifications" && "Notifications"}
+                        {activeView === "help" && "Help & Support"}
+                      </h1>
+                      <button
+                        type="button"
+                        onClick={handleGoHome}
+                        className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                      >
+                        Back to Hero
+                      </button>
+                    </>
+                  )}
                 </div>
-                <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
-                  <p className="text-sm md:text-base text-gray-500">
-                    {activeView === "today" && "Today View"}
-                    {activeView === "calendar" && "Calendar View"}
-                    {activeView === "analytics" && "Analytics View"}
-                    {activeView === "notifications" && "Notifications Center"}
-                    {activeView === "help" && "Help & Support"}
-                  </p>
-                </div>
+                {activeView === "today" && selectedListId ? (
+                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                    <div className="p-6 md:p-8">
+                      <input
+                        placeholder="Add task"
+                        className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-100 outline-none placeholder:text-gray-400 focus:border-blue-500/40 transition-all"
+                      />
+                      <div className="mt-10 text-sm text-gray-400">No tasks</div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
+                    <p className="text-sm md:text-base text-gray-500">
+                      {activeView === "today" && "Today View"}
+                      {activeView === "calendar" && "Calendar View"}
+                      {activeView === "analytics" && "Analytics View"}
+                      {activeView === "notifications" && "Notifications Center"}
+                      {activeView === "help" && "Help & Support"}
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           </>
