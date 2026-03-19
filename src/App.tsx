@@ -30,6 +30,7 @@ async function typeText(
 type Task = {
   id: number;
   text: string;
+  description: string;
   removing: boolean;
   createdAt: number;
   workMode: "inside" | "external";
@@ -59,7 +60,12 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
+  const [tasksByListId, setTasksByListId] = useState<Record<string, Task[]>>(
+    {},
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
+  const isSwitchingListRef = useRef(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
     number | null
@@ -209,6 +215,11 @@ export default function App() {
     [todayLists, selectedListId],
   );
 
+  const selectedTask = useMemo(() => {
+    if (selectedTaskId == null) return null;
+    return tasks.find((t) => t.id === selectedTaskId) ?? null;
+  }, [selectedTaskId, tasks]);
+
   const completedEntries = useMemo(() => {
     const entries: Array<{
       key: string;
@@ -301,6 +312,8 @@ export default function App() {
     if (!selectedListId) return;
     if (!todayLists.some((l) => l.id === selectedListId)) {
       setSelectedListId(null);
+      setTasks([]);
+      setSelectedTaskId(null);
     }
   }, [todayLists, selectedListId]);
 
@@ -316,6 +329,24 @@ export default function App() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [openListMenuId]);
+
+  useEffect(() => {
+    if (!selectedListId) return;
+    if (isSimulation) return;
+    if (isSwitchingListRef.current) return;
+    setTasksByListId((prev) => ({
+      ...prev,
+      [selectedListId]: tasks,
+    }));
+  }, [tasks, selectedListId, isSimulation]);
+
+  useEffect(() => {
+    if (selectedTaskId == null) return;
+    const stillVisible = tasks.some(
+      (t) => t.id === selectedTaskId && !t.removing,
+    );
+    if (!stillVisible) setSelectedTaskId(null);
+  }, [tasks, selectedTaskId]);
 
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
@@ -539,6 +570,8 @@ export default function App() {
       setStreak(0);
       loadUserProgress();
       setTasks([]);
+      setTasksByListId({});
+      setSelectedTaskId(null);
       setSeconds(0);
       setRunning(false);
       setIsTransitioning(false);
@@ -553,6 +586,8 @@ export default function App() {
       setName("Alex");
       setStreak(3);
       setTasks([]);
+      setTasksByListId({});
+      setSelectedTaskId(null);
       setHistory({});
       setSeconds(0);
       setRunning(false);
@@ -606,6 +641,27 @@ export default function App() {
     setOpenListMenuId(null);
   };
 
+  const handleSelectList = (listId: string) => {
+    isSwitchingListRef.current = true;
+
+    // Persist current tasks for the previously selected list.
+    if (selectedListId) {
+      setTasksByListId((prev) => ({
+        ...prev,
+        [selectedListId]: tasks,
+      }));
+    }
+
+    setSelectedListId(listId);
+    setSelectedTaskId(null);
+    setTodayMainMode("tasks");
+    setOpenListMenuId(null);
+
+    setTasks(tasksByListId[listId] ?? []);
+
+    isSwitchingListRef.current = false;
+  };
+
   const resetAllData = () => {
     localStorage.clear();
     setHistory({});
@@ -615,6 +671,8 @@ export default function App() {
     setYesterdayTotalFocusMinutes(0);
     setStreak(0);
     setTasks([]);
+    setTasksByListId({});
+    setSelectedTaskId(null);
     setSeconds(0);
     setRunning(false);
     setIsVictory(false);
@@ -698,6 +756,7 @@ export default function App() {
           {
             id: Date.now(),
             text: t,
+            description: "",
             removing: false,
             createdAt: Date.now(),
             workMode: "inside",
@@ -1609,16 +1668,12 @@ export default function App() {
                         role="button"
                         tabIndex={0}
                         onClick={() => {
-                          setSelectedListId(list.id);
-                          setOpenListMenuId(null);
-                            setTodayMainMode("tasks");
+                          handleSelectList(list.id);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
-                            setSelectedListId(list.id);
-                            setOpenListMenuId(null);
-                              setTodayMainMode("tasks");
+                            handleSelectList(list.id);
                           }
                         }}
                           className="group flex flex-col gap-2 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
@@ -1657,8 +1712,16 @@ export default function App() {
                                   setTodayLists((prev) =>
                                     prev.filter((l) => l.id !== list.id),
                                   );
-                                  if (selectedListId === list.id)
+                                  setTasksByListId((prev) => {
+                                    const next = { ...prev };
+                                    delete next[list.id];
+                                    return next;
+                                  });
+                                  if (selectedListId === list.id) {
                                     setSelectedListId(null);
+                                    setTasks([]);
+                                    setSelectedTaskId(null);
+                                  }
                                   setOpenListMenuId(null);
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
@@ -1937,88 +2000,185 @@ export default function App() {
                     </div>
                   </div>
                 ) : activeView === "today" && selectedListId ? (
-                  <div className="w-full rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm min-h-[60vh]">
-                    <div className="p-5 md:p-7 flex flex-col h-full">
-                      {/* Task input bar */}
-                      <div className="bg-zinc-800/80 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
-                        <input
-                          value={taskInput}
-                          onChange={(e) => setTaskInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key !== "Enter") return;
-                            const trimmed = taskInput.trim();
-                            if (!trimmed) return;
-                            const id = Date.now();
-                            const newTask: Task = {
-                              id,
-                              text: trimmed,
-                              removing: false,
-                              createdAt: Date.now(),
-                              workMode: "inside",
-                            };
-                            setTasks((prev) => [...prev, newTask]);
-                            setTaskInput("");
-                          }}
-                          placeholder="Add a task..."
-                          className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-500 outline-none text-sm md:text-base"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const trimmed = taskInput.trim();
-                            if (!trimmed) return;
-                            const id = Date.now();
-                            const newTask: Task = {
-                              id,
-                              text: trimmed,
-                              removing: false,
-                              createdAt: Date.now(),
-                              workMode: "inside",
-                            };
-                            setTasks((prev) => [...prev, newTask]);
-                            setTaskInput("");
-                          }}
-                          className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
-                          disabled={!taskInput.trim()}
-                        >
-                          Add
-                        </button>
+                  <div className="w-full rounded-3xl bg-zinc-900 border border-zinc-800 shadow-sm min-h-[60vh] overflow-hidden">
+                    <div className="grid grid-cols-[70%_30%] min-h-[60vh]">
+                      {/* LEFT PANEL: tasks */}
+                      <div className="p-5 md:p-7 flex flex-col h-full">
+                        {/* Header + actions */}
+                        <div className="flex items-start justify-between gap-4 mb-4">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-lg">{selectedList?.icon}</span>
+                            <h2 className="text-lg font-semibold text-gray-100 truncate">
+                              {selectedList?.label}
+                            </h2>
+                          </div>
+                          <div className="flex gap-2">
+                            <button
+                              type="button"
+                              onClick={handleStartFocusSession}
+                              disabled={tasks.filter((t) => !t.removing).length === 0}
+                              className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/30 to-indigo-500/30 border border-blue-400/20 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
+                            >
+                              Start
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setTasks([]);
+                                setSelectedTaskId(null);
+                              }}
+                              disabled={tasks.filter((t) => !t.removing).length === 0}
+                              className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
+                            >
+                              Clear
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Task input bar */}
+                        <div className="bg-zinc-800/80 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+                          <input
+                            value={taskInput}
+                            onChange={(e) => setTaskInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Enter") return;
+                              const trimmed = taskInput.trim();
+                              if (!trimmed) return;
+                              const id = Date.now();
+                              const newTask: Task = {
+                                id,
+                                text: trimmed,
+                                description: "",
+                                removing: false,
+                                createdAt: Date.now(),
+                                workMode: "inside",
+                              };
+                              setTasks((prev) => [...prev, newTask]);
+                              setTaskInput("");
+                            }}
+                            placeholder="Add a task..."
+                            className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-500 outline-none text-sm md:text-base"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const trimmed = taskInput.trim();
+                              if (!trimmed) return;
+                              const id = Date.now();
+                              const newTask: Task = {
+                                id,
+                                text: trimmed,
+                                description: "",
+                                removing: false,
+                                createdAt: Date.now(),
+                                workMode: "inside",
+                              };
+                              setTasks((prev) => [...prev, newTask]);
+                              setTaskInput("");
+                            }}
+                            className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
+                            disabled={!taskInput.trim()}
+                          >
+                            Add
+                          </button>
+                        </div>
+
+                        {/* Tasks list */}
+                        <div className="mt-5 flex-1 overflow-y-auto">
+                          {tasks.filter((t) => !t.removing).length === 0 ? (
+                            <div className="mt-10 text-sm text-gray-500/80 px-1">
+                              Add a task to see details.
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {tasks
+                                .filter((t) => !t.removing)
+                                .map((t) => {
+                                  const isSelected = selectedTaskId === t.id;
+                                  return (
+                                    <div
+                                      key={t.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => setSelectedTaskId(t.id)}
+                                      onKeyDown={(e) => {
+                                        if (e.key !== "Enter") return;
+                                        setSelectedTaskId(t.id);
+                                      }}
+                                      className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                                        isSelected
+                                          ? "border-blue-500/30 bg-blue-500/10"
+                                          : "border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/70"
+                                      }`}
+                                    >
+                                      <span className="text-sm text-gray-100 truncate">
+                                        {t.text}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setTasks((prev) =>
+                                            prev.filter((x) => x.id !== t.id),
+                                          );
+                                          if (selectedTaskId === t.id) {
+                                            setSelectedTaskId(null);
+                                          }
+                                        }}
+                                        className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+                                        aria-label="Delete task"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
                       </div>
 
-                      {/* Tasks list */}
-                      <div className="mt-5 flex-1 overflow-y-auto">
-                        {tasks.filter((t) => !t.removing).length === 0 ? (
-                          <div className="mt-10 text-sm text-gray-500/80 px-1">
-                            Add your first task to get started.
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {tasks
-                              .filter((t) => !t.removing)
-                              .map((t) => (
-                                <div
-                                  key={t.id}
-                                  className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 flex items-center justify-between gap-3"
-                                >
-                                  <span className="text-sm text-gray-100 truncate">
-                                    {t.text}
-                                  </span>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setTasks((prev) =>
-                                        prev.filter((x) => x.id !== t.id),
-                                      )
-                                    }
-                                    className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
-                                    aria-label="Delete task"
-                                  >
-                                    ✕
-                                  </button>
-                                </div>
-                              ))}
-                          </div>
-                        )}
+                      {/* RIGHT PANEL: task details */}
+                      <div className="border-l border-zinc-800/70 p-5 md:p-7 flex flex-col h-full">
+                        <div
+                          className={`transition-all duration-200 ${
+                            selectedTask ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
+                          } ${selectedTask ? "" : "pointer-events-none"}`}
+                        >
+                          {selectedTask ? (
+                            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 md:p-5">
+                              <div className="mb-4">
+                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                  Task
+                                </p>
+                                <h3 className="mt-2 text-base font-semibold text-gray-100 truncate">
+                                  {selectedTask.text}
+                                </h3>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                  Description
+                                </p>
+                                <textarea
+                                  value={selectedTask.description}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setTasks((prev) =>
+                                      prev.map((t) =>
+                                        t.id === selectedTask.id
+                                          ? { ...t, description: val }
+                                          : t,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder="Add a description..."
+                                  className="w-full h-40 rounded-2xl bg-zinc-900/50 border border-zinc-800 px-4 py-3 text-gray-100 outline-none placeholder:text-gray-500 resize-none"
+                                />
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -2891,6 +3051,7 @@ export default function App() {
                       const newTask: Task = {
                         id,
                         text: taskInput,
+                        description: "",
                         removing: false,
                         createdAt: Date.now(),
                         workMode: "inside",
