@@ -1769,10 +1769,7 @@ export default function App() {
                     }}
                     className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
                   >
-                    <span className="tracking-[0.18em] uppercase">
-                      Completed
-                    </span>
-                    <span className="text-[11px] text-gray-500">Soon</span>
+                    <span className="tracking-[0.18em] uppercase">Completed</span>
                   </button>
                 </div>
               </aside>
