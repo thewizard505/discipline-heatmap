@@ -1350,11 +1350,11 @@ export default function App() {
           </nav>
         )}
 
-        {/* APP SHELL SIDEBAR (only when app view is active) */}
-        {!isSimulation && (
-          <>
+        {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
+        {!isSimulation && !isFocusSessionActive && (
+          <div className="min-h-screen flex w-full bg-black text-white">
             {/* Left sidebar (main) */}
-            <aside className="fixed left-0 top-0 h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250]">
+            <aside className="h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250] shrink-0">
               {/* Top: profile */}
               <div className="flex flex-col items-center gap-4">
                 <button
@@ -1547,7 +1547,7 @@ export default function App() {
               activeView === "today" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245] transition-all duration-200 ease-out ${
+                  className={`h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 transition-all duration-200 ease-out shrink-0 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
@@ -1621,33 +1621,35 @@ export default function App() {
                               setTodayMainMode("tasks");
                           }
                         }}
-                          className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
+                          className="group flex flex-col gap-2 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-base">{list.icon}</span>
-                            <span className="truncate">{list.label}</span>
-                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-base">{list.icon}</span>
+                              <span className="truncate">{list.label}</span>
+                            </div>
 
-                          <div className="flex items-center">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenListMenuId((cur) =>
-                                  cur === list.id ? null : list.id,
-                                );
-                              }}
-                              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
-                              aria-label="List menu"
-                            >
-                              •••
-                            </button>
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenListMenuId((cur) =>
+                                    cur === list.id ? null : list.id,
+                                  );
+                                }}
+                                className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
+                                aria-label="List menu"
+                              >
+                                •••
+                              </button>
+                            </div>
                           </div>
 
                           {openListMenuId === list.id && (
                             <div
                               ref={listMenuRef}
-                              className="absolute right-2 top-10 z-[260] w-44 rounded-xl bg-[#18191f] border border-white/10 shadow-xl overflow-hidden"
+                              className="w-full rounded-xl bg-[#18191f] border border-white/10 shadow-sm overflow-hidden"
                             >
                               <button
                                 type="button"
@@ -1655,7 +1657,8 @@ export default function App() {
                                   setTodayLists((prev) =>
                                     prev.filter((l) => l.id !== list.id),
                                   );
-                                  if (selectedListId === list.id) setSelectedListId(null);
+                                  if (selectedListId === list.id)
+                                    setSelectedListId(null);
                                   setOpenListMenuId(null);
                                 }}
                                 className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
@@ -1669,85 +1672,82 @@ export default function App() {
                     </div>
                   </div>
 
-                  {isAddListModalOpen &&
-                    !(isFocusSessionActive && isFocusSidebarLimited) && (
-                    <div className="fixed inset-0 z-[600] bg-black/50 flex items-center justify-center px-6">
-                      <div className="w-full max-w-2xl rounded-2xl bg-[#18191f] border border-white/10 shadow-2xl p-4">
-                        <div className="flex items-center justify-between mb-4">
-                          <p className="text-sm font-semibold text-gray-100">
-                            Add List
+                  {isAddListModalOpen && (
+                    <div className="mt-3 rounded-2xl bg-[#18191f] border border-white/10 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-semibold text-gray-100">
+                          Add List
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddListModalOpen(false);
+                            setNewListName("");
+                          }}
+                          className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
+                          aria-label="Close"
+                        >
+                          ✕
+                        </button>
+                      </div>
+
+                      <div className="grid md:grid-cols-[1fr_220px] gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                            List Name
+                          </label>
+                          <input
+                            autoFocus
+                            value={newListName}
+                            onChange={(e) => setNewListName(e.target.value)}
+                            placeholder="List Name"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
+                          />
+                        </div>
+                        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                          <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                            Preview
                           </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                            }}
-                            className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
-                            aria-label="Close"
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        <div className="grid md:grid-cols-[1fr_220px] gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                              List Name
-                            </label>
-                            <input
-                              autoFocus
-                              value={newListName}
-                              onChange={(e) => setNewListName(e.target.value)}
-                              placeholder="List Name"
-                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
-                            />
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                            <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                              Preview
-                            </p>
-                            <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
-                              <span className="mr-2">{DEFAULT_LIST_ICON}</span>
-                              {newListName ? newListName : "List Name"}
-                            </div>
+                          <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
+                            <span className="mr-2">{DEFAULT_LIST_ICON}</span>
+                            {newListName ? newListName : "List Name"}
                           </div>
                         </div>
+                      </div>
 
-                        <div className="flex items-center justify-end gap-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                            }}
-                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!newListName.trim()}
-                            onClick={() => {
-                              const trimmed = newListName.trim();
-                              if (!trimmed) return;
-                              setTodayLists((prev) => [
-                                ...prev,
-                                {
-                                  id: `list-${Date.now()}`,
-                                  label: trimmed,
-                                  icon: DEFAULT_LIST_ICON,
-                                },
-                              ]);
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                              setOpenListMenuId(null);
-                            }}
-                            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
-                          >
-                            Add
-                          </button>
-                        </div>
+                      <div className="flex items-center justify-end gap-3 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddListModalOpen(false);
+                            setNewListName("");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!newListName.trim()}
+                          onClick={() => {
+                            const trimmed = newListName.trim();
+                            if (!trimmed) return;
+                            setTodayLists((prev) => [
+                              ...prev,
+                              {
+                                id: `list-${Date.now()}`,
+                                label: trimmed,
+                                icon: DEFAULT_LIST_ICON,
+                              },
+                            ]);
+                            setIsAddListModalOpen(false);
+                            setNewListName("");
+                            setOpenListMenuId(null);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
+                        >
+                          Add
+                        </button>
                       </div>
                     </div>
                   )}
@@ -1778,13 +1778,13 @@ export default function App() {
             {/* Content panel overlay */}
             {!isFocusSessionActive && (
             <section
-              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
+              className={`flex-1 h-screen overflow-y-auto ${
                 !isSimulation && activeView === "today" && !isTodayPanelCollapsed
-                  ? "left-80"
-                  : "left-16"
+                  ? ""
+                  : ""
               }`}
             >
-              <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
+              <div className="w-full px-6 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
                   {isFocusSessionActive ? (
                     <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
@@ -1937,13 +1937,89 @@ export default function App() {
                     </div>
                   </div>
                 ) : activeView === "today" && selectedListId ? (
-                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                    <div className="p-6 md:p-8">
-                      <input
-                        placeholder="Add task"
-                        className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-100 outline-none placeholder:text-gray-400 focus:border-blue-500/40 transition-all"
-                      />
-                      <div className="mt-10 text-sm text-gray-400">No tasks</div>
+                  <div className="w-full rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm min-h-[60vh]">
+                    <div className="p-5 md:p-7 flex flex-col h-full">
+                      {/* Task input bar */}
+                      <div className="bg-zinc-800/80 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+                        <input
+                          value={taskInput}
+                          onChange={(e) => setTaskInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key !== "Enter") return;
+                            const trimmed = taskInput.trim();
+                            if (!trimmed) return;
+                            const id = Date.now();
+                            const newTask: Task = {
+                              id,
+                              text: trimmed,
+                              removing: false,
+                              createdAt: Date.now(),
+                              workMode: "inside",
+                            };
+                            setTasks((prev) => [...prev, newTask]);
+                            setTaskInput("");
+                          }}
+                          placeholder="Add a task..."
+                          className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-500 outline-none text-sm md:text-base"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const trimmed = taskInput.trim();
+                            if (!trimmed) return;
+                            const id = Date.now();
+                            const newTask: Task = {
+                              id,
+                              text: trimmed,
+                              removing: false,
+                              createdAt: Date.now(),
+                              workMode: "inside",
+                            };
+                            setTasks((prev) => [...prev, newTask]);
+                            setTaskInput("");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
+                          disabled={!taskInput.trim()}
+                        >
+                          Add
+                        </button>
+                      </div>
+
+                      {/* Tasks list */}
+                      <div className="mt-5 flex-1 overflow-y-auto">
+                        {tasks.filter((t) => !t.removing).length === 0 ? (
+                          <div className="mt-10 text-sm text-gray-500/80 px-1">
+                            Add your first task to get started.
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {tasks
+                              .filter((t) => !t.removing)
+                              .map((t) => (
+                                <div
+                                  key={t.id}
+                                  className="rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 flex items-center justify-between gap-3"
+                                >
+                                  <span className="text-sm text-gray-100 truncate">
+                                    {t.text}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setTasks((prev) =>
+                                        prev.filter((x) => x.id !== t.id),
+                                      )
+                                    }
+                                    className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+                                    aria-label="Delete task"
+                                  >
+                                    ✕
+                                  </button>
+                                </div>
+                              ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -1960,7 +2036,7 @@ export default function App() {
               </div>
             </section>
             )}
-          </>
+          </div>
         )}
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
@@ -2574,9 +2650,7 @@ export default function App() {
 
         {!isSimulation && isFocusSessionActive && (
           <div
-            className={`flex flex-col items-center gap-10 relative z-20 ${
-              activeView === "today" && !isTodayPanelCollapsed ? "ml-80" : "ml-16"
-            }`}
+            className="flex flex-col items-center gap-10 relative z-20 w-full"
             style={{
               paddingTop: "5rem",
               transform: "none",
