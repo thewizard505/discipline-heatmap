@@ -66,6 +66,10 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const isSwitchingListRef = useRef(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const taskItemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const lastDragOverIdRef = useRef<number | null>(null);
+  const tasksRef = useRef<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
     number | null
@@ -347,6 +351,10 @@ export default function App() {
     );
     if (!stillVisible) setSelectedTaskId(null);
   }, [tasks, selectedTaskId]);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
@@ -641,6 +649,21 @@ export default function App() {
     setOpenListMenuId(null);
   };
 
+  const handleToggleTodaySidebar = () => {
+    if (activeView !== "today") return;
+    if (isTodayPanelCollapsed) {
+      setIsTodayPanelCollapsed(false);
+      setIsTodayPanelAnimatingOut(false);
+      return;
+    }
+
+    setIsTodayPanelAnimatingOut(true);
+    window.setTimeout(() => {
+      setIsTodayPanelCollapsed(true);
+      setIsTodayPanelAnimatingOut(false);
+    }, 220);
+  };
+
   const handleSelectList = (listId: string) => {
     isSwitchingListRef.current = true;
 
@@ -660,6 +683,61 @@ export default function App() {
     setTasks(tasksByListId[listId] ?? []);
 
     isSwitchingListRef.current = false;
+  };
+
+  const reorderVisibleTasksWithFlip = (fromId: number, toId: number) => {
+    if (isSimulation) return;
+    const visible = tasksRef.current.filter((t) => !t.removing);
+    const fromIndex = visible.findIndex((t) => t.id === fromId);
+    const toIndex = visible.findIndex((t) => t.id === toId);
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+    const visibleIds = visible.map((t) => t.id);
+    const preRects = new Map<number, DOMRect>();
+    visibleIds.forEach((id) => {
+      const el = taskItemRefs.current[id];
+      if (!el) return;
+      preRects.set(id, el.getBoundingClientRect());
+    });
+
+    setTasks((prev) => {
+      const prevVisible = prev.filter((t) => !t.removing);
+      const prevHidden = prev.filter((t) => t.removing);
+      const nextVisible = [...prevVisible];
+      const [moved] = nextVisible.splice(fromIndex, 1);
+      nextVisible.splice(toIndex, 0, moved);
+      return [...nextVisible, ...prevHidden];
+    });
+
+    // FLIP animation: invert position changes after the DOM updates.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        visibleIds.forEach((id) => {
+          const el = taskItemRefs.current[id];
+          const pre = preRects.get(id);
+          if (!el || !pre) return;
+          const post = el.getBoundingClientRect();
+          const dx = pre.left - post.left;
+          const dy = pre.top - post.top;
+          if (dx === 0 && dy === 0) return;
+
+          el.style.willChange = "transform";
+          el.style.transition = "transform 0s";
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+
+          requestAnimationFrame(() => {
+            el.style.transition = "transform 180ms ease";
+            el.style.transform = "translate(0px, 0px)";
+          });
+
+          window.setTimeout(() => {
+            el.style.willChange = "auto";
+            el.style.transition = "";
+            el.style.transform = "";
+          }, 220);
+        });
+      });
+    });
   };
 
   const resetAllData = () => {
@@ -1841,13 +1919,19 @@ export default function App() {
             {/* Content panel overlay */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 h-screen overflow-y-auto ${
-                !isSimulation && activeView === "today" && !isTodayPanelCollapsed
-                  ? ""
-                  : ""
+              className={`flex-1 h-screen ${
+                activeView === "today" && selectedListId && todayMainMode === "tasks"
+                  ? "overflow-hidden"
+                  : "overflow-y-auto"
               }`}
             >
-              <div className="w-full px-6 py-16 h-full flex flex-col">
+              <div
+                className={`w-full px-6 h-full flex flex-col ${
+                  activeView === "today" && selectedListId && todayMainMode === "tasks"
+                    ? "py-6"
+                    : "py-16"
+                }`}
+              >
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
                   {isFocusSessionActive ? (
                     <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
@@ -2000,18 +2084,27 @@ export default function App() {
                     </div>
                   </div>
                 ) : activeView === "today" && selectedListId ? (
-                  <div className="w-full rounded-3xl bg-zinc-900 border border-zinc-800 shadow-sm min-h-[60vh] overflow-hidden">
-                    <div className="grid grid-cols-[70%_30%] min-h-[60vh]">
+                  <div className="w-full rounded-3xl bg-zinc-950/70 border border-zinc-800/70 shadow-sm h-full overflow-hidden">
+                    <div className="grid grid-cols-[70%_30%] h-full">
                       {/* LEFT PANEL: tasks */}
                       <div className="p-5 md:p-7 flex flex-col h-full">
                         {/* Header + actions */}
                         <div className="flex items-start justify-between gap-4 mb-4">
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-lg">{selectedList?.icon}</span>
-                            <h2 className="text-lg font-semibold text-gray-100 truncate">
-                              {selectedList?.label}
-                            </h2>
-                          </div>
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span className="text-lg">{selectedList?.icon}</span>
+                          <h2 className="text-lg font-semibold text-gray-100 truncate">
+                            {selectedList?.label}
+                          </h2>
+                          <button
+                            type="button"
+                            onClick={handleToggleTodaySidebar}
+                            disabled={isTodayPanelAnimatingOut}
+                            className="hidden sm:inline-flex items-center justify-center px-2.5 py-1.5 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold tracking-[0.18em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
+                            aria-label="Toggle Today sidebar"
+                          >
+                            {isTodayPanelCollapsed ? "Expand" : "Collapse"}
+                          </button>
+                        </div>
                           <div className="flex gap-2">
                             <button
                               type="button"
@@ -2098,22 +2191,66 @@ export default function App() {
                                   return (
                                     <div
                                       key={t.id}
+                                      ref={(el) => {
+                                        taskItemRefs.current[t.id] = el;
+                                      }}
                                       role="button"
                                       tabIndex={0}
-                                      onClick={() => setSelectedTaskId(t.id)}
+                                      onClick={() => {
+                                        if (draggingTaskId != null) return;
+                                        setSelectedTaskId(t.id);
+                                      }}
                                       onKeyDown={(e) => {
                                         if (e.key !== "Enter") return;
                                         setSelectedTaskId(t.id);
                                       }}
-                                      className={`rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        if (draggingTaskId == null) return;
+                                        if (draggingTaskId === t.id) return;
+                                        if (lastDragOverIdRef.current === t.id) return;
+                                        lastDragOverIdRef.current = t.id;
+                                        reorderVisibleTasksWithFlip(
+                                          draggingTaskId,
+                                          t.id,
+                                        );
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        lastDragOverIdRef.current = null;
+                                        setDraggingTaskId(null);
+                                      }}
+                                      className={`group rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
                                         isSelected
                                           ? "border-blue-500/30 bg-blue-500/10"
                                           : "border-zinc-800 bg-zinc-900/50 hover:bg-zinc-900/70"
-                                      }`}
+                                      } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
                                     >
-                                      <span className="text-sm text-gray-100 truncate">
-                                        {t.text}
-                                      </span>
+                                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div
+                                          draggable
+                                          onDragStart={(e) => {
+                                            setDraggingTaskId(t.id);
+                                            lastDragOverIdRef.current = t.id;
+                                            e.dataTransfer.effectAllowed = "move";
+                                            e.dataTransfer.setData(
+                                              "text/plain",
+                                              String(t.id),
+                                            );
+                                          }}
+                                          onDragEnd={() => {
+                                            lastDragOverIdRef.current = null;
+                                            setDraggingTaskId(null);
+                                          }}
+                                          className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/30 text-zinc-400 opacity-50 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
+                                          aria-label="Drag to reorder"
+                                        >
+                                          ≡
+                                        </div>
+                                        <span className="text-sm text-gray-100 truncate">
+                                          {t.text}
+                                        </span>
+                                      </div>
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2139,14 +2276,14 @@ export default function App() {
                       </div>
 
                       {/* RIGHT PANEL: task details */}
-                      <div className="border-l border-zinc-800/70 p-5 md:p-7 flex flex-col h-full">
+                      <div className="border-l border-zinc-800/70 bg-zinc-950/20 p-5 md:p-7 flex flex-col h-full">
                         <div
                           className={`transition-all duration-200 ${
                             selectedTask ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
                           } ${selectedTask ? "" : "pointer-events-none"}`}
                         >
                           {selectedTask ? (
-                            <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4 md:p-5">
+                            <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 p-4 md:p-5">
                               <div className="mb-4">
                                 <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
                                   Task
