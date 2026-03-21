@@ -934,6 +934,9 @@ export default function App() {
     [task: string]: HistoryPoint[];
   }>({});
   const [selectedTaskGraph, setSelectedTaskGraph] = useState<string>("");
+  const [analyticsChartHover, setAnalyticsChartHover] = useState<
+    number | null
+  >(null);
 
   const [warning, setWarning] = useState<string | null>(null);
   const heroGraphData: HistoryPoint[] = [
@@ -2352,6 +2355,58 @@ export default function App() {
     return dStr;
   }
 
+  function getAnalyticsChartPoints(data: HistoryPoint[]) {
+    const { min, range } = graphScale;
+    return data.map((d, i) => [
+      (i / (data.length - 1 || 1)) * 100,
+      100 - ((d.value - min) / range) * 90,
+    ]);
+  }
+
+  function buildAnalyticsSmoothLineD(data: HistoryPoint[]) {
+    const pts = getAnalyticsChartPoints(data);
+    if (pts.length === 0) return "";
+    if (pts.length === 1)
+      return `M ${pts[0][0]} ${pts[0][1]} L 100 ${pts[0][1]}`;
+    let d = `M ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+    }
+    return d;
+  }
+
+  function buildAnalyticsSmoothAreaD(data: HistoryPoint[]) {
+    const pts = getAnalyticsChartPoints(data);
+    if (pts.length === 0) return "";
+    if (pts.length === 1) {
+      const p = pts[0];
+      return `M 0 100 L 0 ${p[1]} L 100 ${p[1]} L 100 100 Z`;
+    }
+    let d = `M ${pts[0][0]} 100 L ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const p0 = pts[Math.max(0, i - 1)];
+      const p1 = pts[i];
+      const p2 = pts[i + 1];
+      const p3 = pts[Math.min(pts.length - 1, i + 2)];
+      const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+      const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+      const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+      const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+      d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${last[0]} 100 L ${pts[0][0]} 100 Z`;
+    return d;
+  }
+
   /* ------------------- UI STYLING ------------------- */
   const titleOpacity = isSimulation ? Math.max(0.4 - scrollY / 600, 0) : 0.1;
   const progressPercent =
@@ -2365,18 +2420,18 @@ export default function App() {
         ? "168, 85, 247"
         : "239, 68, 68";
 
-  /** Dark analytics heatmap — 4 intensity levels + empty; Analytics only. */
+  /** Analytics heatmap — soft GitHub-style intensity; Analytics only. */
   const getHeatmapClass = (symbol: string, isCurrentDay: boolean) => {
     const base =
-      "rounded-[2px] border transition-all duration-150 hover:brightness-125 hover:ring-1 hover:ring-blue-500/25 hover:z-[5]";
+      "rounded-md border transition-all duration-150 hover:brightness-110 hover:ring-1 hover:ring-blue-500/20 hover:z-[5]";
     if (isCurrentDay && symbol === "⬜")
-      return `${base} bg-zinc-800/95 border-blue-500/40 ring-1 ring-blue-500/25`;
-    if (symbol === "⬜") return `${base} bg-[#16161a] border-zinc-700/70`;
-    if (symbol === "🔹") return `${base} bg-blue-950/85 border-[#1e3a5f]/80`;
-    if (symbol === "🔷") return `${base} bg-[#1d4ed8]/35 border-blue-700/45`;
-    if (symbol === "🔵") return `${base} bg-[#2563eb]/55 border-blue-500/40`;
-    if (symbol === "🔥") return `${base} bg-[#3b82f6]/70 border-blue-400/35`;
-    return `${base} bg-[#16161a] border-zinc-700/70`;
+      return `${base} bg-zinc-800/80 border-blue-500/30 ring-1 ring-blue-500/20`;
+    if (symbol === "⬜") return `${base} bg-zinc-900/40 border-zinc-800/50`;
+    if (symbol === "🔹") return `${base} bg-blue-950/60 border-blue-900/35`;
+    if (symbol === "🔷") return `${base} bg-blue-900/45 border-blue-800/30`;
+    if (symbol === "🔵") return `${base} bg-blue-700/40 border-blue-600/28`;
+    if (symbol === "🔥") return `${base} bg-blue-600/50 border-blue-500/25`;
+    return `${base} bg-zinc-900/40 border-zinc-800/50`;
   };
 
   const improvementDelta = useMemo(() => {
@@ -3963,22 +4018,25 @@ export default function App() {
                         onTaskPick={openTaskFromCalendar}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#0a0a0b] text-zinc-100 antialiased">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#09090b] text-zinc-100 antialiased [text-rendering:optimizeLegibility]">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-[1100px] mx-auto px-5 sm:px-8 py-5 pb-12 space-y-3">
-                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-zinc-800/60 pb-5 mb-1">
+                          <div className="w-full max-w-none mx-auto px-3 sm:px-5 lg:px-6 py-4 pb-10 space-y-2.5">
+                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-zinc-800/50 pb-6 mb-0.5">
                               <div>
-                                <h1 className="text-[1.35rem] sm:text-[1.5rem] font-semibold text-zinc-50 tracking-tight">
+                                <h1 className="text-[1.5rem] sm:text-[1.65rem] font-semibold text-zinc-50 tracking-tight flex items-center gap-2">
+                                  <span className="text-[1.35rem] leading-none" aria-hidden>
+                                    📊
+                                  </span>
                                   Analytics
                                 </h1>
-                                <p className="text-[12px] text-zinc-600 mt-1.5 max-w-md leading-relaxed">
+                                <p className="text-[12px] text-zinc-600 mt-2 max-w-lg leading-relaxed">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800/90 bg-[#111113] px-2.5 py-1 text-[11px] font-medium text-zinc-500 tabular-nums shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800/80 bg-[#0f0f12] px-2.5 py-1 text-[11px] font-medium text-zinc-500 tabular-nums shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
                                   <span
-                                    className="h-1 w-1 rounded-full bg-blue-500/70"
+                                    className="h-1 w-1 rounded-full bg-blue-500/65"
                                     aria-hidden
                                   />
                                   Last 7 days
@@ -3986,31 +4044,31 @@ export default function App() {
                               </div>
                             </header>
 
-                            <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow] duration-150 hover:bg-[#121215]">
-                              <div className="flex flex-col gap-2 p-3.5 sm:p-4 border-b border-zinc-800/70">
-                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                                  <div>
-                                    <h2 className="text-[15px] font-semibold text-zinc-100 tracking-tight">
+                            <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_8px_28px_rgba(0,0,0,0.45)] transition-[background-color] duration-150 hover:bg-[#101014]">
+                              <div className="flex flex-col gap-1.5 p-3 sm:p-4 border-b border-zinc-800/60">
+                                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                                  <div className="min-w-0">
+                                    <h2 className="text-[16px] font-semibold text-zinc-50 tracking-tight">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
-                                        : selectedTaskGraph
-                                          ? `Task speed · ${selectedTaskGraph}`
-                                          : "Task speed"}
+                                        : "Task Speed"}
                                     </h2>
-                                    <p className="text-[11px] text-zinc-600 mt-0.5">
+                                    <p className="text-[11px] text-zinc-600 mt-0.5 leading-snug">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
-                                        : "Completion time per run"}
+                                        : selectedTaskGraph
+                                          ? `${selectedTaskGraph} · Completion time per session`
+                                          : "Completion time per session"}
                                     </p>
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-1.5">
+                                  <div className="flex flex-wrap items-stretch gap-1.5">
                                     {selectedStat === "Speed" && (
                                       <select
                                         value={selectedTaskGraph}
                                         onChange={(e) =>
                                           setSelectedTaskGraph(e.target.value)
                                         }
-                                        className="rounded-md border border-zinc-700/90 bg-zinc-900/90 px-2 py-1 text-[10px] text-zinc-200 outline-none focus:border-blue-500/45 focus:ring-1 focus:ring-blue-500/20"
+                                        className="h-7 min-w-[8rem] rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 text-[10px] text-zinc-200 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/15 leading-none"
                                       >
                                         <option value="">Select task</option>
                                         {Object.keys(taskHistory).map(
@@ -4022,7 +4080,7 @@ export default function App() {
                                         )}
                                       </select>
                                     )}
-                                    <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-950/50 p-px">
+                                    <div className="inline-flex h-7 rounded-lg border border-zinc-800/90 bg-zinc-950/60 p-0.5">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -4031,9 +4089,9 @@ export default function App() {
                                             onClick={() =>
                                               setSelectedStat(type)
                                             }
-                                            className={`rounded-[5px] px-2 py-0.5 text-[10px] font-medium transition-colors duration-100 ${
+                                            className={`rounded-md px-2.5 text-[10px] font-medium transition-colors duration-100 ${
                                               selectedStat === type
-                                                ? "bg-zinc-800/95 text-zinc-100 border border-blue-500/30"
+                                                ? "bg-zinc-800/90 text-zinc-100 border border-blue-500/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
                                                 : "text-zinc-500 hover:text-zinc-400 border border-transparent"
                                             }`}
                                           >
@@ -4046,9 +4104,9 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="group/chart p-3.5 sm:p-4 pt-2">
+                              <div className="p-3 sm:p-4 pt-2">
                                 <div className="flex gap-2">
-                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-600/85 w-10 text-right leading-none">
+                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-600/75 w-10 text-right leading-none">
                                     {analyticsYTickValues.map((v) => (
                                       <span key={v}>
                                         {selectedStat === "Integrity"
@@ -4058,14 +4116,70 @@ export default function App() {
                                     ))}
                                   </div>
                                   <div
-                                    className="relative min-h-[200px] w-full max-h-[220px] flex-1"
-                                    title={analyticsChartHint}
+                                    className="relative min-h-[236px] w-full max-h-[260px] flex-1"
+                                    onMouseLeave={() =>
+                                      setAnalyticsChartHover(null)
+                                    }
                                   >
+                                    {analyticsChartHover !== null &&
+                                      currentData[analyticsChartHover] && (
+                                        <div
+                                          className="pointer-events-none absolute z-30 rounded-lg border border-zinc-700/90 bg-zinc-950/98 px-2.5 py-1.5 text-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
+                                          style={{
+                                            left: `${
+                                              (analyticsChartHover /
+                                                Math.max(
+                                                  1,
+                                                  currentData.length - 1,
+                                                )) *
+                                              100
+                                            }%`,
+                                            top: 6,
+                                            transform: "translateX(-50%)",
+                                          }}
+                                        >
+                                          <div className="font-medium text-zinc-200">
+                                            {
+                                              currentData[analyticsChartHover]
+                                                .date
+                                            }
+                                          </div>
+                                          <div className="tabular-nums text-blue-400/95 mt-0.5">
+                                            {selectedStat === "Integrity"
+                                              ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
+                                              : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
+                                          </div>
+                                        </div>
+                                      )}
                                     <svg
                                       viewBox="0 0 100 100"
                                       preserveAspectRatio="none"
-                                      className="h-full w-full block"
+                                      className="h-full w-full block cursor-crosshair"
                                       role="img"
+                                      onMouseMove={(e) => {
+                                        const svg = e.currentTarget;
+                                        const rect =
+                                          svg.getBoundingClientRect();
+                                        const xPct =
+                                          ((e.clientX - rect.left) /
+                                            rect.width) *
+                                          100;
+                                        const n = currentData.length;
+                                        if (n < 1) {
+                                          setAnalyticsChartHover(null);
+                                          return;
+                                        }
+                                        const idx = Math.round(
+                                          (xPct / 100) *
+                                            Math.max(0, n - 1),
+                                        );
+                                        setAnalyticsChartHover(
+                                          Math.max(
+                                            0,
+                                            Math.min(n - 1, idx),
+                                          ),
+                                        );
+                                      }}
                                     >
                                       <title>{analyticsChartHint}</title>
                                       <defs>
@@ -4079,19 +4193,35 @@ export default function App() {
                                           <stop
                                             offset="0%"
                                             stopColor="#3b82f6"
-                                            stopOpacity="0.16"
+                                            stopOpacity="0.28"
                                           />
                                           <stop
-                                            offset="55%"
+                                            offset="42%"
                                             stopColor="#3b82f6"
-                                            stopOpacity="0.05"
+                                            stopOpacity="0.09"
                                           />
                                           <stop
                                             offset="100%"
-                                            stopColor="#3b82f6"
-                                            stopOpacity="0"
+                                            stopColor="#09090b"
+                                            stopOpacity="0.55"
                                           />
                                         </linearGradient>
+                                        <filter
+                                          id="analyticsLineGlow"
+                                          x="-20%"
+                                          y="-20%"
+                                          width="140%"
+                                          height="140%"
+                                        >
+                                          <feGaussianBlur
+                                            stdDeviation="0.65"
+                                            result="blur"
+                                          />
+                                          <feMerge>
+                                            <feMergeNode in="blur" />
+                                            <feMergeNode in="SourceGraphic" />
+                                          </feMerge>
+                                        </filter>
                                       </defs>
                                       {[10, 32.5, 55, 77.5, 100].map((y) => (
                                         <line
@@ -4100,8 +4230,8 @@ export default function App() {
                                           y1={y}
                                           x2="100"
                                           y2={y}
-                                          stroke="#2a2a2e"
-                                          strokeWidth="0.2"
+                                          stroke="#27272a"
+                                          strokeWidth="0.18"
                                           vectorEffect="non-scaling-stroke"
                                         />
                                       ))}
@@ -4110,7 +4240,7 @@ export default function App() {
                                           const n = currentData.length - 1;
                                           const step = Math.max(
                                             1,
-                                            Math.ceil(n / 8),
+                                            Math.ceil(n / 10),
                                           );
                                           if (i % step !== 0 && i !== n) {
                                             return null;
@@ -4123,35 +4253,61 @@ export default function App() {
                                               y1="10"
                                               x2={x}
                                               y2="100"
-                                              stroke="#2a2a2e"
-                                              strokeWidth="0.12"
-                                              opacity={0.45}
+                                              stroke="#27272a"
+                                              strokeWidth="0.1"
+                                              opacity={0.4}
                                               vectorEffect="non-scaling-stroke"
                                             />
                                           );
                                         })}
                                       <path
-                                        d={generateLinearPath(currentData)}
+                                        d={buildAnalyticsSmoothAreaD(
+                                          currentData,
+                                        )}
                                         fill="url(#analyticsAreaFillGrad)"
                                         stroke="none"
                                         className="transition-all duration-700 ease-out"
                                       />
                                       <path
-                                        d={generateAnalyticsLinePath(
+                                        d={buildAnalyticsSmoothLineD(
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#4b8dfb"
-                                        strokeWidth="0.42"
+                                        stroke="#5b9fff"
+                                        strokeWidth="0.58"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                         vectorEffect="non-scaling-stroke"
+                                        filter="url(#analyticsLineGlow)"
                                         className="transition-all duration-700 ease-out"
                                       />
+                                      {getAnalyticsChartPoints(
+                                        currentData,
+                                      ).map(([cx, cy], i) => (
+                                        <circle
+                                          key={i}
+                                          cx={cx}
+                                          cy={cy}
+                                          r={
+                                            analyticsChartHover === i
+                                              ? 1.35
+                                              : 0.85
+                                          }
+                                          fill={
+                                            analyticsChartHover === i
+                                              ? "#93c5fd"
+                                              : "#3b82f6"
+                                          }
+                                          stroke="#0c1420"
+                                          strokeWidth="0.22"
+                                          className="transition-all duration-100"
+                                          vectorEffect="non-scaling-stroke"
+                                        />
+                                      ))}
                                     </svg>
                                   </div>
                                 </div>
-                                <div className="mt-1.5 flex justify-between gap-1.5 pl-12 pr-0 text-[10px] text-zinc-600/90 tabular-nums">
+                                <div className="mt-1 flex justify-between gap-1.5 pl-12 pr-0 text-[10px] text-zinc-600/85 tabular-nums">
                                   {analyticsGraphXLabels.map((lab) => (
                                     <span key={lab} className="truncate min-w-0">
                                       {lab}
@@ -4161,18 +4317,18 @@ export default function App() {
                               </div>
                             </section>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-0.5">
-                              <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] p-3.5 sm:p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color] duration-150 hover:bg-[#121215]">
-                                <div className="flex items-center justify-between gap-3 mb-2.5 pb-2 border-b border-zinc-800/70">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pt-0.5">
+                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014]">
+                                <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-zinc-800/60">
                                   <h2 className="text-[14px] font-semibold text-zinc-100">
                                     Discipline
                                   </h2>
-                                  <span className="text-[10px] font-medium text-zinc-600 tabular-nums tracking-wide uppercase">
+                                  <span className="text-[10px] font-medium text-zinc-600 tabular-nums">
                                     {getCurrentMonthName()}
                                   </span>
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-1">
+                                <div className="grid grid-cols-7 gap-[5px]">
                                   {["M", "T", "W", "T", "F", "S", "S"].map(
                                     (day, i) => (
                                       <div
@@ -4209,9 +4365,15 @@ export default function App() {
                                               {day.date}
                                             </div>
                                             <div className="flex justify-between gap-2 text-zinc-500">
-                                              <span>Focus</span>
+                                              <span>Minutes</span>
                                               <span className="text-zinc-200 tabular-nums font-medium">
-                                                {mins} min
+                                                {mins}
+                                              </span>
+                                            </div>
+                                            <div className="flex justify-between gap-2 text-zinc-500 mt-1">
+                                              <span>Tasks</span>
+                                              <span className="text-zinc-200 tabular-nums font-medium">
+                                                {day.tasksCompleted}
                                               </span>
                                             </div>
                                             <div className="flex justify-between gap-2 text-zinc-500 mt-1">
@@ -4232,32 +4394,30 @@ export default function App() {
                                 </div>
                               </section>
 
-                              <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] p-3.5 sm:p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color] duration-150 hover:bg-[#121215]">
-                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-2.5 pb-2 border-b border-zinc-800/70">
+                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014]">
+                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-2 pb-2 border-b border-zinc-800/60">
                                   Performance
                                 </h2>
                                 <div className="grid grid-cols-2 gap-2">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="group/tile rounded-md border border-zinc-800/90 bg-zinc-900/30 px-2.5 py-2 transition-all duration-100 hover:bg-zinc-900/50 hover:border-zinc-700/90 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
+                                      className="group/tile relative overflow-hidden rounded-lg border border-zinc-800/80 bg-gradient-to-br from-zinc-900/50 to-zinc-950/80 px-2.5 py-2 pl-3 transition-all duration-100 hover:brightness-110 hover:border-zinc-700/80 hover:-translate-y-0.5 hover:shadow-[0_4px_14px_rgba(0,0,0,0.4)]"
                                     >
-                                      <div className="flex items-start gap-2">
-                                        <span
-                                          className="mt-1 h-2 w-0.5 shrink-0 rounded-full bg-blue-500/75"
-                                          aria-hidden
-                                        />
-                                        <div className="min-w-0 flex-1">
-                                          <div className="text-[9px] text-zinc-600 leading-tight mb-0.5">
-                                            {stat.label
-                                              .toLowerCase()
-                                              .replace(/\b\w/g, (m) =>
-                                                m.toUpperCase(),
-                                              )}
-                                          </div>
-                                          <div className="text-[17px] font-semibold tabular-nums text-zinc-50 tracking-tight leading-tight">
-                                            {stat.val}
-                                          </div>
+                                      <span
+                                        className="absolute left-0 top-2 bottom-2 w-[2px] rounded-full bg-blue-500/55"
+                                        aria-hidden
+                                      />
+                                      <div className="min-w-0 pl-1.5">
+                                        <div className="text-[8.5px] text-zinc-600 leading-tight mb-0.5">
+                                          {stat.label
+                                            .toLowerCase()
+                                            .replace(/\b\w/g, (m) =>
+                                              m.toUpperCase(),
+                                            )}
+                                        </div>
+                                        <div className="text-[18px] font-semibold tabular-nums text-zinc-50 tracking-tight leading-none">
+                                          {stat.val}
                                         </div>
                                       </div>
                                     </div>
