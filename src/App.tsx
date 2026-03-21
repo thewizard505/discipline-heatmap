@@ -39,6 +39,31 @@ type Task = {
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
+/** TickTick-style list UI: unified main-pane grey */
+const TT_MAIN_GREY = "#1a1a1a";
+const TT_INPUT_ROW = "#1f1f1f";
+const TT_ACCENT_BLUE = "#2563eb";
+
+/** Swatches for new lists (matches TickTick-style picker); `null` = no accent color */
+const LIST_COLOR_SWATCHES: (string | null)[] = [
+  null,
+  "#eab308",
+  "#f97316",
+  "#ef4444",
+  "#22c55e",
+  "#3b82f6",
+  "#a855f7",
+  "#ec4899",
+  "#14b8a6",
+  "#64748b",
+];
+
+function listAccentDotClass(color: string | null) {
+  if (!color)
+    return "border border-zinc-500 bg-zinc-800/80";
+  return "";
+}
+
 type DayMetric = {
   date: string;
   focusIntegrity: number;
@@ -192,17 +217,18 @@ export default function App() {
     FOCUS_SESSION_DURATION_SECONDS,
   );
 
-  type TodayList = { id: string; label: string; icon: string };
+  type TodayList = { id: string; label: string; icon: string; color: string | null };
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
-    { id: "work", label: "Work", icon: "💼" },
-    { id: "shopping", label: "Shopping", icon: "🧾" },
-    { id: "study", label: "Study", icon: "📚" },
-    { id: "exercise", label: "Exercise", icon: "🏃‍♂️" },
+    { id: "work", label: "Work", icon: "💼", color: "#ef4444" },
+    { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
+    { id: "study", label: "Study", icon: "📚", color: "#22c55e" },
+    { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
   ]);
   const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
   const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
+  const [newListColor, setNewListColor] = useState<string | null>("#eab308");
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
@@ -578,6 +604,7 @@ export default function App() {
       setTasks([]);
       setTasksByListId({});
       setSelectedTaskId(null);
+      setSelectedListId("work");
       setSeconds(0);
       setRunning(false);
       setIsTransitioning(false);
@@ -594,6 +621,7 @@ export default function App() {
       setTasks([]);
       setTasksByListId({});
       setSelectedTaskId(null);
+      setSelectedListId(null);
       setHistory({});
       setSeconds(0);
       setRunning(false);
@@ -685,6 +713,7 @@ export default function App() {
 
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
   const addTaskFromListInput = () => {
+    if (!selectedListId) return;
     const trimmed = taskInput.trim();
     if (!trimmed) return;
     const id = Date.now();
@@ -1456,7 +1485,8 @@ export default function App() {
 
         {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
         {!isSimulation && !isFocusSessionActive && (
-          <div className="min-h-screen flex w-full bg-black text-zinc-200 overflow-x-hidden">
+          <>
+          <div className="h-screen min-h-0 flex w-full bg-black text-zinc-200 overflow-hidden">
             {/* Left sidebar (main) — flush to viewport edge */}
             <aside className="h-screen w-[52px] sm:w-14 bg-[#141414] border-r border-[#2a2a2a] flex flex-col items-center justify-between py-2 z-[250] shrink-0">
               {/* Top: profile */}
@@ -1697,6 +1727,7 @@ export default function App() {
                         type="button"
                         onClick={() => {
                           setNewListName("");
+                          setNewListColor("#eab308");
                           setIsAddListModalOpen(true);
                         }}
                         className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
@@ -1728,9 +1759,20 @@ export default function App() {
                           }`}
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <span className="text-base">{list.icon}</span>
-                              <span className="truncate">{list.label}</span>
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="text-base shrink-0">{list.icon}</span>
+                              <span className="truncate text-[13px] font-normal">
+                                {list.label}
+                              </span>
+                              <span
+                                className={`w-2 h-2 rounded-full shrink-0 ${listAccentDotClass(list.color)}`}
+                                style={
+                                  list.color
+                                    ? { backgroundColor: list.color }
+                                    : undefined
+                                }
+                                aria-hidden
+                              />
                             </div>
 
                             <div className="flex items-center">
@@ -1784,85 +1826,6 @@ export default function App() {
                     </div>
                   </div>
 
-                  {isAddListModalOpen && (
-                    <div className="mt-3 rounded-2xl bg-[#18191f] border border-white/10 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <p className="text-sm font-semibold text-gray-100">
-                          Add List
-                        </p>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddListModalOpen(false);
-                            setNewListName("");
-                          }}
-                          className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
-                          aria-label="Close"
-                        >
-                          ✕
-                        </button>
-                      </div>
-
-                      <div className="grid md:grid-cols-[1fr_220px] gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                            List Name
-                          </label>
-                          <input
-                            autoFocus
-                            value={newListName}
-                            onChange={(e) => setNewListName(e.target.value)}
-                            placeholder="List Name"
-                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
-                          />
-                        </div>
-                        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                          <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                            Preview
-                          </p>
-                          <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
-                            <span className="mr-2">{DEFAULT_LIST_ICON}</span>
-                            {newListName ? newListName : "List Name"}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center justify-end gap-3 mt-4">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsAddListModalOpen(false);
-                            setNewListName("");
-                          }}
-                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          type="button"
-                          disabled={!newListName.trim()}
-                          onClick={() => {
-                            const trimmed = newListName.trim();
-                            if (!trimmed) return;
-                            setTodayLists((prev) => [
-                              ...prev,
-                              {
-                                id: `list-${Date.now()}`,
-                                label: trimmed,
-                                icon: DEFAULT_LIST_ICON,
-                              },
-                            ]);
-                            setIsAddListModalOpen(false);
-                            setNewListName("");
-                            setOpenListMenuId(null);
-                          }}
-                          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
-                        >
-                          Add
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                   {/* Bottom: Completed */}
@@ -1879,9 +1842,22 @@ export default function App() {
                       setCollapsedCompletedDates({});
                       setTodayMainMode("completed");
                     }}
-                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
+                    className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors duration-150"
                   >
-                    <span className="tracking-[0.18em] uppercase">Completed</span>
+                    <svg
+                      className="w-4 h-4 text-zinc-500 shrink-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden
+                    >
+                      <path d="M9 11l3 3L22 4" />
+                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                    </svg>
+                    <span className="font-normal">Completed</span>
                   </button>
                 </div>
               </aside>
@@ -1890,22 +1866,22 @@ export default function App() {
             {/* Content panel overlay */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 h-screen ${
-                activeView === "today" && selectedListId && todayMainMode === "tasks"
+              className={`flex-1 min-h-0 h-screen ${
+                activeView === "today" && todayMainMode === "tasks"
                   ? "overflow-hidden"
                   : "overflow-y-auto"
               }`}
             >
               <div
-                className={`w-full h-full flex flex-col ${
-                  activeView === "today" && selectedListId && todayMainMode === "tasks"
-                    ? "px-0 pt-3 pb-0"
+                className={`w-full h-full min-h-0 flex flex-col ${
+                  activeView === "today" && todayMainMode === "tasks"
+                    ? "px-0 pt-0 pb-0"
                     : "px-5 pt-3 pb-6"
                 }`}
               >
                 <div
                   className={`flex items-center justify-between pointer-events-auto shrink-0 ${
-                    activeView === "today" && selectedListId && todayMainMode === "tasks"
+                    activeView === "today" && todayMainMode === "tasks"
                       ? "hidden"
                       : "mb-6"
                   }`}
@@ -2062,34 +2038,110 @@ export default function App() {
                       )}
                     </div>
                   </div>
-                ) : activeView === "today" && selectedListId ? (
-                  <div className="w-full h-[calc(100vh-0.75rem)] flex flex-col bg-[#121212] overflow-hidden">
+                ) : activeView === "today" && todayMainMode === "tasks" ? (
+                  <div
+                    className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
+                    style={{ backgroundColor: TT_MAIN_GREY }}
+                  >
                     <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] flex-1 min-h-0">
                       {/* LEFT PANEL: tasks (TickTick middle column) */}
-                      <div className="pl-3 pr-2 pt-2 pb-2 flex flex-col h-full min-h-0 bg-[#121212]">
+                      <div
+                        className="pl-3 pr-2 pt-3 pb-2 flex flex-col h-full min-h-0"
+                        style={{ backgroundColor: TT_MAIN_GREY }}
+                      >
                         {/* Header + actions */}
-                        <div className="flex items-start justify-between gap-4 mb-2 shrink-0">
-                          <div className="flex items-center gap-2 min-w-0">
+                        <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={handleToggleTodaySidebar}
                               disabled={isTodayPanelAnimatingOut}
-                              className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-zinc-700/80 bg-[#0f0f0f] text-zinc-400 text-xs hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
                               aria-label="Collapse Today sidebar"
                               title="Collapse Today sidebar"
                             >
-                              {isTodayPanelCollapsed ? ">" : "<"}
+                              <svg
+                                className="w-[18px] h-[18px]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                aria-hidden
+                              >
+                                <line x1="4" y1="6" x2="20" y2="6" />
+                                <line x1="4" y1="12" x2="20" y2="12" />
+                                <line x1="4" y1="18" x2="20" y2="18" />
+                              </svg>
                             </button>
-                            <span className="text-base leading-none">{selectedList?.icon}</span>
-                            <h2 className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">
-                              {selectedList?.label}
-                            </h2>
+                            {selectedList ? (
+                              <>
+                                <span className="text-lg leading-none shrink-0">
+                                  {selectedList.icon}
+                                </span>
+                                <h2 className="text-xl font-semibold text-zinc-100 truncate tracking-normal leading-7">
+                                  {selectedList.label}
+                                </h2>
+                                <span
+                                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${listAccentDotClass(selectedList.color)}`}
+                                  style={
+                                    selectedList.color
+                                      ? { backgroundColor: selectedList.color }
+                                      : undefined
+                                  }
+                                  aria-hidden
+                                />
+                              </>
+                            ) : (
+                              <h2 className="text-xl font-semibold text-zinc-300 truncate tracking-normal leading-7">
+                                Today
+                              </h2>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0 text-zinc-500">
+                            <button
+                              type="button"
+                              className="p-2 rounded-md hover:bg-white/[0.06] hover:text-zinc-300 transition-colors"
+                              aria-label="Sort"
+                            >
+                              <svg
+                                className="w-[18px] h-[18px]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
+                              </svg>
+                            </button>
+                            <button
+                              type="button"
+                              className="p-2 rounded-md hover:bg-white/[0.06] hover:text-zinc-300 transition-colors"
+                              aria-label="More options"
+                            >
+                              <svg
+                                className="w-[18px] h-[18px]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                              >
+                                <circle cx="5" cy="12" r="1.5" fill="currentColor" />
+                                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+                                <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+                              </svg>
+                            </button>
                           </div>
                         </div>
 
                         {/* Task input bar — slim, Enter to add only */}
-                        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-[10px] px-2.5 h-9 flex items-center gap-2 shrink-0">
-                          <span className="text-zinc-500 text-sm leading-none pl-0.5">+</span>
+                        <div
+                          className="border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0"
+                          style={{ backgroundColor: TT_INPUT_ROW }}
+                        >
+                          <span className="text-zinc-500 text-base leading-none pl-0.5">+</span>
                           <input
                             value={taskInput}
                             onChange={(e) => setTaskInput(e.target.value)}
@@ -2099,16 +2151,121 @@ export default function App() {
                                 addTaskFromListInput();
                               }
                             }}
-                            placeholder="Add task"
-                            className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[13px]"
+                            placeholder={
+                              selectedListId ? "Add task" : "Select a list to add tasks"
+                            }
+                            disabled={!selectedListId}
+                            className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed"
                           />
                         </div>
 
                         {/* Tasks list */}
                         <div className="mt-2 flex-1 min-h-0 overflow-y-auto">
-                          {tasks.filter((t) => !t.removing).length === 0 ? (
-                            <div className="mt-8 text-[13px] text-zinc-500 px-1">
-                              Add a task to see details.
+                          {!selectedListId ? (
+                            <div className="h-full min-h-[240px] flex flex-col items-center justify-center px-6 text-center">
+                              <p className="text-[15px] font-semibold text-zinc-200 mb-1">
+                                No list selected
+                              </p>
+                              <p className="text-sm text-zinc-500 max-w-xs">
+                                Choose a list from the sidebar to add and view tasks.
+                              </p>
+                            </div>
+                          ) : tasks.filter((t) => !t.removing).length === 0 ? (
+                            <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10">
+                              <div className="relative w-[200px] h-[140px] mb-6">
+                                <div
+                                  className="absolute inset-0 rounded-[45%] opacity-90"
+                                  style={{
+                                    background:
+                                      "radial-gradient(ellipse at 50% 40%, #2a2a2a 0%, #1f1f1f 70%)",
+                                  }}
+                                />
+                                <svg
+                                  className="relative z-[1] w-full h-full drop-shadow-lg"
+                                  viewBox="0 0 200 140"
+                                  fill="none"
+                                  aria-hidden
+                                >
+                                  <path
+                                    d="M48 38 L118 32 L128 108 L58 114 Z"
+                                    fill="#f4f4f5"
+                                    opacity="0.98"
+                                  />
+                                  <rect
+                                    x="58"
+                                    y="48"
+                                    width="10"
+                                    height="10"
+                                    rx="1"
+                                    stroke="#3b82f6"
+                                    strokeWidth="2.2"
+                                    fill="none"
+                                  />
+                                  <rect
+                                    x="58"
+                                    y="72"
+                                    width="10"
+                                    height="10"
+                                    rx="1"
+                                    stroke="#3b82f6"
+                                    strokeWidth="2.2"
+                                    fill="none"
+                                  />
+                                  <line
+                                    x1="74"
+                                    y1="53"
+                                    x2="108"
+                                    y2="51"
+                                    stroke="#d4d4d8"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  <line
+                                    x1="74"
+                                    y1="77"
+                                    x2="104"
+                                    y2="75"
+                                    stroke="#d4d4d8"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  <rect
+                                    x="124"
+                                    y="44"
+                                    width="14"
+                                    height="56"
+                                    rx="2"
+                                    fill="#3b82f6"
+                                  />
+                                  <rect
+                                    x="124"
+                                    y="40"
+                                    width="14"
+                                    height="8"
+                                    rx="1"
+                                    fill="#fafafa"
+                                  />
+                                  <path
+                                    d="M124 100 L131 108 L138 100"
+                                    fill="#fafafa"
+                                  />
+                                  <path
+                                    className="text-blue-500"
+                                    d="M40 36 L44 32 L48 36"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                    fill="none"
+                                  />
+                                  <circle cx="36" cy="52" r="2" fill="#52525b" />
+                                  <circle cx="162" cy="64" r="2" fill="#52525b" />
+                                </svg>
+                              </div>
+                              <p className="text-lg font-semibold text-zinc-100 tracking-tight">
+                                No tasks
+                              </p>
+                              <p className="mt-1.5 text-sm text-zinc-400">
+                                Click the input box to add
+                              </p>
                             </div>
                           ) : (
                             <div className="space-y-0.5 pt-1">
@@ -2193,8 +2350,15 @@ export default function App() {
                       </div>
 
                       {/* RIGHT PANEL: task details (TickTick detail column) */}
-                      <div className="border-l border-[#2a2a2a] bg-[#1e1e1e] flex flex-col h-full min-h-0">
-                        {selectedTask ? (
+                      <div
+                        className="border-l border-[#2a2a2a] flex flex-col h-full min-h-0"
+                        style={{ backgroundColor: TT_MAIN_GREY }}
+                      >
+                        {!selectedListId ? (
+                          <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm px-6 text-center">
+                            Select a list to view details
+                          </div>
+                        ) : selectedTask ? (
                           <>
                             <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
                               <div className="flex items-center gap-3 min-w-0">
@@ -2296,6 +2460,176 @@ export default function App() {
             </section>
             )}
           </div>
+
+          {isAddListModalOpen && (
+            <div
+              className="fixed inset-0 z-[600] flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-[1px]"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-list-title"
+              onClick={() => {
+                setIsAddListModalOpen(false);
+                setNewListName("");
+              }}
+            >
+              <div
+                className="w-full max-w-[720px] rounded-2xl overflow-hidden shadow-2xl flex flex-col sm:flex-row border border-zinc-700/60 bg-[#2d2d2d]"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Left: form (TickTick Add List) */}
+                <div className="flex-1 min-w-0 p-6 sm:p-8 flex flex-col gap-6">
+                  <h2
+                    id="add-list-title"
+                    className="text-lg font-semibold text-zinc-100 tracking-tight"
+                  >
+                    Add List
+                  </h2>
+
+                  <div>
+                    <div className="flex items-stretch rounded-lg overflow-hidden border border-zinc-600/80 bg-[#1f1f1f] focus-within:border-blue-500/70 transition-colors">
+                      <span className="pl-3 pr-1 flex items-center text-zinc-500 text-lg select-none">
+                        ≡
+                      </span>
+                      <input
+                        autoFocus
+                        value={newListName}
+                        onChange={(e) => setNewListName(e.target.value)}
+                        placeholder="Name"
+                        className="flex-1 min-w-0 py-3 pr-3 bg-transparent text-[15px] text-zinc-100 placeholder:text-zinc-500 outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <p className="text-[13px] text-zinc-400 mb-3">List Color</p>
+                    <div className="flex flex-wrap items-center gap-2.5">
+                      {LIST_COLOR_SWATCHES.map((c, i) => {
+                        const selected = newListColor === c;
+                        return (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setNewListColor(c)}
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/80 ${
+                              c === null
+                                ? "border-2 border-dashed border-zinc-500 bg-[#1a1a1a]"
+                                : "border-2 border-transparent"
+                            } ${selected ? "ring-2 ring-offset-2 ring-offset-[#2d2d2d] ring-blue-500" : ""}`}
+                            style={
+                              c
+                                ? {
+                                    backgroundColor: c,
+                                    boxShadow: selected
+                                      ? `inset 0 0 0 2px rgba(0,0,0,0.25)`
+                                      : undefined,
+                                  }
+                                : undefined
+                            }
+                            aria-label={c === null ? "No color" : `Color ${c}`}
+                          >
+                            {c === null && (
+                              <span className="text-zinc-500 text-xs">—</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 mt-auto pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsAddListModalOpen(false);
+                        setNewListName("");
+                      }}
+                      className="text-[14px] text-zinc-400 hover:text-zinc-200 transition-colors py-2"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!newListName.trim()}
+                      onClick={() => {
+                        const trimmed = newListName.trim();
+                        if (!trimmed) return;
+                        setTodayLists((prev) => [
+                          ...prev,
+                          {
+                            id: `list-${Date.now()}`,
+                            label: trimmed,
+                            icon: DEFAULT_LIST_ICON,
+                            color: newListColor,
+                          },
+                        ]);
+                        setIsAddListModalOpen(false);
+                        setNewListName("");
+                        setNewListColor("#eab308");
+                        setOpenListMenuId(null);
+                      }}
+                      className="ml-auto rounded-full px-8 py-2.5 text-[14px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-95"
+                      style={{ backgroundColor: TT_ACCENT_BLUE }}
+                    >
+                      Add
+                    </button>
+                  </div>
+                </div>
+
+                {/* Right: live preview */}
+                <div className="w-full sm:w-[300px] shrink-0 border-t sm:border-t-0 sm:border-l border-zinc-800 bg-[#1a1a1a] p-6 flex flex-col relative">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddListModalOpen(false);
+                      setNewListName("");
+                    }}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 flex items-center justify-center transition-colors"
+                    aria-label="Close"
+                  >
+                    ✕
+                  </button>
+                  <div className="mt-6 flex-1 flex flex-col rounded-xl border border-zinc-800/80 bg-[#141414] overflow-hidden">
+                    <div className="px-4 py-3 border-b border-zinc-800/80 flex items-center gap-2">
+                      <span className="text-zinc-500">{DEFAULT_LIST_ICON}</span>
+                      <span className="text-[15px] text-zinc-100 font-medium truncate">
+                        {newListName.trim() || "Name"}
+                      </span>
+                      <span
+                        className={`ml-1 w-2 h-2 rounded-full shrink-0 ${listAccentDotClass(newListColor)}`}
+                        style={
+                          newListColor
+                            ? { backgroundColor: newListColor }
+                            : undefined
+                        }
+                      />
+                    </div>
+                    <div className="p-3 space-y-2 flex-1">
+                      {["Task title", "Task title"].map((label, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2.5 rounded-lg px-2 py-2 bg-[#1c1c1c]/80"
+                        >
+                          <span className="w-[18px] h-[18px] rounded-full border-2 border-zinc-600 shrink-0" />
+                          <span className="text-[13px] text-zinc-400 truncate">
+                            {label}
+                          </span>
+                          <span
+                            className={`ml-auto w-1.5 h-1.5 rounded-full shrink-0 ${listAccentDotClass(newListColor)}`}
+                            style={
+                              newListColor
+                                ? { backgroundColor: newListColor }
+                                : undefined
+                            }
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
         )}
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
