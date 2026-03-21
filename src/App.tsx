@@ -1067,7 +1067,18 @@ export default function App() {
     useState<FocusSessionDialog>(null);
   /** True only while the task timer is running inside an active focus session. */
   const isFocusTimerRunning = isFocusSessionActive && running;
-  const [focusExpandZenActive, setFocusExpandZenActive] = useState(false);
+  /** Full-screen zen transition when entering Focus from the nav (dartboard). */
+  const [focusEnterZenActive, setFocusEnterZenActive] = useState(false);
+  const [zenOverlayOrigin, setZenOverlayOrigin] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  /** Blocks interaction with the shell until Focus UI is ready (then only mist remains). */
+  const [focusEnterZenBlocking, setFocusEnterZenBlocking] = useState(false);
+  const focusNavButtonRef = useRef<HTMLButtonElement>(null);
+  const focusEnterTimeoutsRef = useRef<number[]>([]);
+  /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
+  const allowFocusEnterRef = useRef(true);
 
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
@@ -1660,10 +1671,24 @@ export default function App() {
     }, 600);
   };
 
+  const cancelFocusEnterZen = () => {
+    allowFocusEnterRef.current = false;
+    clearFocusEnterTimers();
+    setFocusEnterZenActive(false);
+    setZenOverlayOrigin(null);
+    setFocusEnterZenBlocking(false);
+  };
+
   const handleSidebarNavClick = (view: AppView) => {
     if (isFocusTimerRunning) {
       setFocusSessionDialog({ kind: "quit", pending: { action: "view", view } });
       return;
+    }
+    if (focusEnterZenActive) {
+      cancelFocusEnterZen();
+    }
+    if (isFocusSessionActive) {
+      cleanupFocusSessionAfterQuit();
     }
     setActiveView(view);
   };
@@ -1752,6 +1777,12 @@ export default function App() {
       });
       return;
     }
+    if (focusEnterZenActive) {
+      cancelFocusEnterZen();
+    }
+    if (isFocusSessionActive) {
+      cleanupFocusSessionAfterQuit();
+    }
     performOpenTaskInList(listId, taskId);
   };
 
@@ -1794,15 +1825,16 @@ export default function App() {
     setFocusSessionDialog(null);
   };
 
-  const handleStartFocusSession = () => {
-    if (isFocusSessionActive) {
-      if (isFocusTimerRunning) {
-        setFocusSessionDialog({ kind: "reset" });
-      } else {
-        handleResetSessionConfirm();
-      }
-      return;
-    }
+  const clearFocusEnterTimers = () => {
+    focusEnterTimeoutsRef.current.forEach((id) => window.clearTimeout(id));
+    focusEnterTimeoutsRef.current = [];
+  };
+
+  useEffect(() => {
+    return () => clearFocusEnterTimers();
+  }, []);
+
+  const finishEnterFocusSession = () => {
     setIsFocusSessionActive(true);
     setIsAddListModalOpen(false);
     setOpenListMenuId(null);
@@ -1815,6 +1847,61 @@ export default function App() {
       setIsTodayPanelCollapsed(true);
       setIsTodayPanelAnimatingOut(false);
     }, 220);
+  };
+
+  /** Zen transition when tapping the Focus (dartboard) nav — then reveal the focus page. */
+  const runFocusEnterZenTransition = () => {
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      finishEnterFocusSession();
+      return;
+    }
+    clearFocusEnterTimers();
+    allowFocusEnterRef.current = true;
+    const el = focusNavButtonRef.current;
+    if (el) {
+      const r = el.getBoundingClientRect();
+      setZenOverlayOrigin({
+        x: r.left + r.width / 2,
+        y: r.top + r.height / 2,
+      });
+    } else {
+      setZenOverlayOrigin({
+        x: window.innerWidth * 0.06,
+        y: window.innerHeight * 0.38,
+      });
+    }
+    setFocusEnterZenActive(true);
+    setFocusEnterZenBlocking(true);
+    const ENTER_MS = 2200;
+    const UNBLOCK_MS = 2350;
+    const CLEAR_MS = 4800;
+    const t0 = window.setTimeout(() => {
+      if (!allowFocusEnterRef.current) return;
+      finishEnterFocusSession();
+    }, ENTER_MS);
+    const t1 = window.setTimeout(() => setFocusEnterZenBlocking(false), UNBLOCK_MS);
+    const t2 = window.setTimeout(() => {
+      setFocusEnterZenActive(false);
+      setZenOverlayOrigin(null);
+      setFocusEnterZenBlocking(false);
+    }, CLEAR_MS);
+    focusEnterTimeoutsRef.current.push(t0, t1, t2);
+  };
+
+  const handleStartFocusSession = () => {
+    if (focusEnterZenActive) return;
+    if (isFocusSessionActive) {
+      if (isFocusTimerRunning) {
+        setFocusSessionDialog({ kind: "reset" });
+      } else {
+        handleResetSessionConfirm();
+      }
+      return;
+    }
+    runFocusEnterZenTransition();
   };
 
   const handleQuitFocusSession = () => {
@@ -1849,24 +1936,13 @@ export default function App() {
       });
       return;
     }
-    applyListSelection(listId);
-  };
-
-  const runFocusExpandSidebarZen = () => {
-    const reduceMotion =
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (reduceMotion) {
-      setIsTodayPanelCollapsed(false);
-      setIsTodayPanelAnimatingOut(false);
-      return;
+    if (focusEnterZenActive) {
+      cancelFocusEnterZen();
     }
-    setFocusExpandZenActive(true);
-    window.setTimeout(() => {
-      setIsTodayPanelCollapsed(false);
-      setIsTodayPanelAnimatingOut(false);
-    }, 680);
-    window.setTimeout(() => setFocusExpandZenActive(false), 1200);
+    if (isFocusSessionActive) {
+      cleanupFocusSessionAfterQuit();
+    }
+    applyListSelection(listId);
   };
 
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
@@ -2534,17 +2610,46 @@ export default function App() {
         @keyframes workmode-modal-in{ from{ opacity:0; transform:translateY(8px) scale(.96) } to{ opacity:1; transform:translateY(0) scale(1) } }
         .workmode-modal-enter{ animation:workmode-modal-in .18s ease-out; }
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
-        @keyframes focus-zen-mist { 0%{ opacity:0.42 } 100%{ opacity:0 } }
-        @keyframes focus-zen-ripple { 0%{ transform:scale(0.12); opacity:0.5 } 100%{ transform:scale(1); opacity:0 } }
-        .focus-zen-mist-overlay{ animation:focus-zen-mist 1.05s ease-out forwards; }
+        @keyframes focus-zen-mist {
+          0%{ opacity:0.55 }
+          45%{ opacity:0.42 }
+          100%{ opacity:0 }
+        }
+        @keyframes focus-zen-ripple-long {
+          0%{ transform:scale(0.04); opacity:0.72 }
+          100%{ transform:scale(1); opacity:0 }
+        }
+        @keyframes focus-zen-bloom {
+          0%{ transform:scale(0.3); opacity:0.35 }
+          100%{ transform:scale(1); opacity:0 }
+        }
+        .focus-zen-mist-overlay{
+          animation:focus-zen-mist 4.8s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+        }
         .focus-zen-ripple-ring{
           position:absolute; left:50%; top:50%;
-          width:min(140vmax,2200px); height:min(140vmax,2200px);
-          margin-left:calc(min(140vmax,2200px)/-2); margin-top:calc(min(140vmax,2200px)/-2);
+          width:min(160vmax,2600px); height:min(160vmax,2600px);
+          margin-left:calc(min(160vmax,2600px)/-2); margin-top:calc(min(160vmax,2600px)/-2);
           border-radius:50%;
-          border:1px solid rgba(147,197,253,0.28);
-          box-shadow:0 0 80px rgba(59,130,246,0.1), inset 0 0 60px rgba(255,255,255,0.06);
-          animation:focus-zen-ripple 1.08s cubic-bezier(0.22,1,0.36,1) forwards;
+          border:1.5px solid rgba(186,230,253,0.35);
+          box-shadow:
+            0 0 120px rgba(59,130,246,0.22),
+            0 0 220px rgba(147,197,253,0.12),
+            inset 0 0 100px rgba(255,255,255,0.08);
+          animation:focus-zen-ripple-long 2.6s cubic-bezier(0.2,0.85,0.25,1) forwards;
+        }
+        .focus-zen-ripple-ring-slow{
+          animation:focus-zen-ripple-long 3.2s cubic-bezier(0.15,0.75,0.2,1) forwards;
+          border-color:rgba(147,197,253,0.22);
+          box-shadow:0 0 180px rgba(59,130,246,0.15);
+        }
+        .focus-zen-bloom-core{
+          position:absolute; left:50%; top:50%;
+          width:min(90vmax,1400px); height:min(90vmax,1400px);
+          margin-left:calc(min(90vmax,1400px)/-2); margin-top:calc(min(90vmax,1400px)/-2);
+          border-radius:50%;
+          background:radial-gradient(circle, rgba(147,197,253,0.2) 0%, transparent 68%);
+          animation:focus-zen-bloom 3.4s ease-out forwards;
         }
       `}</style>
 
@@ -2834,18 +2939,31 @@ export default function App() {
         {/* APP SHELL LAYOUT (dashboard — includes focus session) */}
         {!isSimulation && (
           <>
-          {focusExpandZenActive && (
+          {focusEnterZenActive && zenOverlayOrigin && (
             <div
-              className="fixed inset-0 z-[265] pointer-events-none overflow-hidden"
+              className={`fixed inset-0 z-[265] overflow-hidden transition-opacity duration-700 ${
+                focusEnterZenBlocking
+                  ? "pointer-events-auto cursor-wait"
+                  : "pointer-events-none"
+              }`}
               aria-hidden
             >
-              <div className="absolute inset-0 bg-gradient-to-r from-sky-100/30 via-white/20 to-blue-50/5 focus-zen-mist-overlay" />
-              <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-px h-px overflow-visible">
-                {[0, 1, 2, 3].map((i) => (
+              <div className="absolute inset-0 bg-gradient-to-br from-sky-200/35 via-[#e0f2fe]/25 to-indigo-100/15 focus-zen-mist-overlay" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/20 opacity-90" />
+              <div
+                className="absolute w-0 h-0 overflow-visible"
+                style={{
+                  left: zenOverlayOrigin.x,
+                  top: zenOverlayOrigin.y,
+                  transform: "translate(-50%, -50%)",
+                }}
+              >
+                <div className="focus-zen-bloom-core" />
+                {Array.from({ length: 7 }).map((_, i) => (
                   <div
                     key={i}
-                    className="focus-zen-ripple-ring"
-                    style={{ animationDelay: `${i * 110}ms` }}
+                    className={`focus-zen-ripple-ring ${i === 6 ? "focus-zen-ripple-ring-slow" : ""}`}
+                    style={{ animationDelay: `${i * 180}ms` }}
                   />
                 ))}
               </div>
@@ -2945,6 +3063,7 @@ export default function App() {
 
                   {/* Focus — same entry as “Start Focus Session” */}
                   <button
+                    ref={focusNavButtonRef}
                     type="button"
                     onClick={handleStartFocusSession}
                     className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-100 hover:bg-white/5 transition-colors duration-150 overflow-visible"
@@ -3122,6 +3241,12 @@ export default function App() {
                             });
                             return;
                           }
+                          if (focusEnterZenActive) {
+                            cancelFocusEnterZen();
+                          }
+                          if (isFocusSessionActive) {
+                            cleanupFocusSessionAfterQuit();
+                          }
                           setNewListName("");
                           setNewListColor("#eab308");
                           setIsAddListModalOpen(true);
@@ -3233,6 +3358,12 @@ export default function App() {
                           });
                           return;
                         }
+                        if (focusEnterZenActive) {
+                          cancelFocusEnterZen();
+                        }
+                        if (isFocusSessionActive) {
+                          cleanupFocusSessionAfterQuit();
+                        }
                         setCollapsedCompletedDates({});
                         setTodayMainMode("completed");
                       }}
@@ -3268,7 +3399,10 @@ export default function App() {
               !isTodayPanelAnimatingOut && (
                 <button
                   type="button"
-                  onClick={runFocusExpandSidebarZen}
+                  onClick={() => {
+                    setIsTodayPanelCollapsed(false);
+                    setIsTodayPanelAnimatingOut(false);
+                  }}
                   className="h-screen w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#141414] border-r border-[#2a2a2a] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
                   aria-label="Expand lists sidebar"
                   title="Show lists"
