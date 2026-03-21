@@ -2313,6 +2313,14 @@ export default function App() {
     return [max, Math.round(max / 2), 0];
   }, [graphScale]);
 
+  const analyticsChartHint = useMemo(() => {
+    const vals = currentData.map((d) => d.value);
+    if (vals.length === 0) return "No data yet";
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const u = selectedStat === "Integrity" ? "%" : "s";
+    return `Avg ${avg.toFixed(1)}${u} · ${vals.length} points`;
+  }, [currentData, selectedStat]);
+
   function generateLinearPath(data: HistoryPoint[]) {
     const { min, range } = graphScale;
     const points = data.map((d, i) => [
@@ -2357,18 +2365,18 @@ export default function App() {
         ? "168, 85, 247"
         : "239, 68, 68";
 
-  /** Dark analytics heatmap — intensity steps (GitHub-style); only used on Analytics. */
+  /** Dark analytics heatmap — 4 intensity levels + empty; Analytics only. */
   const getHeatmapClass = (symbol: string, isCurrentDay: boolean) => {
     const base =
-      "rounded-[3px] border transition-colors duration-150 hover:brightness-110";
+      "rounded-[2px] border transition-all duration-150 hover:brightness-125 hover:ring-1 hover:ring-blue-500/25 hover:z-[5]";
     if (isCurrentDay && symbol === "⬜")
-      return `${base} bg-zinc-800/90 border-blue-500/45 ring-1 ring-blue-500/30`;
-    if (symbol === "⬜") return `${base} bg-zinc-800/50 border-zinc-700/60`;
-    if (symbol === "🔹") return `${base} bg-blue-950/70 border-blue-900/50`;
-    if (symbol === "🔷") return `${base} bg-blue-900/75 border-blue-800/45`;
-    if (symbol === "🔵") return `${base} bg-blue-700/55 border-blue-600/40`;
-    if (symbol === "🔥") return `${base} bg-blue-600/65 border-blue-500/40`;
-    return `${base} bg-zinc-800/50 border-zinc-700/60`;
+      return `${base} bg-zinc-800/95 border-blue-500/40 ring-1 ring-blue-500/25`;
+    if (symbol === "⬜") return `${base} bg-[#16161a] border-zinc-700/70`;
+    if (symbol === "🔹") return `${base} bg-blue-950/85 border-[#1e3a5f]/80`;
+    if (symbol === "🔷") return `${base} bg-[#1d4ed8]/35 border-blue-700/45`;
+    if (symbol === "🔵") return `${base} bg-[#2563eb]/55 border-blue-500/40`;
+    if (symbol === "🔥") return `${base} bg-[#3b82f6]/70 border-blue-400/35`;
+    return `${base} bg-[#16161a] border-zinc-700/70`;
   };
 
   const improvementDelta = useMemo(() => {
@@ -3955,43 +3963,54 @@ export default function App() {
                         onTaskPick={openTaskFromCalendar}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#0c0c0d] text-zinc-100 antialiased">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#0a0a0b] text-zinc-100 antialiased">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-5xl mx-auto px-4 sm:px-5 py-4 pb-10 space-y-4">
-                            <header className="border-b border-zinc-800/90 pb-3">
-                              <h1 className="text-[17px] font-semibold text-zinc-100 tracking-tight">
-                                Analytics
-                              </h1>
-                              <p className="text-[13px] text-zinc-500 mt-0.5 leading-snug">
-                                Focus trends and discipline at a glance
-                              </p>
+                          <div className="w-full max-w-[1100px] mx-auto px-5 sm:px-8 py-5 pb-12 space-y-3">
+                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-zinc-800/60 pb-5 mb-1">
+                              <div>
+                                <h1 className="text-[1.35rem] sm:text-[1.5rem] font-semibold text-zinc-50 tracking-tight">
+                                  Analytics
+                                </h1>
+                                <p className="text-[12px] text-zinc-600 mt-1.5 max-w-md leading-relaxed">
+                                  Focus trends and discipline at a glance
+                                </p>
+                              </div>
+                              <div className="shrink-0 flex items-center gap-2">
+                                <span className="inline-flex items-center gap-1.5 rounded-md border border-zinc-800/90 bg-[#111113] px-2.5 py-1 text-[11px] font-medium text-zinc-500 tabular-nums shadow-[0_1px_2px_rgba(0,0,0,0.35)]">
+                                  <span
+                                    className="h-1 w-1 rounded-full bg-blue-500/70"
+                                    aria-hidden
+                                  />
+                                  Last 7 days
+                                </span>
+                              </div>
                             </header>
 
-                            <section className="rounded-lg border border-zinc-800/90 bg-[#131316] shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
-                              <div className="flex flex-col gap-3 p-3 sm:p-4 border-b border-zinc-800/80">
+                            <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color,box-shadow] duration-150 hover:bg-[#121215]">
+                              <div className="flex flex-col gap-2 p-3.5 sm:p-4 border-b border-zinc-800/70">
                                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                                   <div>
-                                    <h2 className="text-[15px] font-semibold text-zinc-100">
+                                    <h2 className="text-[15px] font-semibold text-zinc-100 tracking-tight">
                                       {selectedStat === "Integrity"
-                                        ? "Focus integrity"
+                                        ? "Focus Integrity"
                                         : selectedTaskGraph
                                           ? `Task speed · ${selectedTaskGraph}`
                                           : "Task speed"}
                                     </h2>
-                                    <p className="text-[12px] text-zinc-500 mt-0.5">
+                                    <p className="text-[11px] text-zinc-600 mt-0.5">
                                       {selectedStat === "Integrity"
-                                        ? "Session consistency over time"
-                                        : "Completion time per task run"}
+                                        ? "Consistency over time"
+                                        : "Completion time per run"}
                                     </p>
                                   </div>
-                                  <div className="flex flex-wrap items-center gap-2">
+                                  <div className="flex flex-wrap items-center gap-1.5">
                                     {selectedStat === "Speed" && (
                                       <select
                                         value={selectedTaskGraph}
                                         onChange={(e) =>
                                           setSelectedTaskGraph(e.target.value)
                                         }
-                                        className="rounded border border-zinc-700 bg-zinc-900/80 px-2.5 py-1.5 text-[11px] text-zinc-200 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+                                        className="rounded-md border border-zinc-700/90 bg-zinc-900/90 px-2 py-1 text-[10px] text-zinc-200 outline-none focus:border-blue-500/45 focus:ring-1 focus:ring-blue-500/20"
                                       >
                                         <option value="">Select task</option>
                                         {Object.keys(taskHistory).map(
@@ -4003,7 +4022,7 @@ export default function App() {
                                         )}
                                       </select>
                                     )}
-                                    <div className="inline-flex rounded border border-zinc-700/90 bg-zinc-900/40 p-0.5">
+                                    <div className="inline-flex rounded-md border border-zinc-800 bg-zinc-950/50 p-px">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -4012,10 +4031,10 @@ export default function App() {
                                             onClick={() =>
                                               setSelectedStat(type)
                                             }
-                                            className={`rounded px-3 py-1 text-[11px] font-medium transition-colors ${
+                                            className={`rounded-[5px] px-2 py-0.5 text-[10px] font-medium transition-colors duration-100 ${
                                               selectedStat === type
-                                                ? "bg-zinc-800 text-zinc-100 border border-blue-500/35 shadow-sm"
-                                                : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                                                ? "bg-zinc-800/95 text-zinc-100 border border-blue-500/30"
+                                                : "text-zinc-500 hover:text-zinc-400 border border-transparent"
                                             }`}
                                           >
                                             {type}
@@ -4027,9 +4046,9 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="p-3 sm:p-4 pt-2">
+                              <div className="group/chart p-3.5 sm:p-4 pt-2">
                                 <div className="flex gap-2">
-                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-500 w-9 text-right leading-none">
+                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-600/85 w-10 text-right leading-none">
                                     {analyticsYTickValues.map((v) => (
                                       <span key={v}>
                                         {selectedStat === "Integrity"
@@ -4038,13 +4057,42 @@ export default function App() {
                                       </span>
                                     ))}
                                   </div>
-                                  <div className="relative min-h-[200px] w-full max-h-[220px] flex-1">
+                                  <div
+                                    className="relative min-h-[200px] w-full max-h-[220px] flex-1"
+                                    title={analyticsChartHint}
+                                  >
                                     <svg
                                       viewBox="0 0 100 100"
                                       preserveAspectRatio="none"
                                       className="h-full w-full block"
-                                      aria-hidden
+                                      role="img"
                                     >
+                                      <title>{analyticsChartHint}</title>
+                                      <defs>
+                                        <linearGradient
+                                          id="analyticsAreaFillGrad"
+                                          x1="0"
+                                          y1="0"
+                                          x2="0"
+                                          y2="1"
+                                        >
+                                          <stop
+                                            offset="0%"
+                                            stopColor="#3b82f6"
+                                            stopOpacity="0.16"
+                                          />
+                                          <stop
+                                            offset="55%"
+                                            stopColor="#3b82f6"
+                                            stopOpacity="0.05"
+                                          />
+                                          <stop
+                                            offset="100%"
+                                            stopColor="#3b82f6"
+                                            stopOpacity="0"
+                                          />
+                                        </linearGradient>
+                                      </defs>
                                       {[10, 32.5, 55, 77.5, 100].map((y) => (
                                         <line
                                           key={y}
@@ -4052,17 +4100,22 @@ export default function App() {
                                           y1={y}
                                           x2="100"
                                           y2={y}
-                                          stroke="#27272a"
+                                          stroke="#2a2a2e"
                                           strokeWidth="0.2"
                                           vectorEffect="non-scaling-stroke"
                                         />
                                       ))}
                                       {currentData.length > 1 &&
                                         currentData.map((_, i) => {
-                                          const x =
-                                            (i /
-                                              (currentData.length - 1 || 1)) *
-                                            100;
+                                          const n = currentData.length - 1;
+                                          const step = Math.max(
+                                            1,
+                                            Math.ceil(n / 8),
+                                          );
+                                          if (i % step !== 0 && i !== n) {
+                                            return null;
+                                          }
+                                          const x = (i / n) * 100;
                                           return (
                                             <line
                                               key={i}
@@ -4070,16 +4123,16 @@ export default function App() {
                                               y1="10"
                                               x2={x}
                                               y2="100"
-                                              stroke="#27272a"
+                                              stroke="#2a2a2e"
                                               strokeWidth="0.12"
-                                              opacity={0.5}
+                                              opacity={0.45}
                                               vectorEffect="non-scaling-stroke"
                                             />
                                           );
                                         })}
                                       <path
                                         d={generateLinearPath(currentData)}
-                                        fill="rgba(59,130,246,0.07)"
+                                        fill="url(#analyticsAreaFillGrad)"
                                         stroke="none"
                                         className="transition-all duration-700 ease-out"
                                       />
@@ -4088,8 +4141,8 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#3b82f6"
-                                        strokeWidth="0.45"
+                                        stroke="#4b8dfb"
+                                        strokeWidth="0.42"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                         vectorEffect="non-scaling-stroke"
@@ -4098,9 +4151,9 @@ export default function App() {
                                     </svg>
                                   </div>
                                 </div>
-                                <div className="mt-1.5 flex justify-between gap-1 pl-11 pr-0 text-[10px] text-zinc-500 tabular-nums">
+                                <div className="mt-1.5 flex justify-between gap-1.5 pl-12 pr-0 text-[10px] text-zinc-600/90 tabular-nums">
                                   {analyticsGraphXLabels.map((lab) => (
-                                    <span key={lab} className="truncate">
+                                    <span key={lab} className="truncate min-w-0">
                                       {lab}
                                     </span>
                                   ))}
@@ -4108,23 +4161,23 @@ export default function App() {
                               </div>
                             </section>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                              <section className="rounded-lg border border-zinc-800/90 bg-[#131316] p-3 sm:p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
-                                <div className="flex items-baseline justify-between gap-2 mb-3 border-b border-zinc-800/80 pb-2">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 pt-0.5">
+                              <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] p-3.5 sm:p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color] duration-150 hover:bg-[#121215]">
+                                <div className="flex items-center justify-between gap-3 mb-2.5 pb-2 border-b border-zinc-800/70">
                                   <h2 className="text-[14px] font-semibold text-zinc-100">
                                     Discipline
                                   </h2>
-                                  <span className="text-[11px] font-medium text-zinc-500 tabular-nums">
+                                  <span className="text-[10px] font-medium text-zinc-600 tabular-nums tracking-wide uppercase">
                                     {getCurrentMonthName()}
                                   </span>
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-1.5">
+                                <div className="grid grid-cols-7 gap-1">
                                   {["M", "T", "W", "T", "F", "S", "S"].map(
                                     (day, i) => (
                                       <div
                                         key={i}
-                                        className="text-[9px] font-medium text-zinc-500 text-center pb-0.5"
+                                        className="text-[9px] font-medium text-zinc-600 text-center pb-0.5"
                                       >
                                         {day}
                                       </div>
@@ -4134,36 +4187,40 @@ export default function App() {
                                   {heatmapData.map((day, i) => {
                                     const todayDateNum = new Date().getDate();
                                     const isToday = i + 1 === todayDateNum;
+                                    const mins = Math.floor(
+                                      day.totalFocusSeconds / 60,
+                                    );
+                                    const hint = day.date
+                                      ? `${day.date} · ${mins} min · ${day.focusIntegrity.toFixed(0)}%`
+                                      : `${mins} min`;
 
                                     return (
                                       <div
                                         key={i}
-                                        className={`group relative aspect-square ${getHeatmapClass(day.symbol || "⬜", isToday)} flex items-center justify-center overflow-hidden cursor-help`}
+                                        title={hint}
+                                        className={`group relative aspect-square ${getHeatmapClass(day.symbol || "⬜", isToday)} flex items-center justify-center overflow-hidden cursor-default`}
                                       >
-                                        <span className="text-[10px] leading-none opacity-90 z-10">
+                                        <span className="text-[9px] leading-none opacity-85 z-10 pointer-events-none">
                                           {day.symbol || "⬜"}
                                         </span>
                                         {day.date && (
-                                          <div className="absolute bottom-full left-1/2 z-[300] mb-2 w-40 -translate-x-1/2 rounded-md border border-zinc-700 bg-zinc-900 p-3 text-[10px] text-zinc-300 opacity-0 shadow-md transition-opacity pointer-events-none group-hover:opacity-100">
-                                            <div className="font-medium border-b border-zinc-700 pb-2 mb-2 text-zinc-100">
+                                          <div className="absolute bottom-full left-1/2 z-[300] mb-1.5 w-[9.5rem] -translate-x-1/2 rounded-md border border-zinc-700/90 bg-zinc-950/98 p-2.5 text-[10px] text-zinc-300 opacity-0 shadow-lg transition-opacity duration-100 pointer-events-none group-hover:opacity-100">
+                                            <div className="font-medium border-b border-zinc-800 pb-1.5 mb-1.5 text-zinc-100 text-[10px]">
                                               {day.date}
                                             </div>
-                                            <div className="flex justify-between gap-2 text-zinc-400">
+                                            <div className="flex justify-between gap-2 text-zinc-500">
                                               <span>Focus</span>
-                                              <span className="text-zinc-200 tabular-nums">
-                                                {Math.floor(
-                                                  day.totalFocusSeconds / 60,
-                                                )}{" "}
-                                                min
+                                              <span className="text-zinc-200 tabular-nums font-medium">
+                                                {mins} min
                                               </span>
                                             </div>
-                                            <div className="flex justify-between gap-2 text-zinc-400 mt-1">
+                                            <div className="flex justify-between gap-2 text-zinc-500 mt-1">
                                               <span>Integrity</span>
-                                              <span className="text-zinc-200 tabular-nums">
+                                              <span className="text-zinc-200 tabular-nums font-medium">
                                                 {day.focusIntegrity.toFixed(0)}%
                                               </span>
                                             </div>
-                                            <div className="mt-2 flex justify-between border-t border-zinc-700 pt-2 text-blue-400/90">
+                                            <div className="mt-1.5 flex justify-between border-t border-zinc-800 pt-1.5 text-blue-400/85 text-[10px]">
                                               <span>Grade</span>
                                               <span>{day.symbol}</span>
                                             </div>
@@ -4175,25 +4232,33 @@ export default function App() {
                                 </div>
                               </section>
 
-                              <section className="rounded-lg border border-zinc-800/90 bg-[#131316] p-3 sm:p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
-                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-3 border-b border-zinc-800/80 pb-2">
+                              <section className="rounded-[10px] border border-zinc-800/80 bg-[#111113] p-3.5 sm:p-4 shadow-[0_1px_0_rgba(255,255,255,0.04)_inset,0_4px_20px_rgba(0,0,0,0.35)] transition-[background-color] duration-150 hover:bg-[#121215]">
+                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-2.5 pb-2 border-b border-zinc-800/70">
                                   Performance
                                 </h2>
                                 <div className="grid grid-cols-2 gap-2">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="rounded border border-zinc-800 bg-zinc-900/35 px-2.5 py-2 transition-colors hover:bg-zinc-900/55 hover:border-zinc-700"
+                                      className="group/tile rounded-md border border-zinc-800/90 bg-zinc-900/30 px-2.5 py-2 transition-all duration-100 hover:bg-zinc-900/50 hover:border-zinc-700/90 hover:-translate-y-px hover:shadow-[0_2px_8px_rgba(0,0,0,0.35)]"
                                     >
-                                      <div className="text-[10px] text-zinc-500 leading-tight mb-1">
-                                        {stat.label
-                                          .toLowerCase()
-                                          .replace(/\b\w/g, (m) =>
-                                            m.toUpperCase(),
-                                          )}
-                                      </div>
-                                      <div className="text-[15px] font-semibold tabular-nums text-zinc-100 tracking-tight">
-                                        {stat.val}
+                                      <div className="flex items-start gap-2">
+                                        <span
+                                          className="mt-1 h-2 w-0.5 shrink-0 rounded-full bg-blue-500/75"
+                                          aria-hidden
+                                        />
+                                        <div className="min-w-0 flex-1">
+                                          <div className="text-[9px] text-zinc-600 leading-tight mb-0.5">
+                                            {stat.label
+                                              .toLowerCase()
+                                              .replace(/\b\w/g, (m) =>
+                                                m.toUpperCase(),
+                                              )}
+                                          </div>
+                                          <div className="text-[17px] font-semibold tabular-nums text-zinc-50 tracking-tight leading-tight">
+                                            {stat.val}
+                                          </div>
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
