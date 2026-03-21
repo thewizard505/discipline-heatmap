@@ -969,6 +969,9 @@ export default function App() {
   const [analyticsChartHover, setAnalyticsChartHover] = useState<
     number | null
   >(null);
+  const [analyticsTaskPickerOpen, setAnalyticsTaskPickerOpen] =
+    useState(false);
+  const analyticsTaskPickerRef = useRef<HTMLDivElement>(null);
 
   const [warning, setWarning] = useState<string | null>(null);
   const heroGraphData: HistoryPoint[] = [
@@ -1635,6 +1638,22 @@ export default function App() {
     todayTotalFocusMinutes,
     completedActivityLog,
   ]);
+
+  useEffect(() => {
+    if (!analyticsTaskPickerOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      const el = analyticsTaskPickerRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setAnalyticsTaskPickerOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [analyticsTaskPickerOpen]);
+
+  useEffect(() => {
+    if (activeView !== "analytics") setAnalyticsTaskPickerOpen(false);
+  }, [activeView]);
 
   /* ------------------- FOCUS INTEGRITY ENGINE ------------------- */
   useEffect(() => {
@@ -4325,43 +4344,143 @@ export default function App() {
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2.5">
                                     {selectedStat === "Speed" && (
-                                      <div className="relative min-w-[11rem] max-w-[16rem]">
-                                        <select
-                                          value={selectedTaskGraph}
-                                          onChange={(e) =>
-                                            setSelectedTaskGraph(
-                                              normalizeTaskKey(e.target.value),
+                                      <div
+                                        ref={analyticsTaskPickerRef}
+                                        className="relative z-[400] min-w-[12rem] max-w-[min(18rem,92vw)]"
+                                      >
+                                        <button
+                                          type="button"
+                                          aria-expanded={analyticsTaskPickerOpen}
+                                          aria-haspopup="listbox"
+                                          onClick={() =>
+                                            setAnalyticsTaskPickerOpen(
+                                              (o) => !o,
                                             )
                                           }
-                                          className="h-9 w-full cursor-pointer appearance-none rounded-full border border-zinc-700/75 bg-[#121214] pl-3.5 pr-10 text-[12px] font-semibold tracking-tight text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition-colors duration-150 hover:border-zinc-600 hover:bg-zinc-900/90 focus:border-blue-500/45 focus:ring-2 focus:ring-blue-500/20"
+                                          className="flex h-10 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-700/60 bg-[#161618] px-4 py-2 text-left text-[13px] font-semibold text-zinc-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] outline-none ring-0 transition-all duration-100 hover:border-zinc-600 hover:bg-[#1a1a1d] hover:shadow-[0_12px_32px_rgba(0,0,0,0.4)] focus-visible:border-blue-500/50 focus-visible:ring-2 focus-visible:ring-blue-500/25"
                                         >
-                                          <option value="">Select task</option>
-                                          {Object.keys(taskHistory)
-                                            .sort((a, b) =>
-                                              a.localeCompare(b),
-                                            )
-                                            .map((task) => (
-                                              <option key={task} value={task}>
-                                                {formatTaskTitleForGraph(task)}
-                                              </option>
-                                            ))}
-                                        </select>
-                                        <span
-                                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500"
-                                          aria-hidden
-                                        >
+                                          <span className="min-w-0 flex-1 truncate font-semibold tracking-tight">
+                                            {selectedTaskGraph
+                                              ? formatTaskTitleForGraph(
+                                                  normalizeTaskKey(
+                                                    selectedTaskGraph,
+                                                  ),
+                                                )
+                                              : "Select task"}
+                                          </span>
                                           <svg
-                                            className="h-3.5 w-3.5"
+                                            className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ${analyticsTaskPickerOpen ? "rotate-180" : ""}`}
                                             viewBox="0 0 24 24"
                                             fill="none"
                                             stroke="currentColor"
                                             strokeWidth="2"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
+                                            aria-hidden
                                           >
                                             <path d="M6 9l6 6 6-6" />
                                           </svg>
-                                        </span>
+                                        </button>
+                                        {analyticsTaskPickerOpen && (
+                                          <div
+                                            className="absolute left-0 right-0 top-full z-[401] mt-2 overflow-hidden rounded-2xl border border-zinc-700/55 bg-[#18181b]/98 py-2 shadow-[0_22px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
+                                            role="listbox"
+                                          >
+                                            <div className="max-h-[min(280px,42vh)] overflow-y-auto overscroll-contain px-2 pb-1 pt-0.5">
+                                              <button
+                                                type="button"
+                                                role="option"
+                                                aria-selected={selectedTaskGraph === ""}
+                                                onClick={() => {
+                                                  setSelectedTaskGraph("");
+                                                  setAnalyticsTaskPickerOpen(
+                                                    false,
+                                                  );
+                                                }}
+                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
+                                                  selectedTaskGraph === ""
+                                                    ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
+                                                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
+                                                }`}
+                                              >
+                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800/80 text-zinc-500">
+                                                  <svg
+                                                    className="h-5 w-5"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="1.75"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                  >
+                                                    <rect
+                                                      x="5"
+                                                      y="5"
+                                                      width="14"
+                                                      height="14"
+                                                      rx="2"
+                                                    />
+                                                    <path d="M9 12h6" />
+                                                  </svg>
+                                                </span>
+                                                <span className="min-w-0 flex-1 truncate">
+                                                  Select task
+                                                </span>
+                                              </button>
+                                              {Object.keys(taskHistory)
+                                                .sort((a, b) =>
+                                                  a.localeCompare(b),
+                                                )
+                                                .map((task) => {
+                                                  const isSel =
+                                                    selectedTaskGraph === task;
+                                                  return (
+                                                    <button
+                                                      key={task}
+                                                      type="button"
+                                                      role="option"
+                                                      aria-selected={isSel}
+                                                      onClick={() => {
+                                                        setSelectedTaskGraph(
+                                                          normalizeTaskKey(
+                                                            task,
+                                                          ),
+                                                        );
+                                                        setAnalyticsTaskPickerOpen(
+                                                          false,
+                                                        );
+                                                      }}
+                                                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
+                                                        isSel
+                                                          ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
+                                                          : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-50"
+                                                      }`}
+                                                    >
+                                                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800/70 text-zinc-500">
+                                                        <svg
+                                                          className="h-5 w-5"
+                                                          viewBox="0 0 24 24"
+                                                          fill="none"
+                                                          stroke="currentColor"
+                                                          strokeWidth="1.75"
+                                                          strokeLinecap="round"
+                                                          strokeLinejoin="round"
+                                                        >
+                                                          <path d="M9 11l3 3L22 4" />
+                                                          <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                                                        </svg>
+                                                      </span>
+                                                      <span className="min-w-0 flex-1 truncate">
+                                                        {formatTaskTitleForGraph(
+                                                          task,
+                                                        )}
+                                                      </span>
+                                                    </button>
+                                                  );
+                                                })}
+                                            </div>
+                                          </div>
+                                        )}
                                       </div>
                                     )}
                                     <div className="inline-flex h-9 shrink-0 rounded-full border border-zinc-700/75 bg-[#0c0c0e] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
@@ -4370,10 +4489,15 @@ export default function App() {
                                           <button
                                             key={type}
                                             type="button"
-                                            onClick={() =>
-                                              setSelectedStat(type)
-                                            }
-                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-tight transition-all duration-200 ${
+                                            onClick={() => {
+                                              setSelectedStat(type);
+                                              if (type === "Integrity") {
+                                                setAnalyticsTaskPickerOpen(
+                                                  false,
+                                                );
+                                              }
+                                            }}
+                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-extrabold tracking-tight transition-all duration-200 ${
                                               selectedStat === type
                                                 ? "bg-zinc-100 text-zinc-900 shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
                                                 : "text-zinc-500 hover:text-zinc-200"
