@@ -1057,7 +1057,6 @@ export default function App() {
     | { action: "list"; listId: string }
     | { action: "completed" }
     | { action: "addList" }
-    | { action: "home" }
     | { action: "quitOnly" }
     | { action: "openTask"; listId: string; taskId: number };
   type FocusSessionDialog =
@@ -1066,6 +1065,9 @@ export default function App() {
     | { kind: "reset" };
   const [focusSessionDialog, setFocusSessionDialog] =
     useState<FocusSessionDialog>(null);
+  /** True only while the task timer is running inside an active focus session. */
+  const isFocusTimerRunning = isFocusSessionActive && running;
+  const [focusExpandZenActive, setFocusExpandZenActive] = useState(false);
 
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
@@ -1658,38 +1660,8 @@ export default function App() {
     }, 600);
   };
 
-  const runGoHomeTransition = () => {
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setIsSimulation(true);
-      setName("Alex");
-      setStreak(3);
-      setTasks([]);
-      setTasksByListId({});
-      setSelectedTaskId(null);
-      setSelectedListId(null);
-      setHistory({});
-      setSeconds(0);
-      setRunning(false);
-      setIsTransitioning(false);
-      setIsVictory(false);
-      setShowReflection(false);
-      setReflectionPrompt(null);
-      setReflectionText("");
-      window.scrollTo({ top: 0, behavior: "instant" });
-    }, 600);
-  };
-
-  const handleGoHome = () => {
-    if (isFocusSessionActive) {
-      setFocusSessionDialog({ kind: "quit", pending: { action: "home" } });
-      return;
-    }
-    runGoHomeTransition();
-  };
-
   const handleSidebarNavClick = (view: AppView) => {
-    if (isFocusSessionActive) {
+    if (isFocusTimerRunning) {
       setFocusSessionDialog({ kind: "quit", pending: { action: "view", view } });
       return;
     }
@@ -1773,7 +1745,7 @@ export default function App() {
   };
 
   const openTaskFromCalendar = (listId: string, taskId: number) => {
-    if (isFocusSessionActive) {
+    if (isFocusTimerRunning) {
       setFocusSessionDialog({
         kind: "quit",
         pending: { action: "openTask", listId, taskId },
@@ -1796,8 +1768,6 @@ export default function App() {
       setNewListName("");
       setNewListColor("#eab308");
       setIsAddListModalOpen(true);
-    } else if (pending.action === "home") {
-      runGoHomeTransition();
     } else if (pending.action === "openTask") {
       performOpenTaskInList(pending.listId, pending.taskId);
     }
@@ -1810,9 +1780,27 @@ export default function App() {
     setFocusSessionDialog(null);
   };
 
+  const handleResetSessionConfirm = () => {
+    setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
+    setSeconds(0);
+    setRunning(false);
+    setIntegrityPenalty(0);
+    setTimerAccumulator(0);
+    setTimerSessionStart(null);
+    setShowReflection(false);
+    setReflectionPrompt(null);
+    setReflectionText("");
+    setWarning(null);
+    setFocusSessionDialog(null);
+  };
+
   const handleStartFocusSession = () => {
     if (isFocusSessionActive) {
-      setFocusSessionDialog({ kind: "reset" });
+      if (isFocusTimerRunning) {
+        setFocusSessionDialog({ kind: "reset" });
+      } else {
+        handleResetSessionConfirm();
+      }
       return;
     }
     setIsFocusSessionActive(true);
@@ -1830,21 +1818,12 @@ export default function App() {
   };
 
   const handleQuitFocusSession = () => {
-    setFocusSessionDialog({ kind: "quit", pending: { action: "quitOnly" } });
-  };
-
-  const handleResetSessionConfirm = () => {
-    setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
-    setSeconds(0);
-    setRunning(false);
-    setIntegrityPenalty(0);
-    setTimerAccumulator(0);
-    setTimerSessionStart(null);
-    setShowReflection(false);
-    setReflectionPrompt(null);
-    setReflectionText("");
-    setWarning(null);
-    setFocusSessionDialog(null);
+    if (isFocusTimerRunning) {
+      setFocusSessionDialog({ kind: "quit", pending: { action: "quitOnly" } });
+    } else {
+      cleanupFocusSessionAfterQuit();
+      setFocusSessionDialog(null);
+    }
   };
 
   const handleToggleTodaySidebar = () => {
@@ -1863,7 +1842,7 @@ export default function App() {
   };
 
   const handleSelectList = (listId: string) => {
-    if (isFocusSessionActive) {
+    if (isFocusTimerRunning) {
       setFocusSessionDialog({
         kind: "quit",
         pending: { action: "list", listId },
@@ -1871,6 +1850,23 @@ export default function App() {
       return;
     }
     applyListSelection(listId);
+  };
+
+  const runFocusExpandSidebarZen = () => {
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion) {
+      setIsTodayPanelCollapsed(false);
+      setIsTodayPanelAnimatingOut(false);
+      return;
+    }
+    setFocusExpandZenActive(true);
+    window.setTimeout(() => {
+      setIsTodayPanelCollapsed(false);
+      setIsTodayPanelAnimatingOut(false);
+    }, 680);
+    window.setTimeout(() => setFocusExpandZenActive(false), 1200);
   };
 
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
@@ -2538,6 +2534,18 @@ export default function App() {
         @keyframes workmode-modal-in{ from{ opacity:0; transform:translateY(8px) scale(.96) } to{ opacity:1; transform:translateY(0) scale(1) } }
         .workmode-modal-enter{ animation:workmode-modal-in .18s ease-out; }
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
+        @keyframes focus-zen-mist { 0%{ opacity:0.42 } 100%{ opacity:0 } }
+        @keyframes focus-zen-ripple { 0%{ transform:scale(0.12); opacity:0.5 } 100%{ transform:scale(1); opacity:0 } }
+        .focus-zen-mist-overlay{ animation:focus-zen-mist 1.05s ease-out forwards; }
+        .focus-zen-ripple-ring{
+          position:absolute; left:50%; top:50%;
+          width:min(140vmax,2200px); height:min(140vmax,2200px);
+          margin-left:calc(min(140vmax,2200px)/-2); margin-top:calc(min(140vmax,2200px)/-2);
+          border-radius:50%;
+          border:1px solid rgba(147,197,253,0.28);
+          box-shadow:0 0 80px rgba(59,130,246,0.1), inset 0 0 60px rgba(255,255,255,0.06);
+          animation:focus-zen-ripple 1.08s cubic-bezier(0.22,1,0.36,1) forwards;
+        }
       `}</style>
 
       <div
@@ -2826,6 +2834,23 @@ export default function App() {
         {/* APP SHELL LAYOUT (dashboard — includes focus session) */}
         {!isSimulation && (
           <>
+          {focusExpandZenActive && (
+            <div
+              className="fixed inset-0 z-[265] pointer-events-none overflow-hidden"
+              aria-hidden
+            >
+              <div className="absolute inset-0 bg-gradient-to-r from-sky-100/30 via-white/20 to-blue-50/5 focus-zen-mist-overlay" />
+              <div className="absolute left-[14px] top-1/2 -translate-y-1/2 w-px h-px overflow-visible">
+                {[0, 1, 2, 3].map((i) => (
+                  <div
+                    key={i}
+                    className="focus-zen-ripple-ring"
+                    style={{ animationDelay: `${i * 110}ms` }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
           <div className="h-screen min-h-0 flex w-full bg-black text-zinc-200 overflow-hidden">
             {/* Left sidebar (main) — flush to viewport edge */}
             <aside className="h-screen w-[52px] sm:w-14 bg-[#141414] border-r border-[#2a2a2a] flex flex-col items-center justify-between py-2 z-[250] shrink-0">
@@ -3090,7 +3115,7 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => {
-                          if (isFocusSessionActive) {
+                          if (isFocusTimerRunning) {
                             setFocusSessionDialog({
                               kind: "quit",
                               pending: { action: "addList" },
@@ -3201,7 +3226,7 @@ export default function App() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (isFocusSessionActive) {
+                        if (isFocusTimerRunning) {
                           setFocusSessionDialog({
                             kind: "quit",
                             pending: { action: "completed" },
@@ -3243,10 +3268,7 @@ export default function App() {
               !isTodayPanelAnimatingOut && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setIsTodayPanelCollapsed(false);
-                    setIsTodayPanelAnimatingOut(false);
-                  }}
+                  onClick={runFocusExpandSidebarZen}
                   className="h-screen w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#141414] border-r border-[#2a2a2a] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
                   aria-label="Expand lists sidebar"
                   title="Show lists"
@@ -3316,19 +3338,10 @@ export default function App() {
                       </button>
                     </>
                   ) : (
-                    <>
-                      <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                        {activeView === "notifications" && "Notifications"}
-                        {activeView === "settings" && "Settings"}
-                      </h1>
-                      <button
-                        type="button"
-                        onClick={handleGoHome}
-                        className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded border border-zinc-700 bg-zinc-900 text-zinc-200 text-[11px] font-medium hover:bg-zinc-800 transition-colors pointer-events-auto"
-                      >
-                        Back to Hero
-                      </button>
-                    </>
+                    <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
+                      {activeView === "notifications" && "Notifications"}
+                      {activeView === "settings" && "Settings"}
+                    </h1>
                   )}
                 </div>
                 {activeView === "tasks" && todayMainMode === "completed" ? (
@@ -4501,20 +4514,6 @@ export default function App() {
             <div
               className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || showReflection ? "blur-lg opacity-0" : "opacity-100"}`}
             >
-              {!isSimulation && (
-                <div className="flex justify-center mb-4">
-                  <button
-                    type="button"
-                    onClick={handleGoHome}
-                    className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
-                      Home
-                    </span>
-                  </button>
-                </div>
-              )}
               <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
                 Hello <span className="text-blue-600">{name}</span>.
               </h1>
