@@ -123,3 +123,89 @@
   opacity: 0.9;
   animation: focus-nav-aura-drift 4.8s ease-in-out infinite;
 }
+
+/* Light grey animated aura — due date chips (detail + list rows) */
+@keyframes due-date-aura-pulse {
+  0%,
+  100% {
+    opacity: 0.5;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.92;
+    transform: scale(1.03);
+  }
+}
+
+@keyframes due-date-aura-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(0.5px, -0.5px) scale(1.02);
+  }
+}
+
+.due-date-aura-detail {
+  position: absolute;
+  inset: -5px;
+  border-radius: 0.65rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 50% 48%,
+    rgba(228, 228, 231, 0.22) 0%,
+    rgba(161, 161, 170, 0.12) 42%,
+    transparent 72%
+  );
+  filter: blur(9px);
+  animation: due-date-aura-pulse 2.6s ease-in-out infinite;
+}
+
+.due-date-aura-detail-soft {
+  position: absolute;
+  inset: -8px;
+  border-radius: 0.75rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 45% 55%,
+    rgba(244, 244, 245, 0.1) 0%,
+    transparent 60%
+  );
+  filter: blur(12px);
+  opacity: 0.95;
+  animation: due-date-aura-drift 3.6s ease-in-out infinite;
+}
+
+.due-date-aura-row {
+  position: absolute;
+  inset: -3px;
+  border-radius: 0.45rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgba(212, 212, 216, 0.2) 0%,
+    rgba(113, 113, 122, 0.1) 45%,
+    transparent 70%
+  );
+  filter: blur(5px);
+  animation: due-date-aura-pulse 2.8s ease-in-out infinite;
+}
+
+.due-date-aura-row-soft {
+  position: absolute;
+  inset: -5px;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 100% 100% at 50% 50%,
+    rgba(228, 228, 231, 0.08) 0%,
+    transparent 65%
+  );
+  filter: blur(7px);
+  animation: due-date-aura-drift 4s ease-in-out infinite;
+}
