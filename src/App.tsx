@@ -34,6 +34,7 @@ type Task = {
   removing: boolean;
   createdAt: number;
   workMode: "inside" | "external";
+  completed?: boolean;
 };
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
@@ -66,9 +67,6 @@ export default function App() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const isSwitchingListRef = useRef(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
-  const taskItemRefs = useRef<Record<number, HTMLDivElement | null>>({});
-  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
-  const lastDragOverIdRef = useRef<number | null>(null);
   const tasksRef = useRef<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
@@ -685,59 +683,23 @@ export default function App() {
     isSwitchingListRef.current = false;
   };
 
-  const reorderVisibleTasksWithFlip = (fromId: number, toId: number) => {
-    if (isSimulation) return;
-    const visible = tasksRef.current.filter((t) => !t.removing);
-    const fromIndex = visible.findIndex((t) => t.id === fromId);
-    const toIndex = visible.findIndex((t) => t.id === toId);
-    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
-
-    const visibleIds = visible.map((t) => t.id);
-    const preRects = new Map<number, DOMRect>();
-    visibleIds.forEach((id) => {
-      const el = taskItemRefs.current[id];
-      if (!el) return;
-      preRects.set(id, el.getBoundingClientRect());
-    });
-
-    setTasks((prev) => {
-      const prevVisible = prev.filter((t) => !t.removing);
-      const prevHidden = prev.filter((t) => t.removing);
-      const nextVisible = [...prevVisible];
-      const [moved] = nextVisible.splice(fromIndex, 1);
-      nextVisible.splice(toIndex, 0, moved);
-      return [...nextVisible, ...prevHidden];
-    });
-
-    // FLIP animation: invert position changes after the DOM updates.
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        visibleIds.forEach((id) => {
-          const el = taskItemRefs.current[id];
-          const pre = preRects.get(id);
-          if (!el || !pre) return;
-          const post = el.getBoundingClientRect();
-          const dx = pre.left - post.left;
-          const dy = pre.top - post.top;
-          if (dx === 0 && dy === 0) return;
-
-          el.style.willChange = "transform";
-          el.style.transition = "transform 0s";
-          el.style.transform = `translate(${dx}px, ${dy}px)`;
-
-          requestAnimationFrame(() => {
-            el.style.transition = "transform 180ms ease";
-            el.style.transform = "translate(0px, 0px)";
-          });
-
-          window.setTimeout(() => {
-            el.style.willChange = "auto";
-            el.style.transition = "";
-            el.style.transform = "";
-          }, 220);
-        });
-      });
-    });
+  /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
+  const addTaskFromListInput = () => {
+    const trimmed = taskInput.trim();
+    if (!trimmed) return;
+    const id = Date.now();
+    const newTask: Task = {
+      id,
+      text: trimmed,
+      description: "",
+      removing: false,
+      createdAt: Date.now(),
+      workMode: "inside",
+      completed: false,
+    };
+    setTasks((prev) => [...prev, newTask]);
+    setSelectedTaskId(id);
+    setTaskInput("");
   };
 
   const resetAllData = () => {
@@ -838,6 +800,7 @@ export default function App() {
             removing: false,
             createdAt: Date.now(),
             workMode: "inside",
+            completed: false,
           },
         ]);
         setTaskInput("");
@@ -1758,7 +1721,11 @@ export default function App() {
                             handleSelectList(list.id);
                           }
                         }}
-                          className="group flex flex-col gap-2 rounded-sm px-2 py-1.5 text-[13px] text-zinc-200 hover:bg-white/5 transition-colors duration-150"
+                          className={`group flex flex-col gap-2 rounded-xl mx-1 px-2.5 py-2 text-[13px] transition-colors duration-150 ${
+                            selectedListId === list.id
+                              ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                              : "text-zinc-200 hover:bg-white/[0.06]"
+                          }`}
                         >
                           <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-3 min-w-0">
@@ -2096,86 +2063,55 @@ export default function App() {
                     </div>
                   </div>
                 ) : activeView === "today" && selectedListId ? (
-                  <div className="w-full h-[calc(100vh-0.75rem)] flex flex-col border-t border-zinc-800 bg-black overflow-hidden">
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] flex-1 min-h-0">
-                      {/* LEFT PANEL: tasks */}
-                      <div className="pl-4 pr-3 pt-2 pb-3 flex flex-col h-full min-h-0 bg-black">
+                  <div className="w-full h-[calc(100vh-0.75rem)] flex flex-col bg-[#121212] overflow-hidden">
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] flex-1 min-h-0">
+                      {/* LEFT PANEL: tasks (TickTick middle column) */}
+                      <div className="pl-3 pr-2 pt-2 pb-2 flex flex-col h-full min-h-0 bg-[#121212]">
                         {/* Header + actions */}
-                        <div className="flex items-start justify-between gap-4 mb-3 shrink-0">
-                          <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="flex items-start justify-between gap-4 mb-2 shrink-0">
+                          <div className="flex items-center gap-2 min-w-0">
                             <button
                               type="button"
                               onClick={handleToggleTodaySidebar}
                               disabled={isTodayPanelAnimatingOut}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded border border-zinc-700 bg-zinc-900 text-zinc-300 text-sm hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-zinc-700/80 bg-[#0f0f0f] text-zinc-400 text-xs hover:bg-zinc-800 transition-colors disabled:opacity-50"
                               aria-label="Collapse Today sidebar"
                               title="Collapse Today sidebar"
                             >
                               {isTodayPanelCollapsed ? ">" : "<"}
                             </button>
-                            <span className="text-base">{selectedList?.icon}</span>
+                            <span className="text-base leading-none">{selectedList?.icon}</span>
                             <h2 className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">
                               {selectedList?.label}
                             </h2>
                           </div>
                         </div>
 
-                        {/* Task input bar */}
-                        <div className="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 flex items-center gap-2 shrink-0">
+                        {/* Task input bar — slim, Enter to add only */}
+                        <div className="bg-[#1e1e1e] border border-[#2a2a2a] rounded-[10px] px-2.5 h-9 flex items-center gap-2 shrink-0">
+                          <span className="text-zinc-500 text-sm leading-none pl-0.5">+</span>
                           <input
                             value={taskInput}
                             onChange={(e) => setTaskInput(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key !== "Enter") return;
-                              const trimmed = taskInput.trim();
-                              if (!trimmed) return;
-                              const id = Date.now();
-                              const newTask: Task = {
-                                id,
-                                text: trimmed,
-                                description: "",
-                                removing: false,
-                                createdAt: Date.now(),
-                                workMode: "inside",
-                              };
-                              setTasks((prev) => [...prev, newTask]);
-                              setTaskInput("");
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                addTaskFromListInput();
+                              }
                             }}
-                            placeholder="Add a task..."
-                            className="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-600 outline-none text-[13px]"
+                            placeholder="Add task"
+                            className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[13px]"
                           />
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const trimmed = taskInput.trim();
-                              if (!trimmed) return;
-                              const id = Date.now();
-                              const newTask: Task = {
-                                id,
-                                text: trimmed,
-                                description: "",
-                                removing: false,
-                                createdAt: Date.now(),
-                                workMode: "inside",
-                              };
-                              setTasks((prev) => [...prev, newTask]);
-                              setTaskInput("");
-                            }}
-                            className="px-3 py-1.5 rounded border border-zinc-700 bg-zinc-800 text-zinc-100 text-[11px] font-medium hover:bg-zinc-700 transition-colors disabled:opacity-40"
-                            disabled={!taskInput.trim()}
-                          >
-                            Add
-                          </button>
                         </div>
 
                         {/* Tasks list */}
-                        <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
+                        <div className="mt-2 flex-1 min-h-0 overflow-y-auto">
                           {tasks.filter((t) => !t.removing).length === 0 ? (
-                            <div className="mt-8 text-[13px] text-zinc-600 px-0.5">
+                            <div className="mt-8 text-[13px] text-zinc-500 px-1">
                               Add a task to see details.
                             </div>
                           ) : (
-                            <div className="space-y-2">
+                            <div className="space-y-0.5 pt-1">
                               {tasks
                                 .filter((t) => !t.removing)
                                 .map((t) => {
@@ -2183,66 +2119,55 @@ export default function App() {
                                   return (
                                     <div
                                       key={t.id}
-                                      ref={(el) => {
-                                        taskItemRefs.current[t.id] = el;
-                                      }}
                                       role="button"
                                       tabIndex={0}
                                       onClick={() => {
-                                        if (draggingTaskId != null) return;
                                         setSelectedTaskId(t.id);
                                       }}
                                       onKeyDown={(e) => {
                                         if (e.key !== "Enter") return;
                                         setSelectedTaskId(t.id);
                                       }}
-                                      onDragOver={(e) => {
-                                        e.preventDefault();
-                                        if (draggingTaskId == null) return;
-                                        if (draggingTaskId === t.id) return;
-                                        if (lastDragOverIdRef.current === t.id) return;
-                                        lastDragOverIdRef.current = t.id;
-                                        reorderVisibleTasksWithFlip(
-                                          draggingTaskId,
-                                          t.id,
-                                        );
-                                      }}
-                                      onDrop={(e) => {
-                                        e.preventDefault();
-                                        lastDragOverIdRef.current = null;
-                                        setDraggingTaskId(null);
-                                      }}
-                                      className={`group border-b border-zinc-800/90 px-1 py-2.5 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                                      className={`group mx-1 rounded-xl px-2 py-2 flex items-center gap-2.5 transition-colors cursor-pointer ${
                                         isSelected
-                                          ? "bg-zinc-900/80"
-                                          : "hover:bg-zinc-950"
-                                      } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
+                                          ? "bg-[#333333] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
+                                          : "hover:bg-[#1c1c1c]"
+                                      }`}
                                     >
-                                      <div className="flex items-center gap-3 min-w-0 flex-1">
-                                        <div
-                                          draggable
-                                          onDragStart={(e) => {
-                                            setDraggingTaskId(t.id);
-                                            lastDragOverIdRef.current = t.id;
-                                            e.dataTransfer.effectAllowed = "move";
-                                            e.dataTransfer.setData(
-                                              "text/plain",
-                                              String(t.id),
-                                            );
-                                          }}
-                                          onDragEnd={() => {
-                                            lastDragOverIdRef.current = null;
-                                            setDraggingTaskId(null);
-                                          }}
-                                          className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/20 text-zinc-400 opacity-60 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
-                                          aria-label="Drag to reorder"
-                                        >
-                                          ≡
-                                        </div>
-                                        <span className="text-[13px] text-zinc-200 truncate">
-                                          {t.text}
-                                        </span>
-                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setTasks((prev) =>
+                                            prev.map((x) =>
+                                              x.id === t.id
+                                                ? { ...x, completed: !x.completed }
+                                                : x,
+                                            ),
+                                          );
+                                        }}
+                                        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
+                                          t.completed
+                                            ? "border-blue-500 bg-blue-500"
+                                            : "border-zinc-500 hover:border-zinc-400"
+                                        }`}
+                                        aria-label={
+                                          t.completed ? "Mark incomplete" : "Complete task"
+                                        }
+                                      >
+                                        {t.completed ? (
+                                          <span className="text-white text-[10px] leading-none">✓</span>
+                                        ) : null}
+                                      </button>
+                                      <span
+                                        className={`text-[13px] truncate flex-1 text-left ${
+                                          t.completed
+                                            ? "text-zinc-500 line-through"
+                                            : "text-zinc-200"
+                                        }`}
+                                      >
+                                        {t.text}
+                                      </span>
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2254,7 +2179,7 @@ export default function App() {
                                             setSelectedTaskId(null);
                                           }
                                         }}
-                                        className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+                                        className="shrink-0 w-7 h-7 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"
                                         aria-label="Delete task"
                                       >
                                         ✕
@@ -2267,47 +2192,88 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* RIGHT PANEL: task details */}
-                      <div className="border-l border-zinc-800 bg-[#0a0a0a] px-4 py-3 flex flex-col h-full min-h-0">
-                        <div
-                          className={`transition-all duration-200 ${
-                            selectedTask ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
-                          } ${selectedTask ? "" : "pointer-events-none"}`}
-                        >
-                          {selectedTask ? (
-                            <div className="border border-zinc-800 bg-zinc-950/80 p-3">
-                              <div className="mb-4">
-                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                                  Task
-                                </p>
-                                <h3 className="mt-2 text-[13px] font-semibold text-zinc-100 truncate">
-                                  {selectedTask.text}
-                                </h3>
-                              </div>
-
-                              <div className="flex flex-col gap-2">
-                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                                  Description
-                                </p>
-                                <textarea
-                                  value={selectedTask.description}
-                                  onChange={(e) => {
-                                    const val = e.target.value;
+                      {/* RIGHT PANEL: task details (TickTick detail column) */}
+                      <div className="border-l border-[#2a2a2a] bg-[#1e1e1e] flex flex-col h-full min-h-0">
+                        {selectedTask ? (
+                          <>
+                            <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <button
+                                  type="button"
+                                  onClick={() =>
                                     setTasks((prev) =>
-                                      prev.map((t) =>
-                                        t.id === selectedTask.id
-                                          ? { ...t, description: val }
-                                          : t,
+                                      prev.map((x) =>
+                                        x.id === selectedTask.id
+                                          ? { ...x, completed: !x.completed }
+                                          : x,
                                       ),
-                                    );
-                                  }}
-                                  placeholder="Add a description..."
-                                  className="w-full h-36 rounded-md bg-black border border-zinc-800 px-3 py-2.5 text-zinc-200 outline-none placeholder:text-zinc-600 resize-none text-[13px]"
-                                />
+                                    )
+                                  }
+                                  className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center ${
+                                    selectedTask.completed
+                                      ? "border-blue-500 bg-blue-500"
+                                      : "border-zinc-500 hover:border-zinc-400"
+                                  }`}
+                                  aria-label="Toggle complete"
+                                >
+                                  {selectedTask.completed ? (
+                                    <span className="text-white text-[10px]">✓</span>
+                                  ) : null}
+                                </button>
+                                <span className="w-px h-4 bg-zinc-700 shrink-0" />
+                                <button
+                                  type="button"
+                                  className="flex items-center gap-1.5 text-[13px] text-zinc-500 hover:text-zinc-400 transition-colors"
+                                >
+                                  <span className="text-sm font-semibold text-zinc-100">📅</span>
+                                  Due Date
+                                </button>
                               </div>
+                              <button
+                                type="button"
+                                className="text-zinc-500 hover:text-zinc-300 p-1"
+                                aria-label="Priority"
+                              >
+                                ⚑
+                              </button>
                             </div>
-                          ) : null}
-                        </div>
+
+                            <div className="px-4 pt-1 flex items-start justify-between gap-3 shrink-0">
+                              <h3 className="text-lg font-semibold text-white leading-snug flex-1">
+                                {selectedTask.text}
+                              </h3>
+                              <button
+                                type="button"
+                                className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0"
+                                aria-label="Task menu"
+                              >
+                                ⋮
+                              </button>
+                            </div>
+
+                            <div className="flex-1 min-h-0 px-4 pt-3 pb-6 overflow-y-auto">
+                              <textarea
+                                value={selectedTask.description}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setTasks((prev) =>
+                                    prev.map((t) =>
+                                      t.id === selectedTask.id
+                                        ? { ...t, description: val }
+                                        : t,
+                                    ),
+                                  );
+                                }}
+                                placeholder="Write something or type / for commands"
+                                className="w-full min-h-[200px] bg-transparent text-[13px] text-zinc-300 placeholder:text-zinc-600 outline-none resize-none leading-relaxed"
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[13px] px-6 text-center">
+                            Select a task to view details
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -3188,6 +3154,7 @@ export default function App() {
                         removing: false,
                         createdAt: Date.now(),
                         workMode: "inside",
+                        completed: false,
                       };
                       setTasks((prev) => [...prev, newTask]);
                       setTaskInput("");
