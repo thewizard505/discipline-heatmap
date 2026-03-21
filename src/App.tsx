@@ -39,6 +39,16 @@ type Task = {
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
+/** Unified log for Completed view (list check-offs + focus session completes) */
+type CompletedActivityEntry = {
+  id: string;
+  taskName: string;
+  dateStr: string;
+  minutes: number;
+  listId: string | null;
+  listLabel: string;
+};
+
 /** TickTick-style list UI: unified main-pane grey */
 const TT_MAIN_GREY = "#1a1a1a";
 const TT_INPUT_ROW = "#1f1f1f";
@@ -232,11 +242,17 @@ export default function App() {
   type TodayList = { id: string; label: string; icon: string; color: string | null };
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
-    { id: "work", label: "Work", icon: "💼", color: "#ef4444" },
+    { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
     { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
     { id: "study", label: "Study", icon: "📚", color: "#22c55e" },
     { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
+    { id: "packing", label: "Packing list", icon: "✈️", color: "#38bdf8" },
+    { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
+    { id: "bucket", label: "Bucket list", icon: "🪣", color: "#facc15" },
   ]);
+  const [completedActivityLog, setCompletedActivityLog] = useState<
+    CompletedActivityEntry[]
+  >([]);
   const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
   const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
@@ -261,26 +277,16 @@ export default function App() {
   }, [selectedTaskId, tasks]);
 
   const completedEntries = useMemo(() => {
-    const entries: Array<{
-      key: string;
-      taskName: string;
-      dateStr: string;
-      minutes: number;
-    }> = [];
-
-    Object.entries(taskHistory).forEach(([taskName, points]) => {
-      points.forEach((p, idx) => {
-        entries.push({
-          key: `${taskName}-${p.date}-${idx}`,
-          taskName,
-          dateStr: p.date,
-          minutes: p.value,
-        });
-      });
-    });
+    const entries = completedActivityLog.map((e) => ({
+      key: e.id,
+      taskName: e.taskName,
+      dateStr: e.dateStr,
+      minutes: e.minutes,
+      listLabel: e.listLabel,
+      listId: e.listId,
+    }));
 
     const parseDate = (dateStr: string) => {
-      // dateStr is "Mon 13" style (month short + day numeric)
       const year = new Date().getFullYear();
       const dt = new Date(`${dateStr} ${year}`);
       return Number.isNaN(dt.getTime()) ? null : dt;
@@ -296,7 +302,7 @@ export default function App() {
     });
 
     return entries;
-  }, [taskHistory]);
+  }, [completedActivityLog]);
 
   const completedGroups = useMemo(() => {
     const todayStr = getTodayStr();
@@ -322,7 +328,14 @@ export default function App() {
       return weekday ? `${weekday}, ${dateStr}` : dateStr;
     };
 
-    const map = new Map<string, { dateStr: string; label: string; items: typeof completedEntries }>();
+    const map = new Map<
+      string,
+      {
+        dateStr: string;
+        label: string;
+        items: typeof completedEntries;
+      }
+    >();
     completedEntries.forEach((e) => {
       if (!map.has(e.dateStr)) {
         map.set(e.dateStr, {
@@ -332,6 +345,10 @@ export default function App() {
         });
       }
       map.get(e.dateStr)!.items.push(e);
+    });
+
+    map.forEach((g) => {
+      g.label = `${formatGroupLabel(g.dateStr)} ${g.items.length}`;
     });
 
     const groups = Array.from(map.values());
@@ -347,6 +364,47 @@ export default function App() {
 
     return groups;
   }, [completedEntries, getTodayStr]);
+
+  const appendCompletedActivity = (
+    taskName: string,
+    minutes: number,
+    listId: string | null,
+    listLabel: string,
+  ) => {
+    const todayStr = getTodayStr();
+    setCompletedActivityLog((prev) => [
+      ...prev,
+      {
+        id: `c-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        taskName,
+        dateStr: todayStr,
+        minutes,
+        listId,
+        listLabel,
+      },
+    ]);
+  };
+
+  const removeLastCompletedForTaskOnList = (
+    taskName: string,
+    listId: string | null,
+  ) => {
+    const todayStr = getTodayStr();
+    setCompletedActivityLog((prev) => {
+      const copy = [...prev];
+      for (let i = copy.length - 1; i >= 0; i--) {
+        if (
+          copy[i].taskName === taskName &&
+          copy[i].listId === listId &&
+          copy[i].dateStr === todayStr
+        ) {
+          copy.splice(i, 1);
+          return copy;
+        }
+      }
+      return prev;
+    });
+  };
 
   useEffect(() => {
     if (!selectedListId) return;
@@ -504,6 +562,36 @@ export default function App() {
       }
     }
 
+    const savedCompleted = localStorage.getItem(
+      "tunnelvision_completed_activity",
+    );
+    if (savedCompleted) {
+      try {
+        setCompletedActivityLog(JSON.parse(savedCompleted));
+      } catch {
+        setCompletedActivityLog([]);
+      }
+    } else if (savedTaskHistory) {
+      const parsed = JSON.parse(savedTaskHistory) as Record<
+        string,
+        HistoryPoint[]
+      >;
+      const migrated: CompletedActivityEntry[] = [];
+      Object.entries(parsed).forEach(([taskName, points]) => {
+        points.forEach((p, idx) => {
+          migrated.push({
+            id: `mig-${taskName}-${p.date}-${idx}`,
+            taskName,
+            dateStr: p.date,
+            minutes: p.value,
+            listId: null,
+            listLabel: "Focus",
+          });
+        });
+      });
+      setCompletedActivityLog(migrated);
+    }
+
     if (savedHeatmap) {
       const data: DayMetric[] = JSON.parse(savedHeatmap);
       setHeatmapData(data);
@@ -548,6 +636,10 @@ export default function App() {
         "tunnelvision_today_mins",
         todayTotalFocusMinutes.toString(),
       );
+      localStorage.setItem(
+        "tunnelvision_completed_activity",
+        JSON.stringify(completedActivityLog),
+      );
     }
   }, [
     history,
@@ -556,6 +648,7 @@ export default function App() {
     isSimulation,
     heatmapData,
     todayTotalFocusMinutes,
+    completedActivityLog,
   ]);
 
   /* ------------------- FOCUS INTEGRITY ENGINE ------------------- */
@@ -831,6 +924,7 @@ export default function App() {
     localStorage.clear();
     setHistory({});
     setTaskHistory({});
+    setCompletedActivityLog([]);
     setHeatmapData([]);
     setTodayTotalFocusMinutes(0);
     setYesterdayTotalFocusMinutes(0);
@@ -1150,13 +1244,17 @@ export default function App() {
     const durationSecs = Math.max(1, Math.floor((now - refPoint) / 1000));
     setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
     setTimeout(() => setFloatingTime(null), 1500);
+    const mins = Math.round(durationSecs / 60);
     setTaskHistory((prev) => ({
       ...prev,
-      [task.text]: [
-        ...(prev[task.text] || []),
-        { value: Math.round(durationSecs / 60), date: today },
-      ],
+      [task.text]: [...(prev[task.text] || []), { value: mins, date: today }],
     }));
+    appendCompletedActivity(
+      task.text,
+      mins,
+      selectedListId,
+      selectedList?.label ?? "Focus",
+    );
     setBestFocusIntegrity((prev) =>
       Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
     );
@@ -1835,7 +1933,7 @@ export default function App() {
                             handleSelectList(list.id);
                           }
                         }}
-                          className={`group flex flex-col gap-2 rounded-xl mx-1 px-2.5 py-2 text-[13px] transition-colors duration-150 ${
+                          className={`group flex flex-col gap-1 rounded-lg mx-1 px-2 py-1.5 text-[13px] transition-colors duration-150 ${
                             selectedListId === list.id
                               ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
                               : "text-zinc-200 hover:bg-white/[0.06]"
@@ -1912,7 +2010,7 @@ export default function App() {
                 </div>
 
                   {/* Bottom: Completed */}
-                  <div className="border-t border-white/5 pt-3">
+                  <div className="border-t border-white/5 pt-3 pb-5">
                   <button
                     type="button"
                     onClick={() => {
@@ -1926,7 +2024,11 @@ export default function App() {
                       setCollapsedCompletedDates({});
                       setTodayMainMode("completed");
                     }}
-                    className="w-full flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] transition-colors duration-150"
+                    className={`w-full flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] transition-colors duration-150 ${
+                      todayMainMode === "completed"
+                        ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]"
+                    }`}
                   >
                     <svg
                       className="w-4 h-4 text-zinc-500 shrink-0"
@@ -1979,21 +2081,24 @@ export default function App() {
             {!isFocusSessionActive && (
             <section
               className={`flex-1 min-h-0 h-screen ${
-                activeView === "today" && todayMainMode === "tasks"
+                activeView === "today" &&
+                (todayMainMode === "tasks" || todayMainMode === "completed")
                   ? "overflow-hidden"
                   : "overflow-y-auto"
               }`}
             >
               <div
                 className={`w-full h-full min-h-0 flex flex-col ${
-                  activeView === "today" && todayMainMode === "tasks"
+                  activeView === "today" &&
+                  (todayMainMode === "tasks" || todayMainMode === "completed")
                     ? "px-0 pt-0 pb-0"
                     : "px-5 pt-3 pb-6"
                 }`}
               >
                 <div
                   className={`flex items-center justify-between pointer-events-auto shrink-0 ${
-                    activeView === "today" && todayMainMode === "tasks"
+                    activeView === "today" &&
+                    (todayMainMode === "tasks" || todayMainMode === "completed")
                       ? "hidden"
                       : "mb-6"
                   }`}
@@ -2036,59 +2141,174 @@ export default function App() {
                   )}
                 </div>
                 {activeView === "today" && todayMainMode === "completed" ? (
-                  <div className="min-h-[60vh] border-t border-zinc-800 bg-black pointer-events-auto">
-                    <div className="p-4 md:p-5">
-                      {completedGroups.length === 0 ? (
-                        <div className="mt-6 text-sm text-gray-400">No completed tasks</div>
-                      ) : (
-                        <div className="space-y-2">
-                          {completedGroups.map((group) => {
-                            const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
-                            return (
-                              <div
-                                key={group.dateStr}
-                                className="border border-zinc-800 overflow-hidden"
+                  <div
+                    className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
+                    style={{ backgroundColor: TT_MAIN_GREY }}
+                  >
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] flex-1 min-h-0">
+                      <div
+                        className="pl-3 pr-2 pt-3 pb-2 flex flex-col h-full min-h-0 border-r border-[#2a2a2a]"
+                        style={{ backgroundColor: TT_MAIN_GREY }}
+                      >
+                        <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={handleToggleTodaySidebar}
+                              disabled={isTodayPanelAnimatingOut}
+                              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
+                              aria-label="Collapse Today sidebar"
+                            >
+                              <svg
+                                className="w-[18px] h-[18px]"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                aria-hidden
                               >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setCollapsedCompletedDates((prev) => ({
-                                      ...prev,
-                                      [group.dateStr]: !isCollapsed,
-                                    }))
-                                  }
-                                  className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
-                                >
-                                  <span className="text-sm font-semibold text-gray-200">
-                                    {group.label}
-                                  </span>
-                                  <span className="text-xs text-gray-400">
-                                    {isCollapsed ? "Expand" : "Collapse"}
-                                  </span>
-                                </button>
-
-                                {!isCollapsed && (
-                                  <div className="divide-y divide-white/5">
-                                    {group.items.map((item) => (
-                                      <div
-                                        key={item.key}
-                                        className="px-7 py-2.5 flex items-start justify-between gap-4"
-                                      >
-                                        <span className="text-sm text-gray-100">
-                                          {item.taskName}
-                                        </span>
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                                          {item.minutes}m
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          })}
+                                <line x1="4" y1="6" x2="20" y2="6" />
+                                <line x1="4" y1="12" x2="20" y2="12" />
+                                <line x1="4" y1="18" x2="20" y2="18" />
+                              </svg>
+                            </button>
+                            <h2 className="text-xl font-semibold text-zinc-100 tracking-normal leading-7">
+                              Completed
+                            </h2>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <button
+                              type="button"
+                              onClick={handleToggleTodaySidebar}
+                              className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg border border-zinc-700 bg-[#252525] text-zinc-200 text-[11px] font-medium hover:bg-zinc-800 transition-colors"
+                            >
+                              Collapse
+                            </button>
+                          </div>
                         </div>
-                      )}
+
+                        <div className="flex-1 min-h-0 overflow-y-auto">
+                          {completedGroups.length === 0 ? (
+                            <div className="flex flex-col items-center justify-center min-h-[200px] text-zinc-500 text-sm px-4">
+                              No completed tasks
+                            </div>
+                          ) : (
+                            <div className="space-y-0">
+                              {completedGroups.map((group) => {
+                                const isCollapsed =
+                                  collapsedCompletedDates[group.dateStr] ?? false;
+                                return (
+                                  <div
+                                    key={group.dateStr}
+                                    className="border-b border-[#2a2a2a]"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        setCollapsedCompletedDates((prev) => ({
+                                          ...prev,
+                                          [group.dateStr]: !isCollapsed,
+                                        }))
+                                      }
+                                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
+                                    >
+                                      <span
+                                        className={`text-zinc-500 text-xs w-4 flex justify-center transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                                        aria-hidden
+                                      >
+                                        ▼
+                                      </span>
+                                      <span className="flex-1 text-[14px] font-semibold text-zinc-200">
+                                        {group.label}
+                                      </span>
+                                      <span className="text-[11px] text-zinc-500">
+                                        Collapse
+                                      </span>
+                                    </button>
+                                    {!isCollapsed && (
+                                      <div className="divide-y divide-[#2a2a2a]/80">
+                                        {group.items.map((item) => (
+                                          <div
+                                            key={item.key}
+                                            className="flex items-center gap-3 px-3 py-2.5 pl-9"
+                                          >
+                                            <span className="shrink-0 w-[16px] h-[16px] rounded border border-blue-500 bg-blue-500 flex items-center justify-center">
+                                              <span className="text-white text-[9px] leading-none">
+                                                ✓
+                                              </span>
+                                            </span>
+                                            <span className="flex-1 min-w-0 text-[13px] text-zinc-500 line-through truncate">
+                                              {item.taskName}
+                                            </span>
+                                            <span className="shrink-0 text-right">
+                                              <span className="text-[11px] text-zinc-600 block">
+                                                {item.minutes}m
+                                              </span>
+                                              <span className="text-[10px] text-zinc-600/90 truncate max-w-[100px] block">
+                                                {item.listLabel}
+                                              </span>
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div
+                        className="hidden lg:flex flex-col h-full min-h-0 items-center justify-center relative overflow-hidden"
+                        style={{ backgroundColor: "#0f0f0f" }}
+                      >
+                        <div
+                          className="absolute inset-0 opacity-[0.12]"
+                          style={{
+                            background:
+                              "radial-gradient(ellipse at 50% 65%, rgba(250,250,250,0.15), transparent 55%)",
+                          }}
+                        />
+                        <svg
+                          className="relative z-[1] w-[min(100%,320px)] max-h-[45vh] text-zinc-500/50"
+                          viewBox="0 0 240 200"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.2"
+                          aria-hidden
+                        >
+                          <rect
+                            x="48"
+                            y="44"
+                            width="72"
+                            height="96"
+                            rx="4"
+                            className="fill-zinc-800/30"
+                          />
+                          <path d="M56 56h56M56 68h40M56 80h48M56 92h36" />
+                          <path d="M68 120h32" strokeDasharray="3 3" />
+                          <rect
+                            x="118"
+                            y="52"
+                            width="10"
+                            height="28"
+                            rx="1"
+                            className="fill-zinc-700/40"
+                          />
+                          <path d="M128 80 L132 120 L124 120 Z" className="fill-zinc-600/30" />
+                          <ellipse cx="168" cy="118" rx="22" ry="8" />
+                          <path d="M150 118 L186 118" />
+                          <path d="M162 110 L174 102" />
+                          <rect x="178" y="64" width="28" height="36" rx="3" />
+                          <path d="M182 72h20M182 80h16" />
+                          <circle cx="88" cy="36" r="6" strokeDasharray="2 2" />
+                          <rect x="152" y="36" width="14" height="14" rx="2" />
+                          <path d="M156 40h6M159 37v6" />
+                        </svg>
+                      </div>
                     </div>
                   </div>
                 ) : activeView === "today" && todayMainMode === "tasks" ? (
@@ -2225,92 +2445,140 @@ export default function App() {
                             </div>
                           ) : tasks.filter((t) => !t.removing).length === 0 ? (
                             <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10">
-                              <div className="relative w-[200px] h-[140px] mb-6">
+                              <div className="relative w-[220px] h-[150px] mb-6">
                                 <div
-                                  className="absolute inset-0 rounded-[45%] opacity-90"
+                                  className="absolute inset-0 rounded-[2rem] opacity-95"
                                   style={{
                                     background:
-                                      "radial-gradient(ellipse at 50% 40%, #2a2a2a 0%, #1f1f1f 70%)",
+                                      "radial-gradient(ellipse 80% 70% at 45% 35%, #262626 0%, #171717 75%)",
                                   }}
                                 />
                                 <svg
-                                  className="relative z-[1] w-full h-full drop-shadow-lg"
-                                  viewBox="0 0 200 140"
+                                  className="relative z-[1] w-full h-full drop-shadow-md"
+                                  viewBox="0 0 220 150"
                                   fill="none"
                                   aria-hidden
                                 >
-                                  <path
-                                    d="M48 38 L118 32 L128 108 L58 114 Z"
-                                    fill="#f4f4f5"
-                                    opacity="0.98"
+                                  <rect
+                                    x="44"
+                                    y="36"
+                                    width="88"
+                                    height="102"
+                                    rx="8"
+                                    fill="#e4e4e7"
+                                    opacity="0.95"
                                   />
                                   <rect
-                                    x="58"
+                                    x="52"
                                     y="48"
-                                    width="10"
-                                    height="10"
-                                    rx="1"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2.2"
-                                    fill="none"
-                                  />
-                                  <rect
-                                    x="58"
-                                    y="72"
-                                    width="10"
-                                    height="10"
-                                    rx="1"
-                                    stroke="#3b82f6"
-                                    strokeWidth="2.2"
-                                    fill="none"
-                                  />
-                                  <line
-                                    x1="74"
-                                    y1="53"
-                                    x2="108"
-                                    y2="51"
-                                    stroke="#d4d4d8"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                  <line
-                                    x1="74"
-                                    y1="77"
-                                    x2="104"
-                                    y2="75"
-                                    stroke="#d4d4d8"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  />
-                                  <rect
-                                    x="124"
-                                    y="44"
-                                    width="14"
-                                    height="56"
-                                    rx="2"
-                                    fill="#3b82f6"
-                                  />
-                                  <rect
-                                    x="124"
-                                    y="40"
-                                    width="14"
+                                    width="72"
                                     height="8"
-                                    rx="1"
-                                    fill="#fafafa"
+                                    rx="2"
+                                    fill="#d4d4d8"
                                   />
-                                  <path
-                                    d="M124 100 L131 108 L138 100"
-                                    fill="#fafafa"
-                                  />
-                                  <path
-                                    className="text-blue-500"
-                                    d="M40 36 L44 32 L48 36"
-                                    stroke="currentColor"
-                                    strokeWidth="1.5"
+                                  <circle
+                                    cx="62"
+                                    cy="72"
+                                    r="7"
+                                    stroke="#22c55e"
+                                    strokeWidth="2.5"
                                     fill="none"
                                   />
-                                  <circle cx="36" cy="52" r="2" fill="#52525b" />
-                                  <circle cx="162" cy="64" r="2" fill="#52525b" />
+                                  <path
+                                    d="M58 72 L61 76 L68 68"
+                                    stroke="#22c55e"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                  <line
+                                    x1="78"
+                                    y1="72"
+                                    x2="112"
+                                    y2="70"
+                                    stroke="#a1a1aa"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  <rect
+                                    x="56"
+                                    y="88"
+                                    width="10"
+                                    height="10"
+                                    rx="2"
+                                    stroke="#a1a1aa"
+                                    strokeWidth="1.8"
+                                  />
+                                  <line
+                                    x1="74"
+                                    y1="90"
+                                    x2="108"
+                                    y2="88"
+                                    stroke="#d4d4d8"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  <line
+                                    x1="74"
+                                    y1="98"
+                                    x2="96"
+                                    y2="97"
+                                    stroke="#d4d4d8"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  />
+                                  <path
+                                    d="M138 42 C168 52 178 88 152 108"
+                                    stroke="#6366f1"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    fill="none"
+                                    opacity="0.85"
+                                  />
+                                  <polygon
+                                    points="154,38 162,48 152,52 144,46"
+                                    fill="#818cf8"
+                                    opacity="0.9"
+                                  />
+                                  <rect
+                                    x="158"
+                                    y="64"
+                                    width="36"
+                                    height="48"
+                                    rx="4"
+                                    fill="#4f46e5"
+                                    opacity="0.9"
+                                  />
+                                  <rect
+                                    x="166"
+                                    y="72"
+                                    width="20"
+                                    height="3"
+                                    rx="1"
+                                    fill="#c7d2fe"
+                                  />
+                                  <rect
+                                    x="166"
+                                    y="80"
+                                    width="14"
+                                    height="3"
+                                    rx="1"
+                                    fill="#a5b4fc"
+                                    opacity="0.8"
+                                  />
+                                  <path
+                                    d="M32 58 L36 52 L40 58"
+                                    stroke="#71717a"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    fill="none"
+                                  />
+                                  <path
+                                    d="M178 118 L182 124 L186 118"
+                                    stroke="#52525b"
+                                    strokeWidth="1.2"
+                                    fill="none"
+                                  />
                                 </svg>
                               </div>
                               <p className="text-lg font-semibold text-zinc-100 tracking-tight">
@@ -2338,7 +2606,7 @@ export default function App() {
                                         if (e.key !== "Enter") return;
                                         setSelectedTaskId(t.id);
                                       }}
-                                      className={`group mx-1 rounded-xl px-2 py-2 flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                      className={`group mx-1 rounded-xl px-2 py-1.5 flex items-center gap-2.5 transition-colors cursor-pointer ${
                                         isSelected
                                           ? "bg-[#333333] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
                                           : "hover:bg-[#1c1c1c]"
@@ -2348,10 +2616,26 @@ export default function App() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          const next = !t.completed;
+                                          if (selectedListId) {
+                                            if (next) {
+                                              appendCompletedActivity(
+                                                t.text,
+                                                0,
+                                                selectedListId,
+                                                selectedList?.label ?? "",
+                                              );
+                                            } else {
+                                              removeLastCompletedForTaskOnList(
+                                                t.text,
+                                                selectedListId,
+                                              );
+                                            }
+                                          }
                                           setTasks((prev) =>
                                             prev.map((x) =>
                                               x.id === t.id
-                                                ? { ...x, completed: !x.completed }
+                                                ? { ...x, completed: next }
                                                 : x,
                                             ),
                                           );
@@ -2413,45 +2697,44 @@ export default function App() {
                           </div>
                         ) : selectedTask ? (
                           <>
-                            <div className="flex items-center justify-between px-4 py-2.5 shrink-0">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setTasks((prev) =>
-                                      prev.map((x) =>
-                                        x.id === selectedTask.id
-                                          ? { ...x, completed: !x.completed }
-                                          : x,
-                                      ),
-                                    )
-                                  }
-                                  className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center ${
-                                    selectedTask.completed
-                                      ? "border-blue-500 bg-blue-500"
-                                      : "border-zinc-500 hover:border-zinc-400"
-                                  }`}
-                                  aria-label="Toggle complete"
-                                >
-                                  {selectedTask.completed ? (
-                                    <span className="text-white text-[10px]">✓</span>
-                                  ) : null}
-                                </button>
-                                <span className="w-px h-4 bg-zinc-700 shrink-0" />
-                                <button
-                                  type="button"
-                                  className="flex items-center gap-1.5 text-[13px] text-zinc-500 hover:text-zinc-400 transition-colors"
-                                >
-                                  <span className="text-sm font-semibold text-zinc-100">📅</span>
-                                  Due Date
-                                </button>
-                              </div>
+                            <div className="flex items-center gap-3 px-4 py-2.5 shrink-0">
                               <button
                                 type="button"
-                                className="text-zinc-500 hover:text-zinc-300 p-1"
-                                aria-label="Priority"
+                                onClick={() => {
+                                  const next = !selectedTask.completed;
+                                  if (selectedListId) {
+                                    if (next) {
+                                      appendCompletedActivity(
+                                        selectedTask.text,
+                                        0,
+                                        selectedListId,
+                                        selectedList?.label ?? "",
+                                      );
+                                    } else {
+                                      removeLastCompletedForTaskOnList(
+                                        selectedTask.text,
+                                        selectedListId,
+                                      );
+                                    }
+                                  }
+                                  setTasks((prev) =>
+                                    prev.map((x) =>
+                                      x.id === selectedTask.id
+                                        ? { ...x, completed: next }
+                                        : x,
+                                    ),
+                                  );
+                                }}
+                                className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center ${
+                                  selectedTask.completed
+                                    ? "border-blue-500 bg-blue-500"
+                                    : "border-zinc-500 hover:border-zinc-400"
+                                }`}
+                                aria-label="Toggle complete"
                               >
-                                ⚑
+                                {selectedTask.completed ? (
+                                  <span className="text-white text-[10px]">✓</span>
+                                ) : null}
                               </button>
                             </div>
 
@@ -2481,7 +2764,7 @@ export default function App() {
                                     ),
                                   );
                                 }}
-                                placeholder="Write something or type / for commands"
+                                placeholder="Write a description"
                                 className="w-full min-h-[200px] bg-transparent text-[13px] text-zinc-300 placeholder:text-zinc-600 outline-none resize-none leading-relaxed"
                               />
                             </div>
