@@ -977,6 +977,9 @@ export default function App() {
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
     number | null
   >(null);
+  const [pendingWorkModeListId, setPendingWorkModeListId] = useState<
+    string | null
+  >(null);
   const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
 
   const [selectedStat, setSelectedStat] = useState("Integrity");
@@ -2399,10 +2402,22 @@ export default function App() {
     setShowReflection(false);
   }
 
-  function addTaskToFocusSession(listId: string, taskId: number) {
+  function addTaskToFocusSession(
+    listId: string,
+    taskId: number,
+    options?: { promptWorkMode?: boolean },
+  ) {
+    const promptWorkMode = options?.promptWorkMode !== false;
     setFocusSessionEntries((prev) => {
       if (prev.some((e) => e.listId === listId && e.taskId === taskId)) {
         return prev;
+      }
+      if (promptWorkMode && !isSimulation) {
+        queueMicrotask(() => {
+          setPendingWorkModeTaskId(taskId);
+          setPendingWorkModeListId(listId);
+          setIsWorkModeModalOpen(true);
+        });
       }
       return [...prev, { listId, taskId }];
     });
@@ -5183,8 +5198,6 @@ export default function App() {
                       }
                       addTaskToFocusSession(targetListId, id);
                       setTaskInput("");
-                      setPendingWorkModeTaskId(id);
-                      setIsWorkModeModalOpen(true);
                     }}
                     className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
                   >
@@ -5260,7 +5273,7 @@ export default function App() {
                               🧩
                             </span>
                             <h2 className="min-w-0 truncate font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-zinc-100">
-                              List Scheme
+                              Constructor
                             </h2>
                           </div>
                           <div
@@ -5280,39 +5293,8 @@ export default function App() {
                             </svg>
                           </div>
                         </div>
-                        {focusSessionEntries.length > 0 && (
-                          <div className="mt-2.5 flex flex-wrap items-center gap-2 rounded-lg border border-emerald-500/25 bg-emerald-950/40 px-2.5 py-2">
-                            <span className="text-[12px] font-medium text-emerald-100/95">
-                              {focusSessionEntries.length} task
-                              {focusSessionEntries.length === 1 ? "" : "s"}{" "}
-                              in session
-                            </span>
-                            {!running && seconds > 0 && (
-                              <button
-                                type="button"
-                                onClick={startTimer}
-                                disabled={isSimulation}
-                                className="ml-auto shrink-0 rounded-full bg-zinc-100 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-zinc-900 transition hover:bg-white disabled:opacity-40"
-                              >
-                                Start
-                              </button>
-                            )}
-                            {!running && seconds <= 0 && (
-                              <span className="text-[10px] text-emerald-200/70">
-                                Set duration on the timer to start
-                              </span>
-                            )}
-                          </div>
-                        )}
                       </div>
                       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0b] px-2 py-2 sm:px-2.5">
-                        {focusSidebarSections.every(
-                          (s) => s.tasks.length === 0,
-                        ) ? (
-                          <p className="px-2 py-10 text-center text-[13px] leading-relaxed text-zinc-500">
-                            No tasks available
-                          </p>
-                        ) : (
                           <div className="flex flex-col">
                             {focusSidebarSections.map((section, secIdx) => {
                               const expanded =
@@ -5469,7 +5451,6 @@ export default function App() {
                               );
                             })}
                           </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -6369,18 +6350,35 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (pendingWorkModeTaskId == null) {
+                    if (
+                      pendingWorkModeTaskId == null ||
+                      pendingWorkModeListId == null
+                    ) {
+                      setPendingWorkModeTaskId(null);
+                      setPendingWorkModeListId(null);
                       setIsWorkModeModalOpen(false);
                       return;
                     }
-                    setTasks((prev) =>
-                      prev.map((t) =>
-                        t.id === pendingWorkModeTaskId
-                          ? { ...t, workMode: "inside" }
-                          : t,
-                      ),
-                    );
+                    const tid = pendingWorkModeTaskId;
+                    const lid = pendingWorkModeListId;
+                    setTasksByListId((prev) => {
+                      const arr = prev[lid] ?? [];
+                      return {
+                        ...prev,
+                        [lid]: arr.map((t) =>
+                          t.id === tid ? { ...t, workMode: "inside" } : t,
+                        ),
+                      };
+                    });
+                    if (selectedListId === lid) {
+                      setTasks((prev) =>
+                        prev.map((t) =>
+                          t.id === tid ? { ...t, workMode: "inside" } : t,
+                        ),
+                      );
+                    }
                     setPendingWorkModeTaskId(null);
+                    setPendingWorkModeListId(null);
                     setIsWorkModeModalOpen(false);
                   }}
                   className="group relative flex flex-col items-start gap-1 rounded-2xl border border-blue-500/70 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-3 text-left text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.55)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(37,99,235,0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
@@ -6398,18 +6396,35 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => {
-                    if (pendingWorkModeTaskId == null) {
+                    if (
+                      pendingWorkModeTaskId == null ||
+                      pendingWorkModeListId == null
+                    ) {
+                      setPendingWorkModeTaskId(null);
+                      setPendingWorkModeListId(null);
                       setIsWorkModeModalOpen(false);
                       return;
                     }
-                    setTasks((prev) =>
-                      prev.map((t) =>
-                        t.id === pendingWorkModeTaskId
-                          ? { ...t, workMode: "external" }
-                          : t,
-                      ),
-                    );
+                    const tid = pendingWorkModeTaskId;
+                    const lid = pendingWorkModeListId;
+                    setTasksByListId((prev) => {
+                      const arr = prev[lid] ?? [];
+                      return {
+                        ...prev,
+                        [lid]: arr.map((t) =>
+                          t.id === tid ? { ...t, workMode: "external" } : t,
+                        ),
+                      };
+                    });
+                    if (selectedListId === lid) {
+                      setTasks((prev) =>
+                        prev.map((t) =>
+                          t.id === tid ? { ...t, workMode: "external" } : t,
+                        ),
+                      );
+                    }
                     setPendingWorkModeTaskId(null);
+                    setPendingWorkModeListId(null);
                     setIsWorkModeModalOpen(false);
                   }}
                   className="group flex flex-col items-start gap-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.26)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
