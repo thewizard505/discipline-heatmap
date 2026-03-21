@@ -728,6 +728,38 @@ function TasksDueCalendarMonth({
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
+/** Canonical key for task speed graphs (case-insensitive, trimmed). */
+function normalizeTaskKey(text: string): string {
+  return text.trim().toLowerCase();
+}
+
+/** Title-style label for displaying normalized task keys in analytics. */
+function formatTaskTitleForGraph(key: string): string {
+  const t = key.trim();
+  if (!t) return "";
+  return t
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+/** Merge task history keys that differ only by capitalization/whitespace. */
+function mergeTaskHistoryByNormalizedKeys(
+  raw: Record<string, HistoryPoint[]>,
+): Record<string, HistoryPoint[]> {
+  const out: Record<string, HistoryPoint[]> = {};
+  for (const [k, points] of Object.entries(raw)) {
+    if (!Array.isArray(points)) continue;
+    const nk = normalizeTaskKey(k);
+    out[nk] = [...(out[nk] || []), ...points];
+  }
+  for (const nk of Object.keys(out)) {
+    out[nk].sort((a, b) => a.date.localeCompare(b.date));
+  }
+  return out;
+}
+
 /** Unified log for Completed view (list check-offs + focus session completes) */
 type CompletedActivityEntry = {
   id: string;
@@ -1461,7 +1493,7 @@ export default function App() {
     Object.values(taskHistory).forEach((points) => {
       points.forEach((p) => {
         totalTasksCount++;
-        totalTaskDurationSecs += p.value * 60;
+        totalTaskDurationSecs += p.value;
       });
     });
 
@@ -1507,8 +1539,9 @@ export default function App() {
 
     if (savedTaskHistory) {
       const parsed = JSON.parse(savedTaskHistory);
-      setTaskHistory(parsed);
-      const taskKeys = Object.keys(parsed);
+      const merged = mergeTaskHistoryByNormalizedKeys(parsed);
+      setTaskHistory(merged);
+      const taskKeys = Object.keys(merged);
       if (taskKeys.length > 0 && !selectedTaskGraph) {
         setSelectedTaskGraph(taskKeys[taskKeys.length - 1]);
       }
@@ -2304,9 +2337,10 @@ export default function App() {
     setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
     setTimeout(() => setFloatingTime(null), 1500);
     const mins = Math.round(durationSecs / 60);
+    const taskKey = normalizeTaskKey(task.text);
     setTaskHistory((prev) => ({
       ...prev,
-      [task.text]: [...(prev[task.text] || []), { value: mins, date: today }],
+      [taskKey]: [...(prev[taskKey] || []), { value: durationSecs, date: today }],
     }));
     appendCompletedActivity(
       task.text,
@@ -2317,7 +2351,7 @@ export default function App() {
     setBestFocusIntegrity((prev) =>
       Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
     );
-    setSelectedTaskGraph(task.text);
+    setSelectedTaskGraph(taskKey);
     setSelectedStat("Speed");
     setTasks((prev) => {
       const newTasks = prev.map((t) =>
@@ -2350,7 +2384,10 @@ export default function App() {
   const currentData = useMemo(() => {
     if (isSimulation) return heroGraphData;
     if (selectedStat === "Speed") {
-      const data = taskHistory[selectedTaskGraph];
+      const nk = normalizeTaskKey(selectedTaskGraph);
+      const data =
+        taskHistory[nk] ||
+        (selectedTaskGraph ? taskHistory[selectedTaskGraph] : undefined);
       return data && data.length > 0 ? data : [{ value: 0, date: "N/A" }];
     }
     const integrityData = history["Focus Integrity"] || [];
@@ -4282,30 +4319,52 @@ export default function App() {
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
                                         : selectedTaskGraph
-                                          ? `${selectedTaskGraph} · Completion time per session`
+                                          ? `${formatTaskTitleForGraph(normalizeTaskKey(selectedTaskGraph))} · Completion time per session`
                                           : "Completion time per session"}
                                     </p>
                                   </div>
-                                  <div className="flex flex-wrap items-stretch gap-1.5">
+                                  <div className="flex flex-wrap items-center gap-2.5">
                                     {selectedStat === "Speed" && (
-                                      <select
-                                        value={selectedTaskGraph}
-                                        onChange={(e) =>
-                                          setSelectedTaskGraph(e.target.value)
-                                        }
-                                        className="h-7 min-w-[8rem] rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 text-[10px] text-zinc-200 outline-none focus:border-blue-500/40 focus:ring-1 focus:ring-blue-500/15 leading-none"
-                                      >
-                                        <option value="">Select task</option>
-                                        {Object.keys(taskHistory).map(
-                                          (task) => (
-                                            <option key={task} value={task}>
-                                              {task}
-                                            </option>
-                                          ),
-                                        )}
-                                      </select>
+                                      <div className="relative min-w-[11rem] max-w-[16rem]">
+                                        <select
+                                          value={selectedTaskGraph}
+                                          onChange={(e) =>
+                                            setSelectedTaskGraph(
+                                              normalizeTaskKey(e.target.value),
+                                            )
+                                          }
+                                          className="h-9 w-full cursor-pointer appearance-none rounded-full border border-zinc-700/75 bg-[#121214] pl-3.5 pr-10 text-[12px] font-semibold tracking-tight text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] outline-none transition-colors duration-150 hover:border-zinc-600 hover:bg-zinc-900/90 focus:border-blue-500/45 focus:ring-2 focus:ring-blue-500/20"
+                                        >
+                                          <option value="">Select task</option>
+                                          {Object.keys(taskHistory)
+                                            .sort((a, b) =>
+                                              a.localeCompare(b),
+                                            )
+                                            .map((task) => (
+                                              <option key={task} value={task}>
+                                                {formatTaskTitleForGraph(task)}
+                                              </option>
+                                            ))}
+                                        </select>
+                                        <span
+                                          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500"
+                                          aria-hidden
+                                        >
+                                          <svg
+                                            className="h-3.5 w-3.5"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                          >
+                                            <path d="M6 9l6 6 6-6" />
+                                          </svg>
+                                        </span>
+                                      </div>
                                     )}
-                                    <div className="inline-flex h-7 rounded-lg border border-zinc-800/90 bg-zinc-950/60 p-0.5">
+                                    <div className="inline-flex h-9 shrink-0 rounded-full border border-zinc-700/75 bg-[#0c0c0e] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -4314,10 +4373,10 @@ export default function App() {
                                             onClick={() =>
                                               setSelectedStat(type)
                                             }
-                                            className={`rounded-md px-2.5 text-[10px] font-medium transition-colors duration-100 ${
+                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-semibold tracking-tight transition-all duration-200 ${
                                               selectedStat === type
-                                                ? "bg-zinc-800/90 text-zinc-100 border border-blue-500/25 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
-                                                : "text-zinc-500 hover:text-zinc-400 border border-transparent"
+                                                ? "bg-zinc-100 text-zinc-900 shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
+                                                : "text-zinc-500 hover:text-zinc-200"
                                             }`}
                                           >
                                             {type}
