@@ -510,12 +510,21 @@ type CalendarPlacedTask = { id: number; text: string; listId: string };
 
 const CALENDAR_TASKS_VISIBLE_CAP = 4;
 
+/** Single accent for calendar task chips (no per-task colors). */
+const CALENDAR_TASK_CHIP =
+  "w-full text-left rounded-lg px-2.5 py-2 border border-sky-500/22 bg-sky-500/[0.12] hover:bg-sky-500/[0.2] text-[11px] sm:text-xs font-medium leading-snug text-zinc-100 truncate transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]";
+
+type CalendarGridCell =
+  | { kind: "outside"; key: string; displayDay: number }
+  | { kind: "inside"; key: string; iso: string; day: number };
+
 function TasksDueCalendarMonth({
   monthStart,
   tasksByDate,
   todayIso,
   onPrevMonth,
   onNextMonth,
+  onTodayMonth,
   onTaskPick,
 }: {
   monthStart: Date;
@@ -523,106 +532,165 @@ function TasksDueCalendarMonth({
   todayIso: string;
   onPrevMonth: () => void;
   onNextMonth: () => void;
+  onTodayMonth: () => void;
   onTaskPick: (listId: string, taskId: number) => void;
 }) {
   const y = monthStart.getFullYear();
   const m = monthStart.getMonth();
   const firstDow = new Date(y, m, 1).getDay();
   const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const cells: { day: number | null; iso: string | null }[] = [];
+  const daysInPrevMonth = new Date(y, m, 0).getDate();
+
+  const cells: CalendarGridCell[] = [];
   for (let i = 0; i < firstDow; i++) {
-    cells.push({ day: null, iso: null });
+    const displayDay = daysInPrevMonth - firstDow + 1 + i;
+    cells.push({ kind: "outside", key: `pre-${y}-${m}-${i}`, displayDay });
   }
   for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({ day: d, iso: toISODate(new Date(y, m, d)) });
+    cells.push({
+      kind: "inside",
+      key: toISODate(new Date(y, m, d)),
+      iso: toISODate(new Date(y, m, d)),
+      day: d,
+    });
   }
+  let post = 0;
   while (cells.length % 7 !== 0) {
-    cells.push({ day: null, iso: null });
+    cells.push({
+      kind: "outside",
+      key: `post-${y}-${m}-${post}`,
+      displayDay: post + 1,
+    });
+    post += 1;
   }
 
-  const title = monthStart.toLocaleDateString("en-US", {
+  const rowCount = cells.length / 7;
+
+  const monthTitle = monthStart.toLocaleDateString("en-US", {
     month: "long",
+  });
+  const yearTitle = monthStart.toLocaleDateString("en-US", {
     year: "numeric",
   });
 
   return (
-    <div className="w-full max-w-[920px] mx-auto">
-      <div className="flex items-center justify-between gap-4 mb-5">
-        <button
-          type="button"
-          onClick={onPrevMonth}
-          className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#1c1c1c] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] text-lg leading-none transition-colors"
-          aria-label="Previous month"
-        >
-          ‹
-        </button>
-        <h2 className="text-base font-semibold text-zinc-100 tabular-nums">
-          {title}
-        </h2>
-        <button
-          type="button"
-          onClick={onNextMonth}
-          className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#1c1c1c] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] text-lg leading-none transition-colors"
-          aria-label="Next month"
-        >
-          ›
-        </button>
-      </div>
+    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-[#0f0f0f]">
+      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-4 pb-3 border-b border-white/[0.06]">
+        <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
+          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-50 tracking-tight tabular-nums">
+            {monthTitle}
+          </h2>
+          <span className="text-lg sm:text-xl font-medium text-zinc-500 tabular-nums">
+            {yearTitle}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onTodayMonth}
+            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-zinc-100 transition-colors"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={onPrevMonth}
+            className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] text-lg leading-none transition-colors flex items-center justify-center"
+            aria-label="Previous month"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={onNextMonth}
+            className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] text-lg leading-none transition-colors flex items-center justify-center"
+            aria-label="Next month"
+          >
+            ›
+          </button>
+        </div>
+      </header>
 
-      <div className="rounded-xl border border-[#2a2a2a] overflow-hidden bg-[#141414]">
-        <div className="grid grid-cols-7 border-b border-[#2a2a2a] bg-[#181818]">
+      <div className="flex-1 min-h-0 flex flex-col border-t border-white/[0.04]">
+        <div className="grid grid-cols-7 shrink-0 border-b border-[#252525] bg-[#141414]">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((wd) => (
             <div
               key={wd}
-              className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+              className="py-2.5 text-center text-[11px] font-medium text-zinc-500"
             >
               {wd}
             </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 gap-px bg-[#2a2a2a]">
-          {cells.map((cell, idx) => {
-            if (cell.day == null || cell.iso == null) {
+
+        <div
+          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#252525]"
+          style={{
+            gridTemplateRows: `repeat(${rowCount}, minmax(80px, 1fr))`,
+          }}
+        >
+          {cells.map((cell) => {
+            if (cell.kind === "outside") {
               return (
                 <div
-                  key={`pad-${idx}`}
-                  className="min-h-[112px] bg-[#141414] p-1.5"
+                  key={cell.key}
+                  className="bg-[#121212] min-h-[100px] p-2 flex flex-col min-w-0"
                   aria-hidden
-                />
+                >
+                  <div className="text-[11px] font-medium tabular-nums text-zinc-600 mb-1 shrink-0">
+                    {cell.displayDay}
+                  </div>
+                </div>
               );
             }
+
             const dayTasks = tasksByDate[cell.iso] ?? [];
             const visible = dayTasks.slice(0, CALENDAR_TASKS_VISIBLE_CAP);
             const more = dayTasks.length - visible.length;
             const isToday = cell.iso === todayIso;
+            const dayLabel =
+              cell.day === 1
+                ? monthStart.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                : String(cell.day);
+
             return (
               <div
-                key={cell.iso}
-                className={`min-h-[112px] bg-[#141414] p-1.5 flex flex-col ${
-                  isToday ? "ring-1 ring-inset ring-zinc-600/50" : ""
+                key={cell.key}
+                className={`bg-[#141414] min-h-[100px] p-2 flex flex-col min-w-0 ${
+                  isToday ? "ring-1 ring-inset ring-sky-500/35" : ""
                 }`}
               >
-                <div
-                  className={`text-[11px] font-semibold tabular-nums mb-1 shrink-0 ${
-                    isToday ? "text-zinc-100" : "text-zinc-500"
-                  }`}
-                >
-                  {cell.day}
+                <div className="mb-1.5 shrink-0">
+                  {isToday ? (
+                    <span
+                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-sky-600 text-[11px] font-semibold text-white tabular-nums shadow-sm"
+                      title="Today"
+                    >
+                      {cell.day}
+                    </span>
+                  ) : (
+                    <span className="inline-flex text-[11px] font-semibold tabular-nums text-zinc-500 pl-0.5">
+                      {dayLabel}
+                    </span>
+                  )}
                 </div>
-                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden">
+                <div className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]">
                   {visible.map((t) => (
                     <button
                       key={`${t.listId}-${t.id}`}
                       type="button"
                       onClick={() => onTaskPick(t.listId, t.id)}
-                      className="w-full text-left rounded-md px-1.5 py-1 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.04] text-[10px] leading-snug text-zinc-300 truncate transition-colors"
+                      className={CALENDAR_TASK_CHIP}
                       title={t.text}
                     >
                       {t.text}
                     </button>
                   ))}
                   {more > 0 ? (
-                    <div className="text-[10px] text-zinc-500 pl-0.5 pt-0.5">
+                    <div className="text-[10px] font-medium text-zinc-500 pl-0.5 pt-0.5">
                       +{more} more
                     </div>
                   ) : null}
@@ -1038,11 +1106,16 @@ export default function App() {
 
   const tasksByDueDate = useMemo(() => {
     if (isSimulation) return {};
+    const allowedListIds = new Set<string>();
+    for (const l of TASK_CATEGORY_LISTS) allowedListIds.add(l.id);
+    for (const l of todayLists) allowedListIds.add(l.id);
+
     const map: Record<string, CalendarPlacedTask[]> = {};
     for (const [listId, arr] of Object.entries(tasksByListId)) {
+      if (!allowedListIds.has(listId)) continue;
       if (!Array.isArray(arr)) continue;
       for (const t of arr) {
-        if (t.removing || !t.dueDate) continue;
+        if (t.removing || t.completed || !t.dueDate) continue;
         const k = t.dueDate;
         if (!map[k]) map[k] = [];
         map[k].push({ id: t.id, text: t.text, listId });
@@ -1052,7 +1125,7 @@ export default function App() {
       map[k].sort((a, b) => a.text.localeCompare(b.text));
     }
     return map;
-  }, [tasksByListId, isSimulation]);
+  }, [tasksByListId, isSimulation, todayLists]);
 
   const completedEntries = useMemo(() => {
     const entries = completedActivityLog.map((e) => ({
@@ -2990,11 +3063,13 @@ export default function App() {
             {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 min-h-0 h-screen ${
+              className={`flex-1 min-h-0 h-screen flex flex-col ${
                 activeView === "tasks" &&
                 (todayMainMode === "tasks" || todayMainMode === "completed")
                   ? "overflow-hidden"
-                  : "overflow-y-auto"
+                  : activeView === "calendar"
+                    ? "overflow-hidden"
+                    : "overflow-y-auto"
               }`}
             >
               <div
@@ -3002,7 +3077,9 @@ export default function App() {
                   activeView === "tasks" &&
                   (todayMainMode === "tasks" || todayMainMode === "completed")
                     ? "px-0 pt-0 pb-0"
-                    : "px-5 pt-3 pb-6"
+                    : activeView === "calendar"
+                      ? "flex-1 min-h-0 px-0 pt-0 pb-0"
+                      : "px-5 pt-3 pb-6"
                 }`}
               >
                 <div
@@ -3010,7 +3087,9 @@ export default function App() {
                     activeView === "tasks" &&
                     (todayMainMode === "tasks" || todayMainMode === "completed")
                       ? "hidden"
-                      : "mb-6"
+                      : activeView === "calendar"
+                        ? "hidden"
+                        : "mb-6"
                   }`}
                 >
                   {activeView === "tasks" ? (
@@ -3035,7 +3114,6 @@ export default function App() {
                   ) : (
                     <>
                       <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                        {activeView === "calendar" && "Calendar"}
                         {activeView === "analytics" && "Analytics View"}
                         {activeView === "notifications" && "Notifications"}
                         {activeView === "settings" && "Settings"}
@@ -3765,7 +3843,13 @@ export default function App() {
                     />
                   </div>
                 ) : (
-                  <div className="min-h-[60vh] pointer-events-auto">
+                  <div
+                    className={`pointer-events-auto ${
+                      activeView === "calendar"
+                        ? "flex-1 min-h-0 flex flex-col"
+                        : "min-h-[60vh]"
+                    }`}
+                  >
                     {activeView === "tasks" ? null : activeView === "calendar" ? (
                       <TasksDueCalendarMonth
                         monthStart={calendarMonthStart}
@@ -3783,6 +3867,12 @@ export default function App() {
                               new Date(d.getFullYear(), d.getMonth() + 1, 1),
                           )
                         }
+                        onTodayMonth={() => {
+                          const n = new Date();
+                          setCalendarMonthStart(
+                            new Date(n.getFullYear(), n.getMonth(), 1),
+                          );
+                        }}
                         onTaskPick={openTaskFromCalendar}
                       />
                     ) : (
