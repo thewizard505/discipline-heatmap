@@ -58,18 +58,20 @@ const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
   SYS_LIST_LONGTERM,
 ]);
 
-/** Lists shown in the Focus session picker sidebar (excluding Overdue). */
-const FOCUS_SIDEBAR_LIST_IDS: readonly string[] = [
+/** Lists in the Focus task picker (right panel), display order. */
+const FOCUS_PICKER_LIST_IDS: readonly string[] = [
+  SYS_LIST_OVERDUE,
   SYS_LIST_TODAY,
-  SYS_LIST_TESTS,
   SYS_LIST_PROJECTS,
+  SYS_LIST_TESTS,
   SYS_LIST_LONGTERM,
 ];
 
-const FOCUS_SIDEBAR_LABELS: Record<string, string> = {
+const FOCUS_PICKER_LABELS: Record<string, string> = {
+  [SYS_LIST_OVERDUE]: "Overdue",
   [SYS_LIST_TODAY]: "Today",
-  [SYS_LIST_TESTS]: "Tests",
   [SYS_LIST_PROJECTS]: "Projects",
+  [SYS_LIST_TESTS]: "Tests",
   [SYS_LIST_LONGTERM]: "Long-Term Assignments",
 };
 
@@ -1131,6 +1133,10 @@ export default function App() {
   const [focusSessionEntries, setFocusSessionEntries] = useState<
     FocusSessionEntry[]
   >([]);
+  /** Focus picker: which category pills are expanded to show tasks (default collapsed on enter). */
+  const [focusPickerExpanded, setFocusPickerExpanded] = useState<
+    Record<string, boolean>
+  >({});
   const focusNavButtonRef = useRef<HTMLButtonElement>(null);
   const focusEnterTimeoutsRef = useRef<number[]>([]);
   /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
@@ -1185,9 +1191,9 @@ export default function App() {
   );
 
   const focusSidebarSections = useMemo(() => {
-    return FOCUS_SIDEBAR_LIST_IDS.map((listId) => ({
+    return FOCUS_PICKER_LIST_IDS.map((listId) => ({
       listId,
-      label: FOCUS_SIDEBAR_LABELS[listId] ?? listId,
+      label: FOCUS_PICKER_LABELS[listId] ?? listId,
       tasks: (tasksByListId[listId] ?? []).filter(
         (t) => !t.completed && !t.removing,
       ),
@@ -1834,6 +1840,7 @@ export default function App() {
     setIsAddListModalOpen(false);
     setOpenListMenuId(null);
     setFocusSessionEntries([]);
+    setFocusPickerExpanded({});
   };
 
   const applyListSelection = (listId: string) => {
@@ -1938,6 +1945,7 @@ export default function App() {
 
   const finishEnterFocusSession = () => {
     setIsFocusSessionActive(true);
+    setFocusPickerExpanded({});
     setIsAddListModalOpen(false);
     setOpenListMenuId(null);
     setTodayMainMode("tasks");
@@ -4908,87 +4916,10 @@ export default function App() {
                       "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
                   }}
                 />
-                <aside className="relative z-10 w-56 shrink-0 border-r border-gray-200 bg-white/95 overflow-y-auto overflow-x-hidden">
-                  <div className="p-3 space-y-4">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
-                      Pick tasks
-                    </div>
-                    {focusSidebarSections.every((s) => s.tasks.length === 0) ? (
-                      <p className="text-xs text-gray-500 leading-snug">
-                        No tasks available
-                      </p>
-                    ) : (
-                      focusSidebarSections.map((section) => (
-                        <div key={section.listId}>
-                          <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
-                            {section.label}
-                          </div>
-                          <ul className="space-y-1">
-                            {section.tasks.map((task) => {
-                              const inSession = focusSessionKeySet.has(
-                                `${section.listId}:${task.id}`,
-                              );
-                              return (
-                                <li
-                                  key={`${section.listId}-${task.id}`}
-                                  className="flex items-start gap-2"
-                                >
-                                  <button
-                                    type="button"
-                                    disabled={inSession}
-                                    onClick={() =>
-                                      addTaskToFocusSession(
-                                        section.listId,
-                                        task.id,
-                                      )
-                                    }
-                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
-                                      inSession
-                                        ? "border-emerald-500 bg-emerald-500 text-white"
-                                        : "border-gray-300 bg-white hover:border-blue-400"
-                                    } disabled:cursor-default`}
-                                    aria-label={
-                                      inSession
-                                        ? "Already in session"
-                                        : "Add to focus session"
-                                    }
-                                  >
-                                    {inSession ? (
-                                      <svg
-                                        className="h-2.5 w-2.5"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="3"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        aria-hidden
-                                      >
-                                        <path d="M20 6L9 17l-5-5" />
-                                      </svg>
-                                    ) : null}
-                                  </button>
-                                  <span className="text-[11px] leading-snug text-gray-800 break-words min-w-0">
-                                    {task.text}
-                                  </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </aside>
-                <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
-                  <div
-                    className="flex flex-col items-center gap-10 w-full"
-                    style={{
-                      paddingTop: "5rem",
-                      transform: "none",
-                    }}
-                  >
-                  {/* inner focus content inserted below — duplicate removed from page bottom */}
+                <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                      <div className="flex w-full flex-shrink-0 flex-col items-center gap-6 px-4 pb-4 pt-16 sm:gap-8">
                   {warning && (
               <div className="fixed top-24 bg-blue-600 text-white px-8 py-2 rounded-full z-[100] animate-pulse text-[10px] font-bold tracking-widest uppercase shadow-xl">
                 {warning}
@@ -5187,8 +5118,10 @@ export default function App() {
                 )}
               </div>
             </div>
+                      </div>
 
-            <div className="w-full max-w-4xl space-y-12 pb-32">
+                      <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden">
+            <div className="mx-auto w-full max-w-4xl space-y-12 px-4 pb-24 pt-2">
               <div
                 className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || showReflection ? "opacity-40" : "opacity-100"}`}
               >
@@ -5295,9 +5228,144 @@ export default function App() {
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex w-[min(360px,32vw)] flex-shrink-0 flex-col self-stretch py-3 pr-3 pl-1 sm:w-[min(380px,34vw)] sm:py-4 sm:pr-4">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.75rem] border border-gray-200/90 bg-white/95 shadow-[0_12px_48px_-16px_rgba(15,23,42,0.12)] backdrop-blur-md sm:rounded-[2rem]">
+                      <div className="shrink-0 border-b border-gray-100/90 px-4 py-3">
+                        <h2 className="text-[15px] font-semibold tracking-tight text-gray-900">
+                          Pick tasks
+                        </h2>
+                        <p className="mt-0.5 text-[11px] text-gray-500">
+                          Tap a category to expand and add tasks
+                        </p>
+                      </div>
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-3">
+                        {focusSidebarSections.every(
+                          (s) => s.tasks.length === 0,
+                        ) ? (
+                          <p className="px-1 py-8 text-center text-[13px] leading-relaxed text-gray-500">
+                            No tasks available
+                          </p>
+                        ) : (
+                          <div className="flex flex-col gap-2">
+                            {focusSidebarSections.map((section) => {
+                              const expanded = !!focusPickerExpanded[section.listId];
+                              return (
+                                <div key={section.listId} className="rounded-2xl">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setFocusPickerExpanded((prev) => ({
+                                        ...prev,
+                                        [section.listId]: !prev[section.listId],
+                                      }))
+                                    }
+                                    className="flex w-full items-center justify-between gap-2 rounded-full border border-gray-200/90 bg-gradient-to-b from-white to-slate-50/90 px-4 py-2.5 text-left shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-gray-300/90 hover:shadow-md"
+                                  >
+                                    <span className="min-w-0 truncate text-[13px] font-medium text-gray-800">
+                                      {section.label}
+                                    </span>
+                                    <span className="flex shrink-0 items-center gap-2">
+                                      <span
+                                        className={`rounded-full px-2 py-0.5 text-[11px] font-semibold tabular-nums ${
+                                          section.tasks.length > 0
+                                            ? "bg-slate-100 text-slate-600"
+                                            : "bg-slate-50 text-slate-400"
+                                        }`}
+                                      >
+                                        {section.tasks.length}
+                                      </span>
+                                      <svg
+                                        className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${expanded ? "rotate-90" : ""}`}
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        aria-hidden
+                                      >
+                                        <path
+                                          d="M9 18l6-6-6-6"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        />
+                                      </svg>
+                                    </span>
+                                  </button>
+                                  {expanded && (
+                                    <ul className="mt-2 space-y-1.5 pl-0.5">
+                                      {section.tasks.length === 0 ? (
+                                        <li className="rounded-xl px-3 py-2 text-[12px] text-gray-400">
+                                          No tasks in this list
+                                        </li>
+                                      ) : (
+                                        section.tasks.map((task) => {
+                                          const inSession =
+                                            focusSessionKeySet.has(
+                                              `${section.listId}:${task.id}`,
+                                            );
+                                          return (
+                                            <li
+                                              key={`${section.listId}-${task.id}`}
+                                            >
+                                              <div className="group flex items-start gap-3 rounded-[14px] border border-gray-100/90 bg-white px-3 py-2.5 shadow-[0_1px_0_rgba(15,23,42,0.04)] transition hover:border-gray-200 hover:bg-slate-50/80">
+                                                <button
+                                                  type="button"
+                                                  disabled={inSession}
+                                                  onClick={() =>
+                                                    addTaskToFocusSession(
+                                                      section.listId,
+                                                      task.id,
+                                                    )
+                                                  }
+                                                  className={`mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md border-2 transition-all ${
+                                                    inSession
+                                                      ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_2px_6px_rgba(16,185,129,0.35)]"
+                                                      : "border-slate-300/90 bg-white shadow-sm hover:border-sky-400 hover:shadow-md"
+                                                  } disabled:cursor-default`}
+                                                  aria-label={
+                                                    inSession
+                                                      ? "Already in session"
+                                                      : "Add to focus session"
+                                                  }
+                                                >
+                                                  {inSession ? (
+                                                    <svg
+                                                      className="h-2.5 w-2.5"
+                                                      viewBox="0 0 24 24"
+                                                      fill="none"
+                                                      stroke="currentColor"
+                                                      strokeWidth="3"
+                                                      strokeLinecap="round"
+                                                      strokeLinejoin="round"
+                                                      aria-hidden
+                                                    >
+                                                      <path d="M20 6L9 17l-5-5" />
+                                                    </svg>
+                                                  ) : null}
+                                                </button>
+                                                <span className="min-w-0 flex-1 pt-0.5 text-[13px] leading-snug text-gray-800">
+                                                  {task.text}
+                                                </span>
+                                              </div>
+                                            </li>
+                                          );
+                                        })
+                                      )}
+                                    </ul>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
           </div>
