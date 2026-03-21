@@ -189,8 +189,7 @@ export default function App() {
   const [isFocusSessionActive, setIsFocusSessionActive] = useState(false);
   const [isFocusSidebarLimited, setIsFocusSidebarLimited] = useState(false);
   const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
-  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] =
-    useState(false);
+  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] = useState(false);
   const [focusSeconds, setFocusSeconds] = useState(
     FOCUS_SESSION_DURATION_SECONDS,
   );
@@ -287,10 +286,7 @@ export default function App() {
       return weekday ? `${weekday}, ${dateStr}` : dateStr;
     };
 
-    const map = new Map<
-      string,
-      { dateStr: string; label: string; items: typeof completedEntries }
-    >();
+    const map = new Map<string, { dateStr: string; label: string; items: typeof completedEntries }>();
     completedEntries.forEach((e) => {
       if (!map.has(e.dateStr)) {
         map.set(e.dateStr, {
@@ -1213,33 +1209,37 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full ${isSimulation ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-zinc-950 text-gray-100"} selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full ${isSimulation ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-black text-zinc-200 antialiased"} selection:bg-blue-500/30 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
-        {/* VIGNETTE & AURA */}
-        <div
-          className={`fixed inset-0 z-[150] pointer-events-none transition-opacity duration-1000 ${running ? "opacity-100" : "opacity-0"}`}
-          style={{
-            background:
-              "radial-gradient(circle, transparent 40%, rgba(0,0,0,0.12) 150%)",
-          }}
-        />
+        {/* VIGNETTE & AURA (landing / timer only — keep app shell pure black) */}
+        {isSimulation && (
+          <>
+            <div
+              className={`fixed inset-0 z-[150] pointer-events-none transition-opacity duration-1000 ${running ? "opacity-100" : "opacity-0"}`}
+              style={{
+                background:
+                  "radial-gradient(circle, transparent 40%, rgba(0,0,0,0.12) 150%)",
+              }}
+            />
 
-        <div
-          className={`fixed inset-0 pointer-events-none z-0 transition-all duration-1000 ${running ? "blur-xl opacity-20" : "blur-0 opacity-100"}`}
-        >
-          <div
-            className="absolute inset-x-0 top-0 h-screen transition-all duration-1000"
-            style={{
-              background: `radial-gradient(circle at top, rgba(${auraColor}, 0.1), transparent 70%)`,
-            }}
-          />
-          <div
-            className="absolute inset-x-0 bottom-0 h-screen transition-all duration-1000"
-            style={{
-              background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
-            }}
-          />
-        </div>
+            <div
+              className={`fixed inset-0 pointer-events-none z-0 transition-all duration-1000 ${running ? "blur-xl opacity-20" : "blur-0 opacity-100"}`}
+            >
+              <div
+                className="absolute inset-x-0 top-0 h-screen transition-all duration-1000"
+                style={{
+                  background: `radial-gradient(circle at top, rgba(${auraColor}, 0.1), transparent 70%)`,
+                }}
+              />
+              <div
+                className="absolute inset-x-0 bottom-0 h-screen transition-all duration-1000"
+                style={{
+                  background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
+                }}
+              />
+            </div>
+          </>
+        )}
         {isSimulation && (
           <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-white/95 backdrop-blur-xl border-b border-gray-200">
             <div className="w-full pointer-events-auto">
@@ -1493,15 +1493,15 @@ export default function App() {
 
         {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
         {!isSimulation && !isFocusSessionActive && (
-          <div className="min-h-screen flex w-full bg-black text-white pl-16 overflow-x-hidden">
-            {/* Left sidebar (main) */}
-            <aside className="h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250] shrink-0">
+          <div className="min-h-screen flex w-full bg-black text-zinc-200 overflow-x-hidden">
+            {/* Left sidebar (main) — flush to viewport edge */}
+            <aside className="h-screen w-[52px] sm:w-14 bg-[#141414] border-r border-[#2a2a2a] flex flex-col items-center justify-between py-2 z-[250] shrink-0">
               {/* Top: profile */}
               <div className="flex flex-col items-center gap-4">
                 <button
                   type="button"
                   onClick={() => handleSidebarNavClick("today")}
-                  className="group relative flex items-center justify-center w-11 h-11 rounded-2xl bg-[#25272d] border border-white/10 hover:border-blue-400/60 hover:bg-[#2b2e34] transition-all duration-200"
+                  className="group relative flex items-center justify-center w-9 h-9 rounded-lg bg-transparent border border-transparent hover:bg-white/5 transition-colors duration-150"
                 >
                   <svg
                     className="w-6 h-6 text-gray-200"
@@ -1528,10 +1528,10 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("today")}
-                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "today"
-                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        ? "bg-white/10 text-zinc-100"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
                     <svg
@@ -1559,10 +1559,10 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("calendar")}
-                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "calendar"
-                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        ? "bg-white/10 text-zinc-100"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
                     <svg
@@ -1589,10 +1589,10 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("analytics")}
-                    className={`group relative flex items-center justify-center w-10 h-10 rounded-xl transition-all duration-200 ${
+                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "analytics"
-                        ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
-                        : "text-gray-400 hover:bg-white/5 hover:text-white"
+                        ? "bg-white/10 text-zinc-100"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
                     <svg
@@ -1625,10 +1625,10 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => handleSidebarNavClick("notifications")}
-                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                  className={`group relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
                     activeView === "notifications"
-                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                   }`}
                 >
                   <svg
@@ -1655,10 +1655,10 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => handleSidebarNavClick("help")}
-                  className={`group relative flex items-center justify-center w-9 h-9 rounded-xl transition-all duration-200 ${
+                  className={`group relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
                     activeView === "help"
-                      ? "bg-blue-500/15 text-blue-300 shadow-[0_0_0_1px_rgba(59,130,246,0.5)]"
-                      : "text-gray-400 hover:bg-white/5 hover:text-white"
+                      ? "bg-white/10 text-zinc-100"
+                      : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                   }`}
                 >
                   <svg
@@ -1688,217 +1688,215 @@ export default function App() {
               activeView === "today" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 transition-all duration-200 ease-out shrink-0 ${
+                  className={`h-screen w-[260px] bg-[#181818] border-r border-[#2a2a2a] flex flex-col justify-between py-3 px-2.5 transition-all duration-200 ease-out shrink-0 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
                   }`}
                 >
-                  {/* Top: Start focus session */}
-                  <div
-                    className={
-                      isFocusSessionActive && isFocusSidebarLimited
-                        ? "flex-1 flex items-center"
-                        : "space-y-6"
-                    }
-                  >
-                    {isFocusSessionActive && isFocusSidebarLimited ? (
-                      <button
-                        type="button"
-                        onClick={handleQuitFocusSession}
-                        className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
-                      >
-                        Quit Session?
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleStartFocusSession}
-                        className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
-                      >
-                        Start Focus Session
-                      </button>
-                    )}
-
-                    {/* Lists section */}
-                    <div
-                      className={`pt-4 border-t border-white/5 space-y-3 ${
-                        isFocusSessionActive && isFocusSidebarLimited
-                          ? "hidden"
-                          : ""
-                      }`}
+                {/* Top: Start focus session */}
+                <div
+                  className={
+                    isFocusSessionActive && isFocusSidebarLimited
+                      ? "flex-1 flex items-center"
+                      : "space-y-6"
+                  }
+                >
+                  {isFocusSessionActive && isFocusSidebarLimited ? (
+                    <button
+                      type="button"
+                      onClick={handleQuitFocusSession}
+                      className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
                     >
-                      <div className="flex items-center justify-between group">
-                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
-                          Lists
+                      Quit Session?
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleStartFocusSession}
+                      className="w-full rounded-md bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-semibold tracking-wide py-2.5 px-3 transition-colors duration-150"
+                    >
+                      Start Focus Session
+                    </button>
+                  )}
+
+                  {/* Lists section */}
+                  <div
+                    className={`pt-4 border-t border-white/5 space-y-3 ${
+                      isFocusSessionActive && isFocusSidebarLimited ? "hidden" : ""
+                    }`}
+                  >
+                    <div className="flex items-center justify-between group">
+                      <p className="text-[11px] font-medium text-zinc-500">
+                        Lists
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewListName("");
+                          setIsAddListModalOpen(true);
+                        }}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
+                        aria-label="Add List"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="space-y-1">
+                      {todayLists.map((list) => (
+                        <div
+                          key={list.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          handleSelectList(list.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectList(list.id);
+                          }
+                        }}
+                          className="group flex flex-col gap-2 rounded-sm px-2 py-1.5 text-[13px] text-zinc-200 hover:bg-white/5 transition-colors duration-150"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <span className="text-base">{list.icon}</span>
+                              <span className="truncate">{list.label}</span>
+                            </div>
+
+                            <div className="flex items-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenListMenuId((cur) =>
+                                    cur === list.id ? null : list.id,
+                                  );
+                                }}
+                                className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
+                                aria-label="List menu"
+                              >
+                                •••
+                              </button>
+                            </div>
+                          </div>
+
+                          {openListMenuId === list.id && (
+                            <div
+                              ref={listMenuRef}
+                              className="w-full rounded-xl bg-[#18191f] border border-white/10 shadow-sm overflow-hidden"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTodayLists((prev) =>
+                                    prev.filter((l) => l.id !== list.id),
+                                  );
+                                  setTasksByListId((prev) => {
+                                    const next = { ...prev };
+                                    delete next[list.id];
+                                    return next;
+                                  });
+                                  if (selectedListId === list.id) {
+                                    setSelectedListId(null);
+                                    setTasks([]);
+                                    setSelectedTaskId(null);
+                                  }
+                                  setOpenListMenuId(null);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
+                              >
+                                Delete List
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {isAddListModalOpen && (
+                    <div className="mt-3 rounded-2xl bg-[#18191f] border border-white/10 p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="text-sm font-semibold text-gray-100">
+                          Add List
                         </p>
                         <button
                           type="button"
                           onClick={() => {
+                            setIsAddListModalOpen(false);
                             setNewListName("");
-                            setIsAddListModalOpen(true);
                           }}
-                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
-                          aria-label="Add List"
+                          className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
+                          aria-label="Close"
                         >
-                          +
+                          ✕
                         </button>
                       </div>
 
-                      <div className="space-y-1">
-                        {todayLists.map((list) => (
-                          <div
-                            key={list.id}
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => {
-                              handleSelectList(list.id);
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                handleSelectList(list.id);
-                              }
-                            }}
-                            className="group flex flex-col gap-2 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
-                          >
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <span className="text-base">{list.icon}</span>
-                                <span className="truncate">{list.label}</span>
-                              </div>
-
-                              <div className="flex items-center">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setOpenListMenuId((cur) =>
-                                      cur === list.id ? null : list.id,
-                                    );
-                                  }}
-                                  className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
-                                  aria-label="List menu"
-                                >
-                                  •••
-                                </button>
-                              </div>
-                            </div>
-
-                            {openListMenuId === list.id && (
-                              <div
-                                ref={listMenuRef}
-                                className="w-full rounded-xl bg-[#18191f] border border-white/10 shadow-sm overflow-hidden"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setTodayLists((prev) =>
-                                      prev.filter((l) => l.id !== list.id),
-                                    );
-                                    setTasksByListId((prev) => {
-                                      const next = { ...prev };
-                                      delete next[list.id];
-                                      return next;
-                                    });
-                                    if (selectedListId === list.id) {
-                                      setSelectedListId(null);
-                                      setTasks([]);
-                                      setSelectedTaskId(null);
-                                    }
-                                    setOpenListMenuId(null);
-                                  }}
-                                  className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
-                                >
-                                  Delete List
-                                </button>
-                              </div>
-                            )}
+                      <div className="grid md:grid-cols-[1fr_220px] gap-4">
+                        <div className="space-y-2">
+                          <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                            List Name
+                          </label>
+                          <input
+                            autoFocus
+                            value={newListName}
+                            onChange={(e) => setNewListName(e.target.value)}
+                            placeholder="List Name"
+                            className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
+                          />
+                        </div>
+                        <div className="rounded-xl bg-white/5 border border-white/10 p-3">
+                          <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
+                            Preview
+                          </p>
+                          <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
+                            <span className="mr-2">{DEFAULT_LIST_ICON}</span>
+                            {newListName ? newListName : "List Name"}
                           </div>
-                        ))}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 mt-4">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsAddListModalOpen(false);
+                            setNewListName("");
+                          }}
+                          className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!newListName.trim()}
+                          onClick={() => {
+                            const trimmed = newListName.trim();
+                            if (!trimmed) return;
+                            setTodayLists((prev) => [
+                              ...prev,
+                              {
+                                id: `list-${Date.now()}`,
+                                label: trimmed,
+                                icon: DEFAULT_LIST_ICON,
+                              },
+                            ]);
+                            setIsAddListModalOpen(false);
+                            setNewListName("");
+                            setOpenListMenuId(null);
+                          }}
+                          className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
+                        >
+                          Add
+                        </button>
                       </div>
                     </div>
-
-                    {isAddListModalOpen && (
-                      <div className="mt-3 rounded-2xl bg-[#18191f] border border-white/10 p-4">
-                        <div className="flex items-center justify-between mb-3">
-                          <p className="text-sm font-semibold text-gray-100">
-                            Add List
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                            }}
-                            className="w-8 h-8 rounded-lg hover:bg-white/5 transition-colors text-gray-200"
-                            aria-label="Close"
-                          >
-                            ✕
-                          </button>
-                        </div>
-
-                        <div className="grid md:grid-cols-[1fr_220px] gap-4">
-                          <div className="space-y-2">
-                            <label className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                              List Name
-                            </label>
-                            <input
-                              autoFocus
-                              value={newListName}
-                              onChange={(e) => setNewListName(e.target.value)}
-                              placeholder="List Name"
-                              className="w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-gray-100 outline-none focus:border-blue-400/60 transition-colors"
-                            />
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 p-3">
-                            <p className="text-[10px] tracking-[0.18em] uppercase text-gray-400">
-                              Preview
-                            </p>
-                            <div className="mt-3 rounded-lg bg-white/5 border border-white/10 px-3 py-2 text-sm text-gray-200">
-                              <span className="mr-2">{DEFAULT_LIST_ICON}</span>
-                              {newListName ? newListName : "List Name"}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 mt-4">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                            }}
-                            className="px-4 py-2 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-xs font-semibold uppercase tracking-[0.18em] hover:bg-white/10 transition-colors"
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            type="button"
-                            disabled={!newListName.trim()}
-                            onClick={() => {
-                              const trimmed = newListName.trim();
-                              if (!trimmed) return;
-                              setTodayLists((prev) => [
-                                ...prev,
-                                {
-                                  id: `list-${Date.now()}`,
-                                  label: trimmed,
-                                  icon: DEFAULT_LIST_ICON,
-                                },
-                              ]);
-                              setIsAddListModalOpen(false);
-                              setNewListName("");
-                              setOpenListMenuId(null);
-                            }}
-                            className="px-4 py-2 rounded-xl bg-blue-600 text-white text-xs font-semibold uppercase tracking-[0.18em] hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-[1]"
-                          >
-                            Add
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
+                  )}
+                </div>
 
                   {/* Bottom: Completed */}
                   <div
@@ -1908,442 +1906,428 @@ export default function App() {
                         : ""
                     }`}
                   >
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCollapsedCompletedDates({});
-                        setTodayMainMode("completed");
-                      }}
-                      className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
-                    >
-                      <span className="tracking-[0.18em] uppercase">
-                        Completed
-                      </span>
-                    </button>
-                  </div>
-                </aside>
-              )}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCollapsedCompletedDates({});
+                      setTodayMainMode("completed");
+                    }}
+                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
+                  >
+                    <span className="tracking-[0.18em] uppercase">Completed</span>
+                  </button>
+                </div>
+              </aside>
+            )}
 
             {/* Content panel overlay */}
             {!isFocusSessionActive && (
-              <section
-                className={`flex-1 h-screen ${
-                  activeView === "today" &&
-                  selectedListId &&
-                  todayMainMode === "tasks"
-                    ? "overflow-hidden"
-                    : "overflow-y-auto"
+            <section
+              className={`flex-1 h-screen ${
+                activeView === "today" && selectedListId && todayMainMode === "tasks"
+                  ? "overflow-hidden"
+                  : "overflow-y-auto"
+              }`}
+            >
+              <div
+                className={`w-full h-full flex flex-col ${
+                  activeView === "today" && selectedListId && todayMainMode === "tasks"
+                    ? "px-0 pt-3 pb-0"
+                    : "px-5 pt-3 pb-6"
                 }`}
               >
                 <div
-                  className={`w-full h-full flex flex-col ${
-                    activeView === "today" &&
-                    selectedListId &&
-                    todayMainMode === "tasks"
-                      ? "px-0 py-0"
-                      : "px-6 py-16"
+                  className={`flex items-center justify-between pointer-events-auto shrink-0 ${
+                    activeView === "today" && selectedListId && todayMainMode === "tasks"
+                      ? "hidden"
+                      : "mb-6"
                   }`}
                 >
-                  <div className="flex items-center justify-between mb-8 pointer-events-auto">
-                    {isFocusSessionActive ? (
-                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                        Hello {name}
-                      </h1>
-                    ) : activeView === "today" ? (
-                      <>
-                        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                          {todayMainMode === "completed"
-                            ? "Completed"
-                            : selectedListId
-                              ? (selectedList?.label ?? "Today")
-                              : ""}
-                        </h1>
-                        <button
-                          type="button"
-                          disabled
-                          className={`hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto ${
-                            selectedListId ? "" : "hidden"
-                          }`}
-                        >
-                          Collapse
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                          {activeView === "calendar" && "Calendar View"}
-                          {activeView === "analytics" && "Analytics View"}
-                          {activeView === "notifications" && "Notifications"}
-                          {activeView === "help" && "Help & Support"}
-                        </h1>
-                        <button
-                          type="button"
-                          onClick={handleGoHome}
-                          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
-                        >
-                          Back to Hero
-                        </button>
-                      </>
-                    )}
-                  </div>
                   {isFocusSessionActive ? (
-                    <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                      <div className="p-6 md:p-8">
-                        <div className="flex items-start justify-between gap-8">
-                          <div>
-                            <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                              Current Timer
-                            </p>
-                            <div className="mt-3 text-4xl md:text-5xl font-semibold text-white tabular-nums">
-                              {formatFocusSeconds(focusSeconds)}
-                            </div>
-                            <p className="mt-4 text-sm text-gray-300">
-                              Hello {name}...
-                            </p>
-                          </div>
-
-                          <div className="text-right">
-                            <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                              Percent Improvement
-                            </p>
-                            <div className="mt-3 flex items-baseline justify-end gap-3">
-                              <span
-                                className={`text-3xl font-semibold ${
-                                  parseInt(improvementDelta) >= 0
-                                    ? "text-emerald-400"
-                                    : "text-red-400"
-                                }`}
-                              >
-                                {improvementDelta}%
-                              </span>
-                              <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
-                                {parseInt(improvementDelta) >= 0
-                                  ? "UP"
-                                  : "DOWN"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-10 pt-6 border-t border-white/5">
-                          <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                            Next Objectives
-                          </p>
-                          <div className="mt-4 space-y-3">
-                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                              1) Choose your top task and begin.
-                            </div>
-                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                              2) Stay in the block until the timer ends.
-                            </div>
-                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                              3) When done, log completion to build integrity.
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ) : activeView === "today" &&
-                    todayMainMode === "completed" ? (
-                    <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                      <div className="p-6 md:p-8">
-                        {completedGroups.length === 0 ? (
-                          <div className="mt-6 text-sm text-gray-400">
-                            No completed tasks
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            {completedGroups.map((group) => {
-                              const isCollapsed =
-                                collapsedCompletedDates[group.dateStr] ?? false;
-                              return (
-                                <div
-                                  key={group.dateStr}
-                                  className="rounded-2xl border border-white/5 overflow-hidden"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      setCollapsedCompletedDates((prev) => ({
-                                        ...prev,
-                                        [group.dateStr]: !isCollapsed,
-                                      }))
-                                    }
-                                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
-                                  >
-                                    <span className="text-sm font-semibold text-gray-200">
-                                      {group.label}
-                                    </span>
-                                    <span className="text-xs text-gray-400">
-                                      {isCollapsed ? "Expand" : "Collapse"}
-                                    </span>
-                                  </button>
-
-                                  {!isCollapsed && (
-                                    <div className="divide-y divide-white/5">
-                                      {group.items.map((item) => (
-                                        <div
-                                          key={item.key}
-                                          className="px-7 py-2.5 flex items-start justify-between gap-4"
-                                        >
-                                          <span className="text-sm text-gray-100">
-                                            {item.taskName}
-                                          </span>
-                                          <span className="text-xs text-gray-500 whitespace-nowrap">
-                                            {item.minutes}m
-                                          </span>
-                                        </div>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ) : activeView === "today" && selectedListId ? (
-                    <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm overflow-hidden">
-                      <div className="grid grid-cols-[70%_30%] h-full">
-                        {/* LEFT PANEL: tasks */}
-                        <div className="p-5 md:p-7 flex flex-col h-full">
-                          {/* Header + actions */}
-                          <div className="flex items-start justify-between gap-4 mb-4">
-                            <div className="flex items-center gap-3 min-w-0">
-                              <button
-                                type="button"
-                                onClick={handleToggleTodaySidebar}
-                                disabled={isTodayPanelAnimatingOut}
-                                className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-[11px] font-semibold tracking-[0.12em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
-                                aria-label="Collapse Today sidebar"
-                                title="Collapse Today sidebar"
-                              >
-                                {isTodayPanelCollapsed ? ">" : "<"}
-                              </button>
-                              <span className="text-lg">
-                                {selectedList?.icon}
-                              </span>
-                              <h2 className="text-lg font-semibold text-gray-100 truncate">
-                                {selectedList?.label}
-                              </h2>
-                            </div>
-                          </div>
-
-                          {/* Task input bar */}
-                          <div className="bg-zinc-800 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
-                            <input
-                              value={taskInput}
-                              onChange={(e) => setTaskInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key !== "Enter") return;
-                                const trimmed = taskInput.trim();
-                                if (!trimmed) return;
-                                const id = Date.now();
-                                const newTask: Task = {
-                                  id,
-                                  text: trimmed,
-                                  description: "",
-                                  removing: false,
-                                  createdAt: Date.now(),
-                                  workMode: "inside",
-                                };
-                                setTasks((prev) => [...prev, newTask]);
-                                setTaskInput("");
-                              }}
-                              placeholder="Add a task..."
-                              className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-500 outline-none text-sm md:text-base"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const trimmed = taskInput.trim();
-                                if (!trimmed) return;
-                                const id = Date.now();
-                                const newTask: Task = {
-                                  id,
-                                  text: trimmed,
-                                  description: "",
-                                  removing: false,
-                                  createdAt: Date.now(),
-                                  workMode: "inside",
-                                };
-                                setTasks((prev) => [...prev, newTask]);
-                                setTaskInput("");
-                              }}
-                              className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
-                              disabled={!taskInput.trim()}
-                            >
-                              Add
-                            </button>
-                          </div>
-
-                          {/* Tasks list */}
-                          <div className="mt-5 flex-1 overflow-y-auto">
-                            {tasks.filter((t) => !t.removing).length === 0 ? (
-                              <div className="mt-10 text-sm text-gray-500/80 px-1">
-                                Add a task to see details.
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {tasks
-                                  .filter((t) => !t.removing)
-                                  .map((t) => {
-                                    const isSelected = selectedTaskId === t.id;
-                                    return (
-                                      <div
-                                        key={t.id}
-                                        ref={(el) => {
-                                          taskItemRefs.current[t.id] = el;
-                                        }}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => {
-                                          if (draggingTaskId != null) return;
-                                          setSelectedTaskId(t.id);
-                                        }}
-                                        onKeyDown={(e) => {
-                                          if (e.key !== "Enter") return;
-                                          setSelectedTaskId(t.id);
-                                        }}
-                                        onDragOver={(e) => {
-                                          e.preventDefault();
-                                          if (draggingTaskId == null) return;
-                                          if (draggingTaskId === t.id) return;
-                                          if (
-                                            lastDragOverIdRef.current === t.id
-                                          )
-                                            return;
-                                          lastDragOverIdRef.current = t.id;
-                                          reorderVisibleTasksWithFlip(
-                                            draggingTaskId,
-                                            t.id,
-                                          );
-                                        }}
-                                        onDrop={(e) => {
-                                          e.preventDefault();
-                                          lastDragOverIdRef.current = null;
-                                          setDraggingTaskId(null);
-                                        }}
-                                        className={`group rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
-                                          isSelected
-                                            ? "border-blue-500/30 bg-blue-500/10"
-                                            : "border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60"
-                                        } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
-                                      >
-                                        <div className="flex items-center gap-3 min-w-0 flex-1">
-                                          <div
-                                            draggable
-                                            onDragStart={(e) => {
-                                              setDraggingTaskId(t.id);
-                                              lastDragOverIdRef.current = t.id;
-                                              e.dataTransfer.effectAllowed =
-                                                "move";
-                                              e.dataTransfer.setData(
-                                                "text/plain",
-                                                String(t.id),
-                                              );
-                                            }}
-                                            onDragEnd={() => {
-                                              lastDragOverIdRef.current = null;
-                                              setDraggingTaskId(null);
-                                            }}
-                                            className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/20 text-zinc-400 opacity-60 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
-                                            aria-label="Drag to reorder"
-                                          >
-                                            ≡
-                                          </div>
-                                          <span className="text-sm text-gray-100 truncate">
-                                            {t.text}
-                                          </span>
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setTasks((prev) =>
-                                              prev.filter((x) => x.id !== t.id),
-                                            );
-                                            if (selectedTaskId === t.id) {
-                                              setSelectedTaskId(null);
-                                            }
-                                          }}
-                                          className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
-                                          aria-label="Delete task"
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* RIGHT PANEL: task details */}
-                        <div className="border-l border-zinc-800/70 bg-zinc-900 p-5 md:p-7 flex flex-col h-full">
-                          <div
-                            className={`transition-all duration-200 ${
-                              selectedTask
-                                ? "opacity-100 translate-x-0"
-                                : "opacity-0 translate-x-2"
-                            } ${selectedTask ? "" : "pointer-events-none"}`}
-                          >
-                            {selectedTask ? (
-                              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 md:p-5">
-                                <div className="mb-4">
-                                  <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                                    Task
-                                  </p>
-                                  <h3 className="mt-2 text-base font-semibold text-gray-100 truncate">
-                                    {selectedTask.text}
-                                  </h3>
-                                </div>
-
-                                <div className="flex flex-col gap-2">
-                                  <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                                    Description
-                                  </p>
-                                  <textarea
-                                    value={selectedTask.description}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      setTasks((prev) =>
-                                        prev.map((t) =>
-                                          t.id === selectedTask.id
-                                            ? { ...t, description: val }
-                                            : t,
-                                        ),
-                                      );
-                                    }}
-                                    placeholder="Add a description..."
-                                    className="w-full h-40 rounded-2xl bg-zinc-900/50 border border-zinc-800 px-4 py-3 text-gray-100 outline-none placeholder:text-gray-500 resize-none"
-                                  />
-                                </div>
-                              </div>
-                            ) : null}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                    <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
+                      Hello {name}
+                    </h1>
+                  ) : activeView === "today" ? (
+                    <>
+                      <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
+                        {todayMainMode === "completed"
+                          ? "Completed"
+                          : selectedListId
+                            ? selectedList?.label ?? "Today"
+                            : ""}
+                      </h1>
+                      <button
+                        type="button"
+                        disabled
+                        className={`hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded border border-zinc-700 bg-zinc-900/80 text-zinc-500 text-[11px] font-medium transition-all pointer-events-auto ${
+                          selectedListId ? "" : "hidden"
+                        }`}
+                      >
+                        Collapse
+                      </button>
+                    </>
                   ) : (
-                    <div className="min-h-[60vh] pointer-events-auto">
-                      {activeView === "today" ? null : (
-                        <div className="flex items-center justify-center h-full pt-8">
-                          <p className="text-sm md:text-base text-gray-500">
-                            {activeView === "calendar" && "Calendar View"}
-                            {activeView === "analytics" && "Analytics View"}
-                            {activeView === "notifications" &&
-                              "Notifications Center"}
-                            {activeView === "help" && "Help & Support"}
+                    <>
+                      <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
+                        {activeView === "calendar" && "Calendar View"}
+                        {activeView === "analytics" && "Analytics View"}
+                        {activeView === "notifications" && "Notifications"}
+                        {activeView === "help" && "Help & Support"}
+                      </h1>
+                      <button
+                        type="button"
+                        onClick={handleGoHome}
+                        className="hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded border border-zinc-700 bg-zinc-900 text-zinc-200 text-[11px] font-medium hover:bg-zinc-800 transition-colors pointer-events-auto"
+                      >
+                        Back to Hero
+                      </button>
+                    </>
+                  )}
+                </div>
+                {isFocusSessionActive ? (
+                  <div className="min-h-[60vh] border-t border-zinc-800 bg-black pointer-events-auto">
+                    <div className="p-5 md:p-6">
+                      <div className="flex items-start justify-between gap-8">
+                        <div>
+                          <p className="text-[11px] font-medium text-zinc-500">
+                            Current Timer
                           </p>
+                          <div className="mt-2 text-3xl md:text-4xl font-semibold text-zinc-100 tabular-nums tracking-tight">
+                            {formatFocusSeconds(focusSeconds)}
+                          </div>
+                          <p className="mt-3 text-[13px] text-zinc-500">
+                            Hello {name}...
+                          </p>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-[11px] font-medium text-zinc-500">
+                            Percent Improvement
+                          </p>
+                          <div className="mt-3 flex items-baseline justify-end gap-3">
+                            <span
+                              className={`text-3xl font-semibold ${
+                                parseInt(improvementDelta) >= 0
+                                  ? "text-emerald-400"
+                                  : "text-red-400"
+                              }`}
+                            >
+                              {improvementDelta}%
+                            </span>
+                            <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
+                              {parseInt(improvementDelta) >= 0 ? "UP" : "DOWN"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-10 pt-6 border-t border-white/5">
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                          Next Objectives
+                        </p>
+                        <div className="mt-4 space-y-3">
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            1) Choose your top task and begin.
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            2) Stay in the block until the timer ends.
+                          </div>
+                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                            3) When done, log completion to build integrity.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : activeView === "today" && todayMainMode === "completed" ? (
+                  <div className="min-h-[60vh] border-t border-zinc-800 bg-black pointer-events-auto">
+                    <div className="p-4 md:p-5">
+                      {completedGroups.length === 0 ? (
+                        <div className="mt-6 text-sm text-gray-400">No completed tasks</div>
+                      ) : (
+                        <div className="space-y-2">
+                          {completedGroups.map((group) => {
+                            const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
+                            return (
+                              <div
+                                key={group.dateStr}
+                                className="border border-zinc-800 overflow-hidden"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setCollapsedCompletedDates((prev) => ({
+                                      ...prev,
+                                      [group.dateStr]: !isCollapsed,
+                                    }))
+                                  }
+                                  className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
+                                >
+                                  <span className="text-sm font-semibold text-gray-200">
+                                    {group.label}
+                                  </span>
+                                  <span className="text-xs text-gray-400">
+                                    {isCollapsed ? "Expand" : "Collapse"}
+                                  </span>
+                                </button>
+
+                                {!isCollapsed && (
+                                  <div className="divide-y divide-white/5">
+                                    {group.items.map((item) => (
+                                      <div
+                                        key={item.key}
+                                        className="px-7 py-2.5 flex items-start justify-between gap-4"
+                                      >
+                                        <span className="text-sm text-gray-100">
+                                          {item.taskName}
+                                        </span>
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">
+                                          {item.minutes}m
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </section>
+                  </div>
+                ) : activeView === "today" && selectedListId ? (
+                  <div className="w-full h-[calc(100vh-0.75rem)] flex flex-col border-t border-zinc-800 bg-black overflow-hidden">
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)] flex-1 min-h-0">
+                      {/* LEFT PANEL: tasks */}
+                      <div className="pl-4 pr-3 pt-2 pb-3 flex flex-col h-full min-h-0 bg-black">
+                        {/* Header + actions */}
+                        <div className="flex items-start justify-between gap-4 mb-3 shrink-0">
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <button
+                              type="button"
+                              onClick={handleToggleTodaySidebar}
+                              disabled={isTodayPanelAnimatingOut}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded border border-zinc-700 bg-zinc-900 text-zinc-300 text-sm hover:bg-zinc-800 transition-colors disabled:opacity-50"
+                              aria-label="Collapse Today sidebar"
+                              title="Collapse Today sidebar"
+                            >
+                              {isTodayPanelCollapsed ? ">" : "<"}
+                            </button>
+                            <span className="text-base">{selectedList?.icon}</span>
+                            <h2 className="text-[15px] font-semibold text-zinc-100 truncate tracking-tight">
+                              {selectedList?.label}
+                            </h2>
+                          </div>
+                        </div>
+
+                        {/* Task input bar */}
+                        <div className="bg-zinc-900 border border-zinc-800 rounded-md px-3 py-2.5 flex items-center gap-2 shrink-0">
+                          <input
+                            value={taskInput}
+                            onChange={(e) => setTaskInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key !== "Enter") return;
+                              const trimmed = taskInput.trim();
+                              if (!trimmed) return;
+                              const id = Date.now();
+                              const newTask: Task = {
+                                id,
+                                text: trimmed,
+                                description: "",
+                                removing: false,
+                                createdAt: Date.now(),
+                                workMode: "inside",
+                              };
+                              setTasks((prev) => [...prev, newTask]);
+                              setTaskInput("");
+                            }}
+                            placeholder="Add a task..."
+                            className="flex-1 bg-transparent text-zinc-100 placeholder:text-zinc-600 outline-none text-[13px]"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const trimmed = taskInput.trim();
+                              if (!trimmed) return;
+                              const id = Date.now();
+                              const newTask: Task = {
+                                id,
+                                text: trimmed,
+                                description: "",
+                                removing: false,
+                                createdAt: Date.now(),
+                                workMode: "inside",
+                              };
+                              setTasks((prev) => [...prev, newTask]);
+                              setTaskInput("");
+                            }}
+                            className="px-3 py-1.5 rounded border border-zinc-700 bg-zinc-800 text-zinc-100 text-[11px] font-medium hover:bg-zinc-700 transition-colors disabled:opacity-40"
+                            disabled={!taskInput.trim()}
+                          >
+                            Add
+                          </button>
+                        </div>
+
+                        {/* Tasks list */}
+                        <div className="mt-3 flex-1 min-h-0 overflow-y-auto">
+                          {tasks.filter((t) => !t.removing).length === 0 ? (
+                            <div className="mt-8 text-[13px] text-zinc-600 px-0.5">
+                              Add a task to see details.
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              {tasks
+                                .filter((t) => !t.removing)
+                                .map((t) => {
+                                  const isSelected = selectedTaskId === t.id;
+                                  return (
+                                    <div
+                                      key={t.id}
+                                      ref={(el) => {
+                                        taskItemRefs.current[t.id] = el;
+                                      }}
+                                      role="button"
+                                      tabIndex={0}
+                                      onClick={() => {
+                                        if (draggingTaskId != null) return;
+                                        setSelectedTaskId(t.id);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key !== "Enter") return;
+                                        setSelectedTaskId(t.id);
+                                      }}
+                                      onDragOver={(e) => {
+                                        e.preventDefault();
+                                        if (draggingTaskId == null) return;
+                                        if (draggingTaskId === t.id) return;
+                                        if (lastDragOverIdRef.current === t.id) return;
+                                        lastDragOverIdRef.current = t.id;
+                                        reorderVisibleTasksWithFlip(
+                                          draggingTaskId,
+                                          t.id,
+                                        );
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        lastDragOverIdRef.current = null;
+                                        setDraggingTaskId(null);
+                                      }}
+                                      className={`group border-b border-zinc-800/90 px-1 py-2.5 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                                        isSelected
+                                          ? "bg-zinc-900/80"
+                                          : "hover:bg-zinc-950"
+                                      } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
+                                    >
+                                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                                        <div
+                                          draggable
+                                          onDragStart={(e) => {
+                                            setDraggingTaskId(t.id);
+                                            lastDragOverIdRef.current = t.id;
+                                            e.dataTransfer.effectAllowed = "move";
+                                            e.dataTransfer.setData(
+                                              "text/plain",
+                                              String(t.id),
+                                            );
+                                          }}
+                                          onDragEnd={() => {
+                                            lastDragOverIdRef.current = null;
+                                            setDraggingTaskId(null);
+                                          }}
+                                          className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/20 text-zinc-400 opacity-60 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
+                                          aria-label="Drag to reorder"
+                                        >
+                                          ≡
+                                        </div>
+                                        <span className="text-[13px] text-zinc-200 truncate">
+                                          {t.text}
+                                        </span>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setTasks((prev) =>
+                                            prev.filter((x) => x.id !== t.id),
+                                          );
+                                          if (selectedTaskId === t.id) {
+                                            setSelectedTaskId(null);
+                                          }
+                                        }}
+                                        className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+                                        aria-label="Delete task"
+                                      >
+                                        ✕
+                                      </button>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* RIGHT PANEL: task details */}
+                      <div className="border-l border-zinc-800 bg-[#0a0a0a] px-4 py-3 flex flex-col h-full min-h-0">
+                        <div
+                          className={`transition-all duration-200 ${
+                            selectedTask ? "opacity-100 translate-x-0" : "opacity-0 translate-x-2"
+                          } ${selectedTask ? "" : "pointer-events-none"}`}
+                        >
+                          {selectedTask ? (
+                            <div className="border border-zinc-800 bg-zinc-950/80 p-3">
+                              <div className="mb-4">
+                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                  Task
+                                </p>
+                                <h3 className="mt-2 text-[13px] font-semibold text-zinc-100 truncate">
+                                  {selectedTask.text}
+                                </h3>
+                              </div>
+
+                              <div className="flex flex-col gap-2">
+                                <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                  Description
+                                </p>
+                                <textarea
+                                  value={selectedTask.description}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setTasks((prev) =>
+                                      prev.map((t) =>
+                                        t.id === selectedTask.id
+                                          ? { ...t, description: val }
+                                          : t,
+                                      ),
+                                    );
+                                  }}
+                                  placeholder="Add a description..."
+                                  className="w-full h-36 rounded-md bg-black border border-zinc-800 px-3 py-2.5 text-zinc-200 outline-none placeholder:text-zinc-600 resize-none text-[13px]"
+                                />
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="min-h-[60vh] pointer-events-auto">
+                    {activeView === "today" ? null : (
+                      <div className="flex items-center justify-center h-full pt-8">
+                        <p className="text-sm md:text-base text-gray-500">
+                          {activeView === "calendar" && "Calendar View"}
+                          {activeView === "analytics" && "Analytics View"}
+                          {activeView === "notifications" &&
+                            "Notifications Center"}
+                          {activeView === "help" && "Help & Support"}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </section>
             )}
           </div>
         )}
