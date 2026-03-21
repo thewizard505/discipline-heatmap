@@ -506,6 +506,136 @@ function DogHomeworkOverdueIllustration() {
   );
 }
 
+type CalendarPlacedTask = { id: number; text: string; listId: string };
+
+const CALENDAR_TASKS_VISIBLE_CAP = 4;
+
+function TasksDueCalendarMonth({
+  monthStart,
+  tasksByDate,
+  todayIso,
+  onPrevMonth,
+  onNextMonth,
+  onTaskPick,
+}: {
+  monthStart: Date;
+  tasksByDate: Record<string, CalendarPlacedTask[]>;
+  todayIso: string;
+  onPrevMonth: () => void;
+  onNextMonth: () => void;
+  onTaskPick: (listId: string, taskId: number) => void;
+}) {
+  const y = monthStart.getFullYear();
+  const m = monthStart.getMonth();
+  const firstDow = new Date(y, m, 1).getDay();
+  const daysInMonth = new Date(y, m + 1, 0).getDate();
+  const cells: { day: number | null; iso: string | null }[] = [];
+  for (let i = 0; i < firstDow; i++) {
+    cells.push({ day: null, iso: null });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    cells.push({ day: d, iso: toISODate(new Date(y, m, d)) });
+  }
+  while (cells.length % 7 !== 0) {
+    cells.push({ day: null, iso: null });
+  }
+
+  const title = monthStart.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="w-full max-w-[920px] mx-auto">
+      <div className="flex items-center justify-between gap-4 mb-5">
+        <button
+          type="button"
+          onClick={onPrevMonth}
+          className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#1c1c1c] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] text-lg leading-none transition-colors"
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <h2 className="text-base font-semibold text-zinc-100 tabular-nums">
+          {title}
+        </h2>
+        <button
+          type="button"
+          onClick={onNextMonth}
+          className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#1c1c1c] text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05] text-lg leading-none transition-colors"
+          aria-label="Next month"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-[#2a2a2a] overflow-hidden bg-[#141414]">
+        <div className="grid grid-cols-7 border-b border-[#2a2a2a] bg-[#181818]">
+          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((wd) => (
+            <div
+              key={wd}
+              className="py-2 text-center text-[10px] font-semibold uppercase tracking-wide text-zinc-500"
+            >
+              {wd}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7 gap-px bg-[#2a2a2a]">
+          {cells.map((cell, idx) => {
+            if (cell.day == null || cell.iso == null) {
+              return (
+                <div
+                  key={`pad-${idx}`}
+                  className="min-h-[112px] bg-[#141414] p-1.5"
+                  aria-hidden
+                />
+              );
+            }
+            const dayTasks = tasksByDate[cell.iso] ?? [];
+            const visible = dayTasks.slice(0, CALENDAR_TASKS_VISIBLE_CAP);
+            const more = dayTasks.length - visible.length;
+            const isToday = cell.iso === todayIso;
+            return (
+              <div
+                key={cell.iso}
+                className={`min-h-[112px] bg-[#141414] p-1.5 flex flex-col ${
+                  isToday ? "ring-1 ring-inset ring-zinc-600/50" : ""
+                }`}
+              >
+                <div
+                  className={`text-[11px] font-semibold tabular-nums mb-1 shrink-0 ${
+                    isToday ? "text-zinc-100" : "text-zinc-500"
+                  }`}
+                >
+                  {cell.day}
+                </div>
+                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-hidden">
+                  {visible.map((t) => (
+                    <button
+                      key={`${t.listId}-${t.id}`}
+                      type="button"
+                      onClick={() => onTaskPick(t.listId, t.id)}
+                      className="w-full text-left rounded-md px-1.5 py-1 bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.04] text-[10px] leading-snug text-zinc-300 truncate transition-colors"
+                      title={t.text}
+                    >
+                      {t.text}
+                    </button>
+                  ))}
+                  {more > 0 ? (
+                    <div className="text-[10px] text-zinc-500 pl-0.5 pt-0.5">
+                      +{more} more
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
@@ -836,7 +966,8 @@ export default function App() {
     | { action: "completed" }
     | { action: "addList" }
     | { action: "home" }
-    | { action: "quitOnly" };
+    | { action: "quitOnly" }
+    | { action: "openTask"; listId: string; taskId: number };
   type FocusSessionDialog =
     | null
     | { kind: "quit"; pending: FocusQuitPending }
@@ -866,6 +997,10 @@ export default function App() {
   selectedListIdRef.current = selectedListId;
   const skipNextTasksPersistRef = useRef(false);
   const [calendarDay, setCalendarDay] = useState(() => toISODate(new Date()));
+  const [calendarMonthStart, setCalendarMonthStart] = useState(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
   const [dueDatePopover, setDueDatePopover] = useState<null | {
     taskId: number;
     anchor: DOMRect;
@@ -900,6 +1035,24 @@ export default function App() {
     if (selectedTaskId == null) return null;
     return tasks.find((t) => t.id === selectedTaskId) ?? null;
   }, [selectedTaskId, tasks]);
+
+  const tasksByDueDate = useMemo(() => {
+    if (isSimulation) return {};
+    const map: Record<string, CalendarPlacedTask[]> = {};
+    for (const [listId, arr] of Object.entries(tasksByListId)) {
+      if (!Array.isArray(arr)) continue;
+      for (const t of arr) {
+        if (t.removing || !t.dueDate) continue;
+        const k = t.dueDate;
+        if (!map[k]) map[k] = [];
+        map[k].push({ id: t.id, text: t.text, listId });
+      }
+    }
+    for (const k of Object.keys(map)) {
+      map[k].sort((a, b) => a.text.localeCompare(b.text));
+    }
+    return map;
+  }, [tasksByListId, isSimulation]);
 
   const completedEntries = useMemo(() => {
     const entries = completedActivityLog.map((e) => ({
@@ -1486,6 +1639,36 @@ export default function App() {
     isSwitchingListRef.current = false;
   };
 
+  const performOpenTaskInList = (listId: string, taskId: number) => {
+    isSwitchingListRef.current = true;
+    const merged = { ...tasksByListId };
+    if (selectedListId) {
+      merged[selectedListId] = tasks;
+    }
+    const slice = [...(merged[listId] ?? [])];
+    setTasksByListId(merged);
+    setSelectedListId(listId);
+    setTasks(slice);
+    setSelectedTaskId(taskId);
+    setTodayMainMode("tasks");
+    setOpenListMenuId(null);
+    setActiveView("tasks");
+    setIsTodayPanelCollapsed(false);
+    setIsTodayPanelAnimatingOut(false);
+    isSwitchingListRef.current = false;
+  };
+
+  const openTaskFromCalendar = (listId: string, taskId: number) => {
+    if (isFocusSessionActive) {
+      setFocusSessionDialog({
+        kind: "quit",
+        pending: { action: "openTask", listId, taskId },
+      });
+      return;
+    }
+    performOpenTaskInList(listId, taskId);
+  };
+
   const applyPendingAfterQuit = (pending: FocusQuitPending) => {
     if (pending.action === "quitOnly") return;
     if (pending.action === "view") {
@@ -1501,6 +1684,8 @@ export default function App() {
       setIsAddListModalOpen(true);
     } else if (pending.action === "home") {
       runGoHomeTransition();
+    } else if (pending.action === "openTask") {
+      performOpenTaskInList(pending.listId, pending.taskId);
     }
   };
 
@@ -2430,11 +2615,15 @@ export default function App() {
                     </div>
                   </button>
 
-                  {/* Calendar (placeholder) */}
+                  {/* Calendar */}
                   <button
                     type="button"
-                    onClick={() => {}}
-                    className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
+                    onClick={() => handleSidebarNavClick("calendar")}
+                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
+                      activeView === "calendar"
+                        ? "bg-white/10 text-zinc-100"
+                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
+                    }`}
                   >
                     <svg
                       className="w-5 h-5"
@@ -2846,7 +3035,7 @@ export default function App() {
                   ) : (
                     <>
                       <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                        {activeView === "calendar" && "Calendar View"}
+                        {activeView === "calendar" && "Calendar"}
                         {activeView === "analytics" && "Analytics View"}
                         {activeView === "notifications" && "Notifications"}
                         {activeView === "settings" && "Settings"}
@@ -3577,10 +3766,28 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="min-h-[60vh] pointer-events-auto">
-                    {activeView === "tasks" ? null : (
+                    {activeView === "tasks" ? null : activeView === "calendar" ? (
+                      <TasksDueCalendarMonth
+                        monthStart={calendarMonthStart}
+                        tasksByDate={tasksByDueDate}
+                        todayIso={calendarDay}
+                        onPrevMonth={() =>
+                          setCalendarMonthStart(
+                            (d) =>
+                              new Date(d.getFullYear(), d.getMonth() - 1, 1),
+                          )
+                        }
+                        onNextMonth={() =>
+                          setCalendarMonthStart(
+                            (d) =>
+                              new Date(d.getFullYear(), d.getMonth() + 1, 1),
+                          )
+                        }
+                        onTaskPick={openTaskFromCalendar}
+                      />
+                    ) : (
                       <div className="flex items-center justify-center h-full pt-8">
                         <p className="text-sm md:text-base text-gray-500">
-                          {activeView === "calendar" && "Calendar View"}
                           {activeView === "analytics" && "Analytics View"}
                           {activeView === "notifications" &&
                             "Notifications Center"}
