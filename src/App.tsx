@@ -74,7 +74,118 @@ function listAccentDotClass(color: string | null) {
   return "";
 }
 
-const MAX_USER_LISTS = 9;
+/** Monochrome outline icons for system task categories (TickTick-style nav). */
+function TaskSystemNavIcon({
+  listId,
+  className,
+  dayOfMonth,
+}: {
+  listId: string;
+  className?: string;
+  dayOfMonth?: number;
+}) {
+  const day = String(dayOfMonth ?? new Date().getDate());
+  const sw = 1.65;
+  const base = className ?? "w-[19px] h-[19px] shrink-0";
+
+  if (listId === "sys-overdue") {
+    return (
+      <svg
+        className={base}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <circle cx="12" cy="12" r="7.5" />
+        <polyline points="12 8 12 12 15 14" />
+      </svg>
+    );
+  }
+  if (listId === "sys-today") {
+    return (
+      <svg
+        className={base}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <rect x="3.5" y="5" width="17" height="15" rx="2" />
+        <path d="M8 3.5v3.5M16 3.5v3.5M3.5 10.5h17" />
+        <text
+          x="12"
+          y="18.25"
+          textAnchor="middle"
+          fill="currentColor"
+          fontSize="9.5"
+          fontWeight="600"
+          fontFamily="system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
+        >
+          {day}
+        </text>
+      </svg>
+    );
+  }
+  if (listId === "sys-projects") {
+    return (
+      <svg
+        className={base}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M4 20h16V9.5a1 1 0 0 0-1-1h-5.5L11 6.5H5a1 1 0 0 0-1 1V20z" />
+      </svg>
+    );
+  }
+  if (listId === "sys-tests") {
+    return (
+      <svg
+        className={base}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <path d="M9 3.5h6l1 2.5h3a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3l1-2.5z" />
+        <path d="M9 11.5h6M9 15h6M9 18.5h4" />
+      </svg>
+    );
+  }
+  if (listId === "sys-longterm") {
+    return (
+      <svg
+        className={base}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={sw}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden
+      >
+        <rect x="3.5" y="5" width="17" height="14" rx="2" />
+        <path d="M3.5 10h17M8 3.5v3.5M16 3.5v3.5" />
+        <path d="M7 14h10M7 17.5h6" />
+      </svg>
+    );
+  }
+  return null;
+}
 
 /** Predefined “system” lists — same task behavior as user lists, no delete menu */
 type TodayList = {
@@ -86,11 +197,11 @@ type TodayList = {
 };
 
 const TASK_CATEGORY_LISTS: TodayList[] = [
-  { id: "sys-overdue", label: "Overdue", icon: "⏰", color: "#ef4444", system: true },
-  { id: "sys-today", label: "Today", icon: "📅", color: "#3b82f6", system: true },
-  { id: "sys-projects", label: "Projects", icon: "📂", color: "#64748b", system: true },
-  { id: "sys-tests", label: "Tests", icon: "📋", color: "#ca8a04", system: true },
-  { id: "sys-longterm", label: "Long-Term", icon: "🗓", color: "#22c55e", system: true },
+  { id: "sys-overdue", label: "Overdue", icon: "", color: null, system: true },
+  { id: "sys-today", label: "Today", icon: "", color: null, system: true },
+  { id: "sys-projects", label: "Projects", icon: "", color: null, system: true },
+  { id: "sys-tests", label: "Tests", icon: "", color: null, system: true },
+  { id: "sys-longterm", label: "Long-Term", icon: "", color: null, system: true },
 ];
 
 type DayMetric = {
@@ -265,6 +376,8 @@ export default function App() {
 
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
+    { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
+    { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
     { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
     { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
     { id: "packing", label: "Packing list", icon: "✈️", color: "#38bdf8" },
@@ -1908,81 +2021,53 @@ export default function App() {
               activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-screen w-[260px] bg-[#181818] border-r border-[#2a2a2a] flex flex-col justify-between py-3 px-2.5 transition-all duration-200 ease-out shrink-0 ${
+                  className={`h-screen w-[272px] bg-[#181818] border-r border-[#2a2a2a] flex flex-col min-h-0 py-4 px-3 transition-all duration-200 ease-out shrink-0 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
                   }`}
                 >
-                {/* Top: Start focus session */}
-                <div className="space-y-6">
-                  <button
-                    type="button"
-                    onClick={handleStartFocusSession}
-                    className="w-full rounded-md bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-semibold tracking-wide py-2.5 px-3 transition-colors duration-150"
-                  >
-                    Start Focus Session
-                  </button>
-
-                  {/* System categories (same behavior as lists) */}
-                  <div className="space-y-1">
-                    {TASK_CATEGORY_LISTS.map((list) => (
-                      <div
-                        key={list.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          handleSelectList(list.id);
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
+                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+                    {/* System categories — TickTick-style nav (taller, outline icons) */}
+                    <nav
+                      className="shrink-0 flex flex-col gap-0.5"
+                      aria-label="Task categories"
+                    >
+                      {TASK_CATEGORY_LISTS.map((list) => (
+                        <div
+                          key={list.id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => {
                             handleSelectList(list.id);
-                          }
-                        }}
-                        className={`group flex flex-col gap-0.5 rounded-md mx-1 px-1.5 py-1 text-[12px] leading-tight transition-colors duration-150 ${
-                          selectedListId === list.id
-                            ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
-                            : "text-zinc-200 hover:bg-white/[0.06]"
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-base shrink-0">{list.icon}</span>
-                            <span className="truncate text-[13px] font-normal">
-                              {list.label}
-                            </span>
-                            <span
-                              className={`w-2 h-2 rounded-full shrink-0 ${listAccentDotClass(list.color)}`}
-                              style={
-                                list.color
-                                  ? { backgroundColor: list.color }
-                                  : undefined
-                              }
-                              aria-hidden
-                            />
-                          </div>
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              handleSelectList(list.id);
+                            }
+                          }}
+                          className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 min-h-[44px] text-[13px] font-medium leading-snug transition-colors duration-150 cursor-pointer ${
+                            selectedListId === list.id
+                              ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                              : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
+                          }`}
+                        >
+                          <TaskSystemNavIcon listId={list.id} />
+                          <span className="truncate">{list.label}</span>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </nav>
 
-                  <div
-                    className="border-t border-white/5"
-                    aria-hidden
-                  />
+                    <div
+                      className="shrink-0 h-px bg-white/[0.07] my-4 mx-0.5"
+                      aria-hidden
+                    />
 
-                  {/* Lists section */}
-                  <div className="pt-3 space-y-3">
-                    <div className="flex items-center justify-between group gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <p className="text-[11px] font-medium text-zinc-500 shrink-0">
-                          Lists
-                        </p>
-                        <span className="rounded-full bg-zinc-700/35 px-2 py-0.5 text-[10px] text-zinc-400 tabular-nums shrink-0">
-                          Used: {todayLists.length}/{MAX_USER_LISTS}
-                        </span>
-                      </div>
+                    <div className="shrink-0 flex items-center justify-between group mb-2 px-0.5">
+                      <p className="text-[11px] font-medium text-zinc-500 tracking-wide">
+                        Lists
+                      </p>
                       <button
                         type="button"
                         onClick={() => {
@@ -1997,14 +2082,14 @@ export default function App() {
                           setNewListColor("#eab308");
                           setIsAddListModalOpen(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200 shrink-0"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-200 shrink-0"
                         aria-label="Add List"
                       >
                         +
                       </button>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 pb-1 -mx-0.5 px-0.5">
                       {todayLists.map((list) => (
                         <div
                           key={list.id}
@@ -2093,46 +2178,43 @@ export default function App() {
                     </div>
                   </div>
 
-                </div>
-
-                  {/* Bottom: Completed */}
-                  <div className="border-t border-white/5 pt-3 pb-5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (isFocusSessionActive) {
-                        setFocusSessionDialog({
-                          kind: "quit",
-                          pending: { action: "completed" },
-                        });
-                        return;
-                      }
-                      setCollapsedCompletedDates({});
-                      setTodayMainMode("completed");
-                    }}
-                    className={`w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[12px] leading-tight transition-colors duration-150 ${
-                      todayMainMode === "completed"
-                        ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
-                        : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]"
-                    }`}
-                  >
-                    <svg
-                      className="w-4 h-4 text-zinc-500 shrink-0"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      aria-hidden
+                  <div className="shrink-0 border-t border-white/[0.06] pt-3 mt-2 pb-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (isFocusSessionActive) {
+                          setFocusSessionDialog({
+                            kind: "quit",
+                            pending: { action: "completed" },
+                          });
+                          return;
+                        }
+                        setCollapsedCompletedDates({});
+                        setTodayMainMode("completed");
+                      }}
+                      className={`w-full flex items-center gap-2.5 rounded-lg px-2.5 py-2.5 min-h-[40px] text-[13px] font-medium leading-snug transition-colors duration-150 ${
+                        todayMainMode === "completed"
+                          ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
+                          : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.05]"
+                      }`}
                     >
-                      <path d="M9 11l3 3L22 4" />
-                      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-                    </svg>
-                    <span className="font-normal">Completed</span>
-                  </button>
-                </div>
-              </aside>
+                      <svg
+                        className="w-[18px] h-[18px] text-zinc-500 shrink-0"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.75"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden
+                      >
+                        <path d="M9 11l3 3L22 4" />
+                        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                      </svg>
+                      <span className="font-medium">Completed</span>
+                    </button>
+                  </div>
+                </aside>
             )}
 
             {/* Expand lists sidebar (focus session, TickTick-style) */}
@@ -2423,21 +2505,32 @@ export default function App() {
                             </button>
                             {selectedList ? (
                               <>
-                                <span className="text-lg leading-none shrink-0">
-                                  {selectedList.icon}
-                                </span>
+                                {selectedList.system ? (
+                                  <TaskSystemNavIcon
+                                    listId={selectedList.id}
+                                    className="w-5 h-5 shrink-0 text-zinc-400"
+                                  />
+                                ) : (
+                                  <span className="text-lg leading-none shrink-0">
+                                    {selectedList.icon}
+                                  </span>
+                                )}
                                 <h2 className="text-xl font-semibold text-zinc-100 truncate tracking-normal leading-7">
                                   {selectedList.label}
                                 </h2>
-                                <span
-                                  className={`w-2.5 h-2.5 rounded-full shrink-0 ${listAccentDotClass(selectedList.color)}`}
-                                  style={
-                                    selectedList.color
-                                      ? { backgroundColor: selectedList.color }
-                                      : undefined
-                                  }
-                                  aria-hidden
-                                />
+                                {!selectedList.system && (
+                                  <span
+                                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${listAccentDotClass(selectedList.color)}`}
+                                    style={
+                                      selectedList.color
+                                        ? {
+                                            backgroundColor: selectedList.color,
+                                          }
+                                        : undefined
+                                    }
+                                    aria-hidden
+                                  />
+                                )}
                               </>
                             ) : (
                               <h2 className="text-xl font-semibold text-zinc-300 truncate tracking-normal leading-7">
