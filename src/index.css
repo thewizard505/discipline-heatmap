@@ -7,3 +7,66 @@
 .demo-cursor-blink {
   animation: demo-cursor-blink 1s step-end infinite;
 }
+
+/* Subtle blue mist around Focus nav emoji */
+@keyframes focus-nav-aura-breathe {
+  0%,
+  100% {
+    opacity: 0.38;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.72;
+    transform: scale(1.06);
+  }
+}
+
+@keyframes focus-nav-aura-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(0.5px, -0.5px) scale(1.04);
+  }
+}
+
+.focus-nav-aura {
+  position: absolute;
+  width: 2.75rem;
+  height: 2.75rem;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(96, 165, 250, 0.5) 0%,
+    rgba(37, 99, 235, 0.22) 38%,
+    transparent 68%
+  );
+  filter: blur(7px);
+  animation: focus-nav-aura-breathe 3.4s ease-in-out infinite;
+}
+
+.focus-nav-aura-soft {
+  position: absolute;
+  width: 3.25rem;
+  height: 3.25rem;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 48% 52%,
+    rgba(59, 130, 246, 0.18) 0%,
+    transparent 55%
+  );
+  filter: blur(11px);
+  opacity: 0.85;
+  animation: focus-nav-aura-drift 4.8s ease-in-out infinite;
+}

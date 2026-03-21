@@ -74,6 +74,25 @@ function listAccentDotClass(color: string | null) {
   return "";
 }
 
+const MAX_USER_LISTS = 9;
+
+/** Predefined “system” lists — same task behavior as user lists, no delete menu */
+type TodayList = {
+  id: string;
+  label: string;
+  icon: string;
+  color: string | null;
+  system?: boolean;
+};
+
+const TASK_CATEGORY_LISTS: TodayList[] = [
+  { id: "sys-overdue", label: "Overdue", icon: "⏰", color: "#ef4444", system: true },
+  { id: "sys-today", label: "Today", icon: "📅", color: "#3b82f6", system: true },
+  { id: "sys-projects", label: "Projects", icon: "📂", color: "#64748b", system: true },
+  { id: "sys-tests", label: "Tests", icon: "📋", color: "#ca8a04", system: true },
+  { id: "sys-longterm", label: "Long-Term", icon: "🗓", color: "#22c55e", system: true },
+];
+
 type DayMetric = {
   date: string;
   focusIntegrity: number;
@@ -214,8 +233,13 @@ export default function App() {
     "What grade would you give yourself?",
   ];
 
-  type AppView = "today" | "calendar" | "analytics" | "notifications" | "help";
-  const [activeView, setActiveView] = useState<AppView>("today");
+  type AppView =
+    | "tasks"
+    | "calendar"
+    | "analytics"
+    | "notifications"
+    | "settings";
+  const [activeView, setActiveView] = useState<AppView>("tasks");
 
   /* --- Focus Session Mode STATE --- */
   const FOCUS_SESSION_DURATION_SECONDS = 25 * 60;
@@ -239,16 +263,11 @@ export default function App() {
   const [focusSessionDialog, setFocusSessionDialog] =
     useState<FocusSessionDialog>(null);
 
-  type TodayList = { id: string; label: string; icon: string; color: string | null };
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
-    { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
     { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
-    { id: "study", label: "Study", icon: "📚", color: "#22c55e" },
     { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
     { id: "packing", label: "Packing list", icon: "✈️", color: "#38bdf8" },
-    { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
-    { id: "bucket", label: "Bucket list", icon: "🪣", color: "#facc15" },
   ]);
   const [completedActivityLog, setCompletedActivityLog] = useState<
     CompletedActivityEntry[]
@@ -266,9 +285,14 @@ export default function App() {
   const [collapsedCompletedDates, setCollapsedCompletedDates] = useState<
     Record<string, boolean>
   >({});
+  const allListsForSelection = useMemo(
+    () => [...TASK_CATEGORY_LISTS, ...todayLists],
+    [todayLists],
+  );
+
   const selectedList = useMemo(
-    () => todayLists.find((l) => l.id === selectedListId) ?? null,
-    [todayLists, selectedListId],
+    () => allListsForSelection.find((l) => l.id === selectedListId) ?? null,
+    [allListsForSelection, selectedListId],
   );
 
   const selectedTask = useMemo(() => {
@@ -408,12 +432,12 @@ export default function App() {
 
   useEffect(() => {
     if (!selectedListId) return;
-    if (!todayLists.some((l) => l.id === selectedListId)) {
+    if (!allListsForSelection.some((l) => l.id === selectedListId)) {
       setSelectedListId(null);
       setTasks([]);
       setSelectedTaskId(null);
     }
-  }, [todayLists, selectedListId]);
+  }, [allListsForSelection, selectedListId]);
 
   useEffect(() => {
     if (!openListMenuId) return;
@@ -710,7 +734,7 @@ export default function App() {
       setTasks([]);
       setTasksByListId({});
       setSelectedTaskId(null);
-      setSelectedListId("work");
+      setSelectedListId("sys-today");
       setSeconds(0);
       setRunning(false);
       setTaskInput("");
@@ -849,7 +873,7 @@ export default function App() {
     setOpenListMenuId(null);
     setTodayMainMode("tasks");
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
-    setActiveView("today");
+    setActiveView("tasks");
 
     setIsTodayPanelAnimatingOut(true);
     window.setTimeout(() => {
@@ -877,7 +901,7 @@ export default function App() {
   };
 
   const handleToggleTodaySidebar = () => {
-    if (activeView !== "today") return;
+    if (activeView !== "tasks") return;
     if (isTodayPanelCollapsed) {
       setIsTodayPanelCollapsed(false);
       setIsTodayPanelAnimatingOut(false);
@@ -1695,7 +1719,7 @@ export default function App() {
               <div className="flex flex-col items-center gap-4">
                 <button
                   type="button"
-                  onClick={() => handleSidebarNavClick("today")}
+                  onClick={() => {}}
                   className="group relative flex items-center justify-center w-9 h-9 rounded-lg bg-transparent border border-transparent hover:bg-white/5 transition-colors duration-150"
                 >
                   <svg
@@ -1719,12 +1743,12 @@ export default function App() {
 
                 {/* Main nav */}
                 <nav className="flex flex-col items-center gap-3 mt-3">
-                  {/* Today */}
+                  {/* Tasks */}
                   <button
                     type="button"
-                    onClick={() => handleSidebarNavClick("today")}
+                    onClick={() => handleSidebarNavClick("tasks")}
                     className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
-                      activeView === "today"
+                      activeView === "tasks"
                         ? "bg-white/10 text-zinc-100"
                         : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
@@ -1745,20 +1769,16 @@ export default function App() {
                     </svg>
                     <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
                       <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
-                        Today
+                        Tasks
                       </div>
                     </div>
                   </button>
 
-                  {/* Calendar */}
+                  {/* Calendar (placeholder) */}
                   <button
                     type="button"
-                    onClick={() => handleSidebarNavClick("calendar")}
-                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
-                      activeView === "calendar"
-                        ? "bg-white/10 text-zinc-100"
-                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                    }`}
+                    onClick={() => {}}
+                    className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
                   >
                     <svg
                       className="w-5 h-5"
@@ -1780,15 +1800,29 @@ export default function App() {
                     </div>
                   </button>
 
-                  {/* Analytics */}
+                  {/* Focus — same entry as “Start Focus Session” */}
                   <button
                     type="button"
-                    onClick={() => handleSidebarNavClick("analytics")}
-                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
-                      activeView === "analytics"
-                        ? "bg-white/10 text-zinc-100"
-                        : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                    }`}
+                    onClick={handleStartFocusSession}
+                    className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-100 hover:bg-white/5 transition-colors duration-150 overflow-visible"
+                  >
+                    <span className="focus-nav-aura-soft" aria-hidden />
+                    <span className="focus-nav-aura" aria-hidden />
+                    <span className="relative z-[1] text-[15px] leading-none select-none">
+                      🎯
+                    </span>
+                    <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150 z-[2]">
+                      <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
+                        Focus
+                      </div>
+                    </div>
+                  </button>
+
+                  {/* Analytics (placeholder) */}
+                  <button
+                    type="button"
+                    onClick={() => {}}
+                    className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
                   >
                     <svg
                       className="w-5 h-5"
@@ -1819,12 +1853,8 @@ export default function App() {
                 {/* Notifications */}
                 <button
                   type="button"
-                  onClick={() => handleSidebarNavClick("notifications")}
-                  className={`group relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
-                    activeView === "notifications"
-                      ? "bg-white/10 text-zinc-100"
-                      : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                  }`}
+                  onClick={() => {}}
+                  className="group relative flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
                 >
                   <svg
                     className="w-5 h-5"
@@ -1846,15 +1876,11 @@ export default function App() {
                   </div>
                 </button>
 
-                {/* Help */}
+                {/* Settings (placeholder) */}
                 <button
                   type="button"
-                  onClick={() => handleSidebarNavClick("help")}
-                  className={`group relative flex items-center justify-center w-8 h-8 rounded-lg transition-colors duration-150 ${
-                    activeView === "help"
-                      ? "bg-white/10 text-zinc-100"
-                      : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
-                  }`}
+                  onClick={() => {}}
+                  className="group relative flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
                 >
                   <svg
                     className="w-5 h-5"
@@ -1865,22 +1891,21 @@ export default function App() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                   >
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M9.75 9a2.25 2.25 0 0 1 4.5 0c0 1.5-2.25 1.5-2.25 3" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                    <circle cx="12" cy="12" r="3" />
+                    <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                   </svg>
                   <div className="pointer-events-none absolute left-14 top-1/2 -translate-y-1/2 opacity-0 translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-150">
                     <div className="rounded-xl bg-[#18191f] shadow-lg border border-white/10 px-3 py-1 text-xs text-gray-100">
-                      Help
+                      Settings
                     </div>
                   </div>
                 </button>
               </div>
             </aside>
 
-            {/* Second sidebar: Today panel (only when Today is active) */}
+            {/* Second sidebar: Tasks panel (only when Tasks view is active) */}
             {!isSimulation &&
-              activeView === "today" &&
+              activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
                   className={`h-screen w-[260px] bg-[#181818] border-r border-[#2a2a2a] flex flex-col justify-between py-3 px-2.5 transition-all duration-200 ease-out shrink-0 ${
@@ -1899,12 +1924,65 @@ export default function App() {
                     Start Focus Session
                   </button>
 
+                  {/* System categories (same behavior as lists) */}
+                  <div className="space-y-1">
+                    {TASK_CATEGORY_LISTS.map((list) => (
+                      <div
+                        key={list.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          handleSelectList(list.id);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleSelectList(list.id);
+                          }
+                        }}
+                        className={`group flex flex-col gap-0.5 rounded-md mx-1 px-1.5 py-1 text-[12px] leading-tight transition-colors duration-150 ${
+                          selectedListId === list.id
+                            ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
+                            : "text-zinc-200 hover:bg-white/[0.06]"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base shrink-0">{list.icon}</span>
+                            <span className="truncate text-[13px] font-normal">
+                              {list.label}
+                            </span>
+                            <span
+                              className={`w-2 h-2 rounded-full shrink-0 ${listAccentDotClass(list.color)}`}
+                              style={
+                                list.color
+                                  ? { backgroundColor: list.color }
+                                  : undefined
+                              }
+                              aria-hidden
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div
+                    className="border-t border-white/5"
+                    aria-hidden
+                  />
+
                   {/* Lists section */}
-                  <div className="pt-4 border-t border-white/5 space-y-3">
-                    <div className="flex items-center justify-between group">
-                      <p className="text-[11px] font-medium text-zinc-500">
-                        Lists
-                      </p>
+                  <div className="pt-3 space-y-3">
+                    <div className="flex items-center justify-between group gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <p className="text-[11px] font-medium text-zinc-500 shrink-0">
+                          Lists
+                        </p>
+                        <span className="rounded-full bg-zinc-700/35 px-2 py-0.5 text-[10px] text-zinc-400 tabular-nums shrink-0">
+                          Used: {todayLists.length}/{MAX_USER_LISTS}
+                        </span>
+                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -1919,7 +1997,7 @@ export default function App() {
                           setNewListColor("#eab308");
                           setIsAddListModalOpen(true);
                         }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
+                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200 shrink-0"
                         aria-label="Add List"
                       >
                         +
@@ -2059,7 +2137,7 @@ export default function App() {
 
             {/* Expand lists sidebar (focus session, TickTick-style) */}
             {isFocusSessionActive &&
-              activeView === "today" &&
+              activeView === "tasks" &&
               isTodayPanelCollapsed &&
               !isTodayPanelAnimatingOut && (
                 <button
@@ -2089,7 +2167,7 @@ export default function App() {
             {!isFocusSessionActive && (
             <section
               className={`flex-1 min-h-0 h-screen ${
-                activeView === "today" &&
+                activeView === "tasks" &&
                 (todayMainMode === "tasks" || todayMainMode === "completed")
                   ? "overflow-hidden"
                   : "overflow-y-auto"
@@ -2097,7 +2175,7 @@ export default function App() {
             >
               <div
                 className={`w-full h-full min-h-0 flex flex-col ${
-                  activeView === "today" &&
+                  activeView === "tasks" &&
                   (todayMainMode === "tasks" || todayMainMode === "completed")
                     ? "px-0 pt-0 pb-0"
                     : "px-5 pt-3 pb-6"
@@ -2105,19 +2183,19 @@ export default function App() {
               >
                 <div
                   className={`flex items-center justify-between pointer-events-auto shrink-0 ${
-                    activeView === "today" &&
+                    activeView === "tasks" &&
                     (todayMainMode === "tasks" || todayMainMode === "completed")
                       ? "hidden"
                       : "mb-6"
                   }`}
                 >
-                  {activeView === "today" ? (
+                  {activeView === "tasks" ? (
                     <>
                       <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
                         {todayMainMode === "completed"
                           ? "Completed"
                           : selectedListId
-                            ? selectedList?.label ?? "Today"
+                            ? selectedList?.label ?? "Tasks"
                             : ""}
                       </h1>
                       <button
@@ -2136,7 +2214,7 @@ export default function App() {
                         {activeView === "calendar" && "Calendar View"}
                         {activeView === "analytics" && "Analytics View"}
                         {activeView === "notifications" && "Notifications"}
-                        {activeView === "help" && "Help & Support"}
+                        {activeView === "settings" && "Settings"}
                       </h1>
                       <button
                         type="button"
@@ -2148,7 +2226,7 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {activeView === "today" && todayMainMode === "completed" ? (
+                {activeView === "tasks" && todayMainMode === "completed" ? (
                   <div
                     className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
                     style={{ backgroundColor: TT_MAIN_GREY }}
@@ -2165,7 +2243,7 @@ export default function App() {
                               onClick={handleToggleTodaySidebar}
                               disabled={isTodayPanelAnimatingOut}
                               className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
-                              aria-label="Collapse Today sidebar"
+                              aria-label="Collapse Tasks sidebar"
                             >
                               <svg
                                 className="w-[18px] h-[18px]"
@@ -2307,7 +2385,7 @@ export default function App() {
                       </div>
                     </div>
                   </div>
-                ) : activeView === "today" && todayMainMode === "tasks" ? (
+                ) : activeView === "tasks" && todayMainMode === "tasks" ? (
                   <div
                     className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
                     style={{ backgroundColor: TT_MAIN_GREY }}
@@ -2326,8 +2404,8 @@ export default function App() {
                               onClick={handleToggleTodaySidebar}
                               disabled={isTodayPanelAnimatingOut}
                               className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
-                              aria-label="Collapse Today sidebar"
-                              title="Collapse Today sidebar"
+                              aria-label="Collapse Tasks sidebar"
+                              title="Collapse Tasks sidebar"
                             >
                               <svg
                                 className="w-[18px] h-[18px]"
@@ -2363,7 +2441,7 @@ export default function App() {
                               </>
                             ) : (
                               <h2 className="text-xl font-semibold text-zinc-300 truncate tracking-normal leading-7">
-                                Today
+                                Tasks
                               </h2>
                             )}
                           </div>
@@ -2775,14 +2853,14 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="min-h-[60vh] pointer-events-auto">
-                    {activeView === "today" ? null : (
+                    {activeView === "tasks" ? null : (
                       <div className="flex items-center justify-center h-full pt-8">
                         <p className="text-sm md:text-base text-gray-500">
                           {activeView === "calendar" && "Calendar View"}
                           {activeView === "analytics" && "Analytics View"}
                           {activeView === "notifications" &&
                             "Notifications Center"}
-                          {activeView === "help" && "Help & Support"}
+                          {activeView === "settings" && "Settings"}
                         </p>
                       </div>
                     )}
