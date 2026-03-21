@@ -506,13 +506,19 @@ function DogHomeworkOverdueIllustration() {
   );
 }
 
-type CalendarPlacedTask = { id: number; text: string; listId: string };
+type CalendarPlacedTask = {
+  id: number;
+  text: string;
+  listId: string;
+  /** List name for display (e.g. Tests, Today). */
+  categoryLabel: string;
+};
 
 const CALENDAR_TASKS_VISIBLE_CAP = 4;
 
-/** Single accent for calendar task chips (no per-task colors). */
+/** Single blue accent; category + title row inside (TickTick-style). */
 const CALENDAR_TASK_CHIP =
-  "w-full text-left rounded-lg px-2.5 py-2 border border-sky-500/22 bg-sky-500/[0.12] hover:bg-sky-500/[0.2] text-[11px] sm:text-xs font-medium leading-snug text-zinc-100 truncate transition-colors shadow-[inset_0_1px_0_0_rgba(255,255,255,0.04)]";
+  "group w-full text-left rounded-md px-2 py-1.5 border border-sky-500/35 bg-gradient-to-b from-sky-600/90 to-sky-700/95 hover:from-sky-500/95 hover:to-sky-600/95 text-left min-w-0 shadow-[0_1px_3px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)] transition-[box-shadow,background-color,border-color] duration-150 active:scale-[0.99]";
 
 type CalendarGridCell =
   | { kind: "outside"; key: string; displayDay: number }
@@ -574,28 +580,28 @@ function TasksDueCalendarMonth({
   });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-[#0f0f0f]">
-      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-4 pb-3 border-b border-white/[0.06]">
-        <div className="min-w-0 flex items-baseline gap-2 flex-wrap">
-          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-50 tracking-tight tabular-nums">
+    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-gradient-to-b from-[#111110] via-[#0e0e0e] to-[#0a0a0a] antialiased [text-rendering:optimizeLegibility]">
+      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-3.5 pb-3 border-b border-white/[0.07] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)]">
+        <div className="min-w-0 flex items-baseline gap-2.5 flex-wrap">
+          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-50 tracking-[-0.02em] tabular-nums">
             {monthTitle}
           </h2>
           <span className="text-lg sm:text-xl font-medium text-zinc-500 tabular-nums">
             {yearTitle}
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0">
           <button
             type="button"
             onClick={onTodayMonth}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-300 bg-white/[0.06] border border-white/[0.08] hover:bg-white/[0.1] hover:text-zinc-100 transition-colors"
+            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-200 bg-white/[0.07] border border-white/[0.1] shadow-[0_1px_2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-white/[0.11] hover:border-white/[0.14] transition-all duration-150 active:scale-[0.98]"
           >
             Today
           </button>
           <button
             type="button"
             onClick={onPrevMonth}
-            className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] text-lg leading-none transition-colors flex items-center justify-center"
+            className="w-9 h-9 rounded-lg border border-white/[0.1] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] hover:border-white/[0.12] text-lg leading-none transition-all duration-150 flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.4)] active:scale-[0.97]"
             aria-label="Previous month"
           >
             ‹
@@ -603,7 +609,7 @@ function TasksDueCalendarMonth({
           <button
             type="button"
             onClick={onNextMonth}
-            className="w-9 h-9 rounded-lg border border-white/[0.08] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.05] text-lg leading-none transition-colors flex items-center justify-center"
+            className="w-9 h-9 rounded-lg border border-white/[0.1] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] hover:border-white/[0.12] text-lg leading-none transition-all duration-150 flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.4)] active:scale-[0.97]"
             aria-label="Next month"
           >
             ›
@@ -611,12 +617,12 @@ function TasksDueCalendarMonth({
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col border-t border-white/[0.04]">
-        <div className="grid grid-cols-7 shrink-0 border-b border-[#252525] bg-[#141414]">
+      <div className="flex-1 min-h-0 flex flex-col">
+        <div className="grid grid-cols-7 shrink-0 border-b border-black/50 bg-[#151515] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05)]">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((wd) => (
             <div
               key={wd}
-              className="py-2.5 text-center text-[11px] font-medium text-zinc-500"
+              className="py-2 text-center text-[11px] font-medium text-zinc-500 tracking-tight"
             >
               {wd}
             </div>
@@ -624,7 +630,7 @@ function TasksDueCalendarMonth({
         </div>
 
         <div
-          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#252525]"
+          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#1c1c1c]"
           style={{
             gridTemplateRows: `repeat(${rowCount}, minmax(80px, 1fr))`,
           }}
@@ -634,7 +640,7 @@ function TasksDueCalendarMonth({
               return (
                 <div
                   key={cell.key}
-                  className="bg-[#121212] min-h-[100px] p-2 flex flex-col min-w-0"
+                  className="bg-[#0f0f0f] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]"
                   aria-hidden
                 >
                   <div className="text-[11px] font-medium tabular-nums text-zinc-600 mb-1 shrink-0">
@@ -659,14 +665,16 @@ function TasksDueCalendarMonth({
             return (
               <div
                 key={cell.key}
-                className={`bg-[#141414] min-h-[100px] p-2 flex flex-col min-w-0 ${
-                  isToday ? "ring-1 ring-inset ring-sky-500/35" : ""
+                className={`relative bg-[#131313] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.045)] ${
+                  isToday
+                    ? "ring-1 ring-inset ring-sky-500/45 bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.09),transparent_55%)]"
+                    : ""
                 }`}
               >
-                <div className="mb-1.5 shrink-0">
+                <div className="mb-1 shrink-0">
                   {isToday ? (
                     <span
-                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-sky-600 text-[11px] font-semibold text-white tabular-nums shadow-sm"
+                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-sky-600 text-[11px] font-semibold text-white tabular-nums shadow-[0_1px_4px_rgba(14,165,233,0.45),inset_0_1px_0_rgba(255,255,255,0.2)]"
                       title="Today"
                     >
                       {cell.day}
@@ -677,20 +685,33 @@ function TasksDueCalendarMonth({
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col gap-1 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin]">
+                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(63,63,70,0.6)_transparent]">
                   {visible.map((t) => (
                     <button
                       key={`${t.listId}-${t.id}`}
                       type="button"
                       onClick={() => onTaskPick(t.listId, t.id)}
                       className={CALENDAR_TASK_CHIP}
-                      title={t.text}
+                      title={`${t.categoryLabel} — ${t.text}`}
                     >
-                      {t.text}
+                      <span className="flex items-baseline gap-1 min-w-0 w-full">
+                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-white/75 leading-tight">
+                          {t.categoryLabel}
+                        </span>
+                        <span
+                          className="shrink-0 text-[11px] text-white/35 font-light select-none"
+                          aria-hidden
+                        >
+                          ·
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-white leading-snug">
+                          {t.text}
+                        </span>
+                      </span>
                     </button>
                   ))}
                   {more > 0 ? (
-                    <div className="text-[10px] font-medium text-zinc-500 pl-0.5 pt-0.5">
+                    <div className="text-[10px] font-medium text-zinc-500 pl-0.5 pt-0.5 tracking-tight">
                       +{more} more
                     </div>
                   ) : null}
@@ -1107,22 +1128,39 @@ export default function App() {
   const tasksByDueDate = useMemo(() => {
     if (isSimulation) return {};
     const allowedListIds = new Set<string>();
-    for (const l of TASK_CATEGORY_LISTS) allowedListIds.add(l.id);
-    for (const l of todayLists) allowedListIds.add(l.id);
+    const labelByListId = new Map<string, string>();
+    for (const l of TASK_CATEGORY_LISTS) {
+      allowedListIds.add(l.id);
+      labelByListId.set(l.id, l.label);
+    }
+    for (const l of todayLists) {
+      allowedListIds.add(l.id);
+      labelByListId.set(l.id, l.label);
+    }
 
     const map: Record<string, CalendarPlacedTask[]> = {};
     for (const [listId, arr] of Object.entries(tasksByListId)) {
       if (!allowedListIds.has(listId)) continue;
       if (!Array.isArray(arr)) continue;
+      const categoryLabel = labelByListId.get(listId) ?? "Tasks";
       for (const t of arr) {
         if (t.removing || t.completed || !t.dueDate) continue;
         const k = t.dueDate;
         if (!map[k]) map[k] = [];
-        map[k].push({ id: t.id, text: t.text, listId });
+        map[k].push({
+          id: t.id,
+          text: t.text,
+          listId,
+          categoryLabel,
+        });
       }
     }
     for (const k of Object.keys(map)) {
-      map[k].sort((a, b) => a.text.localeCompare(b.text));
+      map[k].sort((a, b) => {
+        const byCat = a.categoryLabel.localeCompare(b.categoryLabel);
+        if (byCat !== 0) return byCat;
+        return a.text.localeCompare(b.text);
+      });
     }
     return map;
   }, [tasksByListId, isSimulation, todayLists]);
