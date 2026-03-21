@@ -4357,9 +4357,9 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-10 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-zinc-700/60 bg-[#161618] px-4 py-2 text-left text-[13px] font-semibold text-zinc-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] outline-none ring-0 transition-all duration-100 hover:border-zinc-600 hover:bg-[#1a1a1d] hover:shadow-[0_12px_32px_rgba(0,0,0,0.4)] focus-visible:border-blue-500/50 focus-visible:ring-2 focus-visible:ring-blue-500/25"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-2xl border border-zinc-700/60 bg-[#161618] px-3.5 py-1.5 text-left font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-[12px] font-semibold text-zinc-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] outline-none ring-0 transition-all duration-100 hover:border-zinc-600 hover:bg-[#1a1a1d] hover:shadow-[0_12px_32px_rgba(0,0,0,0.4)] focus-visible:border-blue-500/50 focus-visible:ring-2 focus-visible:ring-blue-500/25"
                                         >
-                                          <span className="min-w-0 flex-1 truncate font-semibold tracking-tight">
+                                          <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
                                               ? formatTaskTitleForGraph(
                                                   normalizeTaskKey(
@@ -4383,10 +4383,10 @@ export default function App() {
                                         </button>
                                         {analyticsTaskPickerOpen && (
                                           <div
-                                            className="absolute left-0 right-0 top-full z-[401] mt-2 overflow-hidden rounded-2xl border border-zinc-700/55 bg-[#18181b]/98 py-2 shadow-[0_22px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
+                                            className="absolute left-0 right-0 top-full z-[401] mt-1.5 overflow-hidden rounded-2xl border border-zinc-700/55 bg-[#18181b]/98 py-1 shadow-[0_22px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
                                             role="listbox"
                                           >
-                                            <div className="max-h-[min(280px,42vh)] overflow-y-auto overscroll-contain px-2 pb-1 pt-0.5">
+                                            <div className="max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain px-1.5 py-0.5 font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
                                               <button
                                                 type="button"
                                                 role="option"
@@ -4397,15 +4397,15 @@ export default function App() {
                                                     false,
                                                   );
                                                 }}
-                                                className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
+                                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
                                                     ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
                                                     : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
                                                 }`}
                                               >
-                                                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800/80 text-zinc-500">
+                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-500">
                                                   <svg
-                                                    className="h-5 w-5"
+                                                    className="h-3.5 w-3.5"
                                                     viewBox="0 0 24 24"
                                                     fill="none"
                                                     stroke="currentColor"
@@ -4450,15 +4450,15 @@ export default function App() {
                                                           false,
                                                         );
                                                       }}
-                                                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
+                                                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium tracking-tight transition-colors ${
                                                         isSel
                                                           ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
                                                           : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-50"
                                                       }`}
                                                     >
-                                                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-800/70 text-zinc-500">
+                                                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800/70 text-zinc-500">
                                                         <svg
-                                                          className="h-5 w-5"
+                                                          className="h-3.5 w-3.5"
                                                           viewBox="0 0 24 24"
                                                           fill="none"
                                                           stroke="currentColor"
@@ -4483,7 +4483,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-full border border-zinc-700/75 bg-[#0c0c0e] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                                    <div className="inline-flex h-9 shrink-0 rounded-full border border-zinc-700/75 bg-[#0c0c0e] p-1 font-['Plus_Jakarta_Sans',system-ui,sans-serif] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -4497,10 +4497,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-extrabold tracking-tight transition-all duration-200 ${
+                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-tight antialiased transition-all duration-200 ${
                                               selectedStat === type
                                                 ? "bg-zinc-100 text-zinc-900 shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
-                                                : "text-zinc-500 hover:text-zinc-200"
+                                                : "font-semibold text-zinc-500 hover:text-zinc-200"
                                             }`}
                                           >
                                             {type}
@@ -4758,20 +4758,20 @@ export default function App() {
                                 </div>
                               </section>
 
-                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014]">
-                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-3 pb-2 border-b border-zinc-800/60">
+                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
+                                <h2 className="text-[13px] font-bold text-zinc-100 mb-2.5 pb-2 border-b border-zinc-800/60 tracking-tight">
                                   Performance
                                 </h2>
-                                <div className="grid grid-cols-2 gap-3">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="rounded-2xl border border-zinc-800/85 bg-zinc-950/50 px-3 py-3 space-y-1 transition-transform duration-150 hover:-translate-y-0.5 hover:border-zinc-700/75 hover:shadow-[0_10px_28px_rgba(0,0,0,0.45)]"
+                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-2xl border border-zinc-800/70 bg-gradient-to-b from-zinc-900/45 to-zinc-950/90 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-150 hover:border-zinc-700/80 hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:px-3 sm:py-3"
                                     >
-                                      <p className="text-[9px] uppercase tracking-[0.2em] text-zinc-500 leading-tight">
+                                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500 leading-snug line-clamp-2">
                                         {stat.label}
                                       </p>
-                                      <p className="text-sm font-mono font-bold tabular-nums text-zinc-100 tracking-tight">
+                                      <p className="text-[15px] sm:text-base font-bold tabular-nums tracking-tight text-zinc-50 leading-none">
                                         {stat.val}
                                       </p>
                                     </div>
