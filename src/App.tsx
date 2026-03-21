@@ -58,6 +58,23 @@ const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
   SYS_LIST_LONGTERM,
 ]);
 
+/** Lists shown in the Focus session picker sidebar (excluding Overdue). */
+const FOCUS_SIDEBAR_LIST_IDS: readonly string[] = [
+  SYS_LIST_TODAY,
+  SYS_LIST_TESTS,
+  SYS_LIST_PROJECTS,
+  SYS_LIST_LONGTERM,
+];
+
+const FOCUS_SIDEBAR_LABELS: Record<string, string> = {
+  [SYS_LIST_TODAY]: "Today",
+  [SYS_LIST_TESTS]: "Tests",
+  [SYS_LIST_PROJECTS]: "Projects",
+  [SYS_LIST_LONGTERM]: "Long-Term Assignments",
+};
+
+type FocusSessionEntry = { listId: string; taskId: number };
+
 function toISODate(d: Date): string {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
@@ -1110,6 +1127,10 @@ export default function App() {
   } | null>(null);
   /** Blocks interaction with the shell until Focus UI is ready (then only mist remains). */
   const [focusEnterZenBlocking, setFocusEnterZenBlocking] = useState(false);
+  /** Tasks queued for the current focus session (listId + taskId); source of truth below timer. */
+  const [focusSessionEntries, setFocusSessionEntries] = useState<
+    FocusSessionEntry[]
+  >([]);
   const focusNavButtonRef = useRef<HTMLButtonElement>(null);
   const focusEnterTimeoutsRef = useRef<number[]>([]);
   /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
@@ -1156,6 +1177,33 @@ export default function App() {
     () => [...TASK_CATEGORY_LISTS, ...todayLists],
     [todayLists],
   );
+
+  const focusSessionKeySet = useMemo(
+    () =>
+      new Set(focusSessionEntries.map((e) => `${e.listId}:${e.taskId}`)),
+    [focusSessionEntries],
+  );
+
+  const focusSidebarSections = useMemo(() => {
+    return FOCUS_SIDEBAR_LIST_IDS.map((listId) => ({
+      listId,
+      label: FOCUS_SIDEBAR_LABELS[listId] ?? listId,
+      tasks: (tasksByListId[listId] ?? []).filter(
+        (t) => !t.completed && !t.removing,
+      ),
+    }));
+  }, [tasksByListId]);
+
+  /** First task in the focus session queue (for integrity / tab visibility). */
+  const activeFocusTaskForIntegrity = useMemo(() => {
+    for (const e of focusSessionEntries) {
+      const t = (tasksByListId[e.listId] ?? []).find(
+        (x) => x.id === e.taskId && !x.removing,
+      );
+      if (t) return t;
+    }
+    return tasks.find((task) => !task.removing) ?? null;
+  }, [focusSessionEntries, tasksByListId, tasks]);
 
   const selectedList = useMemo(
     () => allListsForSelection.find((l) => l.id === selectedListId) ?? null,
@@ -1659,7 +1707,7 @@ export default function App() {
   useEffect(() => {
     if (!running || isSimulation) return;
     const handleVisibilityChange = () => {
-      const activeTask = tasks.find((t) => !t.removing);
+      const activeTask = activeFocusTaskForIntegrity;
       if (document.hidden) {
         if (!activeTask || activeTask.workMode !== "inside") {
           hiddenTimeRef.current = null;
@@ -1690,7 +1738,7 @@ export default function App() {
     document.addEventListener("visibilitychange", handleVisibilityChange);
     return () =>
       document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [running, isSimulation, tasks]);
+  }, [running, isSimulation, activeFocusTaskForIntegrity]);
 
   const integrityScoreNum = useMemo(
     () => Math.max(0, 100 - integrityPenalty),
@@ -1719,6 +1767,7 @@ export default function App() {
       setRunning(false);
       setTaskInput("");
       setIsTransitioning(false);
+      setFocusSessionEntries([]);
       window.scrollTo({ top: 0, behavior: "instant" });
     }, 600);
   };
@@ -1784,6 +1833,7 @@ export default function App() {
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
     setIsAddListModalOpen(false);
     setOpenListMenuId(null);
+    setFocusSessionEntries([]);
   };
 
   const applyListSelection = (listId: string) => {
@@ -2042,6 +2092,7 @@ export default function App() {
     setIsVictory(false);
     setShowReflection(false);
     setIntegrityPenalty(0);
+    setFocusSessionEntries([]);
     setWarning("System Purged");
     setTimeout(() => setWarning(null), 3000);
   };
@@ -2326,8 +2377,8 @@ export default function App() {
   }, [timerAccumulator]);
 
   function startTimer() {
-    if (tasks.length === 0) {
-      setWarning("Compile tasks before starting!");
+    if (focusSessionEntries.length === 0) {
+      setWarning("Add tasks from the sidebar or list first!");
       setTimeout(() => setWarning(null), 3000);
       return;
     }
@@ -2340,49 +2391,100 @@ export default function App() {
     setShowReflection(false);
   }
 
-  function completeTask(id: number) {
+  function addTaskToFocusSession(listId: string, taskId: number) {
+    setFocusSessionEntries((prev) => {
+      if (prev.some((e) => e.listId === listId && e.taskId === taskId)) {
+        return prev;
+      }
+      return [...prev, { listId, taskId }];
+    });
+  }
+
+  function completeFocusTask(listId: string, taskId: number) {
     if (isSimulation) return;
-    if (!running) {
-      setWarning("Start timer to track efficiency!");
-      setTimeout(() => setWarning(null), 3000);
-      return;
-    }
-    const task = tasks.find((t) => t.id === id);
+    const list = tasksByListId[listId] ?? [];
+    const task = list.find((t) => t.id === taskId && !t.removing);
     if (!task) return;
     const now = Date.now();
     const today = getTodayStr();
-    const refPoint = lastTaskCompletionTime || timerSessionStart || now;
-    const durationSecs = Math.max(1, Math.floor((now - refPoint) / 1000));
-    setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
-    setTimeout(() => setFloatingTime(null), 1500);
-    const mins = Math.round(durationSecs / 60);
     const taskKey = normalizeTaskKey(task.text);
-    setTaskHistory((prev) => ({
-      ...prev,
-      [taskKey]: [...(prev[taskKey] || []), { value: durationSecs, date: today }],
-    }));
-    appendCompletedActivity(
-      task.text,
-      mins,
-      selectedListId,
-      selectedList?.label ?? "Focus",
-    );
-    setBestFocusIntegrity((prev) =>
-      Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
-    );
-    setSelectedTaskGraph(taskKey);
-    setSelectedStat("Speed");
-    setTasks((prev) => {
-      const newTasks = prev.map((t) =>
-        t.id === id ? { ...t, removing: true } : t,
+    const listLabel =
+      allListsForSelection.find((l) => l.id === listId)?.label ?? "Focus";
+
+    if (running) {
+      const refPoint = lastTaskCompletionTime || timerSessionStart || now;
+      const durationSecs = Math.max(1, Math.floor((now - refPoint) / 1000));
+      setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
+      setTimeout(() => setFloatingTime(null), 1500);
+      const mins = Math.round(durationSecs / 60);
+      setTaskHistory((prev) => ({
+        ...prev,
+        [taskKey]: [...(prev[taskKey] || []), { value: durationSecs, date: today }],
+      }));
+      appendCompletedActivity(task.text, mins, listId, listLabel);
+      setBestFocusIntegrity((prev) =>
+        Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
       );
-      if (newTasks.filter((t) => !t.removing).length === 0) {
-        finishSessionManual();
-      }
-      return newTasks;
+      setSelectedTaskGraph(taskKey);
+      setSelectedStat("Speed");
+    } else {
+      setTaskHistory((prev) => ({
+        ...prev,
+        [taskKey]: [...(prev[taskKey] || []), { value: 0, date: today }],
+      }));
+      appendCompletedActivity(task.text, 0, listId, listLabel);
+    }
+
+    setTasksByListId((prev) => {
+      const arr = prev[listId] ?? [];
+      const newArr = arr.map((t) =>
+        t.id === taskId ? { ...t, removing: true } : t,
+      );
+      return { ...prev, [listId]: newArr };
     });
+    if (selectedListId === listId) {
+      setTasks((prev) => {
+        const newTasks = prev.map((t) =>
+          t.id === taskId ? { ...t, removing: true } : t,
+        );
+        return newTasks;
+      });
+    }
+
+    setFocusSessionEntries((prev) => {
+      const next = prev.filter(
+        (e) => !(e.listId === listId && e.taskId === taskId),
+      );
+      if (next.length === 0 && running) {
+        setTimeout(() => finishSessionManual(), 0);
+      }
+      return next;
+    });
+
     setLastTaskCompletionTime(now);
-    setTimeout(() => setTasks((prev) => prev.filter((t) => t.id !== id)), 300);
+    setTimeout(() => {
+      setTasksByListId((prev) => {
+        const arr = prev[listId] ?? [];
+        return {
+          ...prev,
+          [listId]: arr.filter((t) => t.id !== taskId),
+        };
+      });
+      if (selectedListId === listId) {
+        setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      }
+    }, 300);
+  }
+
+  function completeTask(id: number) {
+    const entry = focusSessionEntries.find((e) => e.taskId === id);
+    if (entry) {
+      completeFocusTask(entry.listId, id);
+      return;
+    }
+    if (selectedListId) {
+      completeFocusTask(selectedListId, id);
+    }
   }
 
   function finishSessionManual() {
@@ -4798,7 +4900,7 @@ export default function App() {
             )}
 
             {isFocusSessionActive && (
-              <div className="flex-1 min-h-0 h-screen overflow-y-auto overflow-x-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900">
+              <div className="flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900">
                 <div
                   className="pointer-events-none absolute inset-0 z-0"
                   style={{
@@ -4806,13 +4908,86 @@ export default function App() {
                       "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
                   }}
                 />
-                <div
-                  className="relative z-10 flex flex-col items-center gap-10 w-full"
-                  style={{
-                    paddingTop: "5rem",
-                    transform: "none",
-                  }}
-                >
+                <aside className="relative z-10 w-56 shrink-0 border-r border-gray-200 bg-white/95 overflow-y-auto overflow-x-hidden">
+                  <div className="p-3 space-y-4">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">
+                      Pick tasks
+                    </div>
+                    {focusSidebarSections.every((s) => s.tasks.length === 0) ? (
+                      <p className="text-xs text-gray-500 leading-snug">
+                        No tasks available
+                      </p>
+                    ) : (
+                      focusSidebarSections.map((section) => (
+                        <div key={section.listId}>
+                          <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+                            {section.label}
+                          </div>
+                          <ul className="space-y-1">
+                            {section.tasks.map((task) => {
+                              const inSession = focusSessionKeySet.has(
+                                `${section.listId}:${task.id}`,
+                              );
+                              return (
+                                <li
+                                  key={`${section.listId}-${task.id}`}
+                                  className="flex items-start gap-2"
+                                >
+                                  <button
+                                    type="button"
+                                    disabled={inSession}
+                                    onClick={() =>
+                                      addTaskToFocusSession(
+                                        section.listId,
+                                        task.id,
+                                      )
+                                    }
+                                    className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded border transition-colors ${
+                                      inSession
+                                        ? "border-emerald-500 bg-emerald-500 text-white"
+                                        : "border-gray-300 bg-white hover:border-blue-400"
+                                    } disabled:cursor-default`}
+                                    aria-label={
+                                      inSession
+                                        ? "Already in session"
+                                        : "Add to focus session"
+                                    }
+                                  >
+                                    {inSession ? (
+                                      <svg
+                                        className="h-2.5 w-2.5"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="3"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        aria-hidden
+                                      >
+                                        <path d="M20 6L9 17l-5-5" />
+                                      </svg>
+                                    ) : null}
+                                  </button>
+                                  <span className="text-[11px] leading-snug text-gray-800 break-words min-w-0">
+                                    {task.text}
+                                  </span>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </aside>
+                <div className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden">
+                  <div
+                    className="flex flex-col items-center gap-10 w-full"
+                    style={{
+                      paddingTop: "5rem",
+                      transform: "none",
+                    }}
+                  >
                   {/* inner focus content inserted below — duplicate removed from page bottom */}
                   {warning && (
               <div className="fixed top-24 bg-blue-600 text-white px-8 py-2 rounded-full z-[100] animate-pulse text-[10px] font-bold tracking-widest uppercase shadow-xl">
@@ -5030,18 +5205,34 @@ export default function App() {
                   <button
                     disabled={isSimulation}
                     onClick={() => {
-                      if (!taskInput) return;
+                      if (!taskInput.trim()) return;
+                      const targetListId = selectedListId ?? SYS_LIST_TODAY;
+                      if (targetListId === SYS_LIST_OVERDUE) return;
                       const id = Date.now();
+                      let dueDate: string | null = null;
+                      if (targetListId === SYS_LIST_TODAY) {
+                        dueDate = toISODate(new Date());
+                      } else if (DUE_DATE_PICKER_LIST_IDS.has(targetListId)) {
+                        dueDate = null;
+                      }
                       const newTask: Task = {
                         id,
-                        text: taskInput,
+                        text: taskInput.trim(),
                         description: "",
                         removing: false,
                         createdAt: Date.now(),
                         workMode: "inside",
                         completed: false,
+                        dueDate,
                       };
-                      setTasks((prev) => [...prev, newTask]);
+                      setTasksByListId((prev) => ({
+                        ...prev,
+                        [targetListId]: [...(prev[targetListId] ?? []), newTask],
+                      }));
+                      if (selectedListId === targetListId) {
+                        setTasks((prev) => [...prev, newTask]);
+                      }
+                      addTaskToFocusSession(targetListId, id);
                       setTaskInput("");
                       setPendingWorkModeTaskId(id);
                       setIsWorkModeModalOpen(true);
@@ -5052,59 +5243,60 @@ export default function App() {
                   </button>
                 </div>
 
-                <div className="flex flex-col gap-3">
-                  {tasks.map((task, index) => {
-                    const isActive = index === 0;
-                    const isLocked = index > 0;
-                    return (
-                      <div
-                        key={task.id}
-                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
-                          task.removing
-                            ? "opacity-0 translate-x-12"
-                            : "opacity-100"
-                        } ${
-                          running && isActive
-                            ? "bg-blue-50/80 border-blue-300"
-                            : ""
-                        } ${isLocked ? "opacity-60" : ""}`}
-                      >
-                        <div className="flex flex-col gap-1 flex-1">
-                          <div className="flex items-center gap-5">
-                            <div
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                running && isActive
-                                  ? "bg-blue-500"
-                                  : "bg-gray-400"
-                              }`}
-                            />
-                            <span className="text-base text-gray-800">
-                              {task.text}
+                <div className="flex flex-col gap-3 w-full max-w-xl mx-auto">
+                  {focusSessionEntries.length === 0 ? (
+                    <p className="text-center text-sm text-gray-500 py-2">
+                      No tasks in session
+                    </p>
+                  ) : (
+                    focusSessionEntries
+                      .map((entry) => {
+                        const t = (tasksByListId[entry.listId] ?? []).find(
+                          (x) => x.id === entry.taskId,
+                        );
+                        if (!t || t.removing) return null;
+                        return { entry, t };
+                      })
+                      .filter(
+                        (
+                          row,
+                        ): row is {
+                          entry: FocusSessionEntry;
+                          t: Task;
+                        } => row !== null,
+                      )
+                      .map(({ entry, t }) => (
+                        <div
+                          key={`${entry.listId}-${entry.taskId}`}
+                          className={`flex items-center justify-between gap-3 p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                            t.removing
+                              ? "opacity-0 translate-x-12"
+                              : "opacity-100"
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
+                            <span className="text-base text-gray-800 truncate">
+                              {t.text}
                             </span>
                           </div>
-                          {isLocked && (
-                            <span className="pl-6 text-[11px] text-gray-400">
-                              Complete the current task first
-                            </span>
-                          )}
+                          <button
+                            type="button"
+                            disabled={isSimulation}
+                            onClick={() =>
+                              completeFocusTask(entry.listId, entry.taskId)
+                            }
+                            className="w-7 h-7 shrink-0 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                            title="Mark complete"
+                          />
                         </div>
-                        <button
-                          disabled={isSimulation || !isActive}
-                          onClick={() => completeTask(task.id)}
-                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
-                          title={
-                            isLocked
-                              ? "Complete the current task first"
-                              : undefined
-                          }
-                        />
-                      </div>
-                    );
-                  })}
+                      ))
+                  )}
                 </div>
               </div>
             </div>
           </div>
+        </div>
         </div>
             )}
 
