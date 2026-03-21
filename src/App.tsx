@@ -30,6 +30,7 @@ async function typeText(
 type Task = {
   id: number;
   text: string;
+  description: string;
   removing: boolean;
   createdAt: number;
   workMode: "inside" | "external";
@@ -59,7 +60,16 @@ export default function App() {
   const [running, setRunning] = useState(false);
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
+  const [tasksByListId, setTasksByListId] = useState<Record<string, Task[]>>(
+    {},
+  );
   const [tasks, setTasks] = useState<Task[]>([]);
+  const isSwitchingListRef = useRef(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const taskItemRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const lastDragOverIdRef = useRef<number | null>(null);
+  const tasksRef = useRef<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
     number | null
@@ -179,7 +189,8 @@ export default function App() {
   const [isFocusSessionActive, setIsFocusSessionActive] = useState(false);
   const [isFocusSidebarLimited, setIsFocusSidebarLimited] = useState(false);
   const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
-  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] = useState(false);
+  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] =
+    useState(false);
   const [focusSeconds, setFocusSeconds] = useState(
     FOCUS_SESSION_DURATION_SECONDS,
   );
@@ -208,6 +219,11 @@ export default function App() {
     () => todayLists.find((l) => l.id === selectedListId) ?? null,
     [todayLists, selectedListId],
   );
+
+  const selectedTask = useMemo(() => {
+    if (selectedTaskId == null) return null;
+    return tasks.find((t) => t.id === selectedTaskId) ?? null;
+  }, [selectedTaskId, tasks]);
 
   const completedEntries = useMemo(() => {
     const entries: Array<{
@@ -271,7 +287,10 @@ export default function App() {
       return weekday ? `${weekday}, ${dateStr}` : dateStr;
     };
 
-    const map = new Map<string, { dateStr: string; label: string; items: typeof completedEntries }>();
+    const map = new Map<
+      string,
+      { dateStr: string; label: string; items: typeof completedEntries }
+    >();
     completedEntries.forEach((e) => {
       if (!map.has(e.dateStr)) {
         map.set(e.dateStr, {
@@ -301,6 +320,8 @@ export default function App() {
     if (!selectedListId) return;
     if (!todayLists.some((l) => l.id === selectedListId)) {
       setSelectedListId(null);
+      setTasks([]);
+      setSelectedTaskId(null);
     }
   }, [todayLists, selectedListId]);
 
@@ -316,6 +337,28 @@ export default function App() {
     document.addEventListener("mousedown", onDown);
     return () => document.removeEventListener("mousedown", onDown);
   }, [openListMenuId]);
+
+  useEffect(() => {
+    if (!selectedListId) return;
+    if (isSimulation) return;
+    if (isSwitchingListRef.current) return;
+    setTasksByListId((prev) => ({
+      ...prev,
+      [selectedListId]: tasks,
+    }));
+  }, [tasks, selectedListId, isSimulation]);
+
+  useEffect(() => {
+    if (selectedTaskId == null) return;
+    const stillVisible = tasks.some(
+      (t) => t.id === selectedTaskId && !t.removing,
+    );
+    if (!stillVisible) setSelectedTaskId(null);
+  }, [tasks, selectedTaskId]);
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
 
   const randomGreeting = useMemo(
     () => greetings[Math.floor(Math.random() * greetings.length)],
@@ -539,6 +582,8 @@ export default function App() {
       setStreak(0);
       loadUserProgress();
       setTasks([]);
+      setTasksByListId({});
+      setSelectedTaskId(null);
       setSeconds(0);
       setRunning(false);
       setIsTransitioning(false);
@@ -553,6 +598,8 @@ export default function App() {
       setName("Alex");
       setStreak(3);
       setTasks([]);
+      setTasksByListId({});
+      setSelectedTaskId(null);
       setHistory({});
       setSeconds(0);
       setRunning(false);
@@ -606,6 +653,97 @@ export default function App() {
     setOpenListMenuId(null);
   };
 
+  const handleToggleTodaySidebar = () => {
+    if (activeView !== "today") return;
+    if (isTodayPanelCollapsed) {
+      setIsTodayPanelCollapsed(false);
+      setIsTodayPanelAnimatingOut(false);
+      return;
+    }
+
+    setIsTodayPanelAnimatingOut(true);
+    window.setTimeout(() => {
+      setIsTodayPanelCollapsed(true);
+      setIsTodayPanelAnimatingOut(false);
+    }, 220);
+  };
+
+  const handleSelectList = (listId: string) => {
+    isSwitchingListRef.current = true;
+
+    // Persist current tasks for the previously selected list.
+    if (selectedListId) {
+      setTasksByListId((prev) => ({
+        ...prev,
+        [selectedListId]: tasks,
+      }));
+    }
+
+    setSelectedListId(listId);
+    setSelectedTaskId(null);
+    setTodayMainMode("tasks");
+    setOpenListMenuId(null);
+
+    setTasks(tasksByListId[listId] ?? []);
+
+    isSwitchingListRef.current = false;
+  };
+
+  const reorderVisibleTasksWithFlip = (fromId: number, toId: number) => {
+    if (isSimulation) return;
+    const visible = tasksRef.current.filter((t) => !t.removing);
+    const fromIndex = visible.findIndex((t) => t.id === fromId);
+    const toIndex = visible.findIndex((t) => t.id === toId);
+    if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+
+    const visibleIds = visible.map((t) => t.id);
+    const preRects = new Map<number, DOMRect>();
+    visibleIds.forEach((id) => {
+      const el = taskItemRefs.current[id];
+      if (!el) return;
+      preRects.set(id, el.getBoundingClientRect());
+    });
+
+    setTasks((prev) => {
+      const prevVisible = prev.filter((t) => !t.removing);
+      const prevHidden = prev.filter((t) => t.removing);
+      const nextVisible = [...prevVisible];
+      const [moved] = nextVisible.splice(fromIndex, 1);
+      nextVisible.splice(toIndex, 0, moved);
+      return [...nextVisible, ...prevHidden];
+    });
+
+    // FLIP animation: invert position changes after the DOM updates.
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        visibleIds.forEach((id) => {
+          const el = taskItemRefs.current[id];
+          const pre = preRects.get(id);
+          if (!el || !pre) return;
+          const post = el.getBoundingClientRect();
+          const dx = pre.left - post.left;
+          const dy = pre.top - post.top;
+          if (dx === 0 && dy === 0) return;
+
+          el.style.willChange = "transform";
+          el.style.transition = "transform 0s";
+          el.style.transform = `translate(${dx}px, ${dy}px)`;
+
+          requestAnimationFrame(() => {
+            el.style.transition = "transform 180ms ease";
+            el.style.transform = "translate(0px, 0px)";
+          });
+
+          window.setTimeout(() => {
+            el.style.willChange = "auto";
+            el.style.transition = "";
+            el.style.transform = "";
+          }, 220);
+        });
+      });
+    });
+  };
+
   const resetAllData = () => {
     localStorage.clear();
     setHistory({});
@@ -615,6 +753,8 @@ export default function App() {
     setYesterdayTotalFocusMinutes(0);
     setStreak(0);
     setTasks([]);
+    setTasksByListId({});
+    setSelectedTaskId(null);
     setSeconds(0);
     setRunning(false);
     setIsVictory(false);
@@ -698,6 +838,7 @@ export default function App() {
           {
             id: Date.now(),
             text: t,
+            description: "",
             removing: false,
             createdAt: Date.now(),
             workMode: "inside",
@@ -1350,11 +1491,11 @@ export default function App() {
           </nav>
         )}
 
-        {/* APP SHELL SIDEBAR (only when app view is active) */}
-        {!isSimulation && (
-          <>
+        {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
+        {!isSimulation && !isFocusSessionActive && (
+          <div className="min-h-screen flex w-full bg-black text-white pl-16 overflow-x-hidden">
             {/* Left sidebar (main) */}
-            <aside className="fixed inset-y-0 left-0 h-screen w-16 bg-zinc-900 border-r border-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.2)] flex flex-col items-center justify-between py-3 z-[250]">
+            <aside className="h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250] shrink-0">
               {/* Top: profile */}
               <div className="flex flex-col items-center gap-4">
                 <button
@@ -1547,133 +1688,140 @@ export default function App() {
               activeView === "today" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`fixed left-16 top-0 h-screen w-64 bg-zinc-950 border-r border-zinc-800 shadow-none flex flex-col justify-between py-4 px-3 z-[245] transition-all duration-200 ease-out ${
+                  className={`h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 transition-all duration-200 ease-out shrink-0 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
                   }`}
                 >
-                {/* Top: Start focus session */}
-                <div
-                  className={
-                    isFocusSessionActive && isFocusSidebarLimited
-                      ? "flex-1 flex items-center"
-                      : "space-y-6"
-                  }
-                >
-                  {isFocusSessionActive && isFocusSidebarLimited ? (
-                    <button
-                      type="button"
-                      onClick={handleQuitFocusSession}
-                      className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
-                    >
-                      Quit Session?
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleStartFocusSession}
-                      className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
-                    >
-                      Start Focus Session
-                    </button>
-                  )}
-
-                  {/* Lists section */}
+                  {/* Top: Start focus session */}
                   <div
-                    className={`pt-4 border-t border-white/5 space-y-3 ${
-                      isFocusSessionActive && isFocusSidebarLimited ? "hidden" : ""
-                    }`}
+                    className={
+                      isFocusSessionActive && isFocusSidebarLimited
+                        ? "flex-1 flex items-center"
+                        : "space-y-6"
+                    }
                   >
-                    <div className="flex items-center justify-between group">
-                      <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
-                        Lists
-                      </p>
+                    {isFocusSessionActive && isFocusSidebarLimited ? (
                       <button
                         type="button"
-                        onClick={() => {
-                          setNewListName("");
-                          setIsAddListModalOpen(true);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
-                        aria-label="Add List"
+                        onClick={handleQuitFocusSession}
+                        className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
                       >
-                        +
+                        Quit Session?
                       </button>
-                    </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleStartFocusSession}
+                        className="w-full rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(37,99,235,0.6)] hover:shadow-[0_16px_40px_rgba(37,99,235,0.7)] hover:scale-[1.02] transition-all duration-150"
+                      >
+                        Start Focus Session
+                      </button>
+                    )}
 
-                    <div className="space-y-1">
-                      {todayLists.map((list) => (
-                        <div
-                          key={list.id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => {
-                          setSelectedListId(list.id);
-                          setOpenListMenuId(null);
-                            setTodayMainMode("tasks");
-                        }}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setSelectedListId(list.id);
-                            setOpenListMenuId(null);
-                              setTodayMainMode("tasks");
-                          }
-                        }}
-                          className="group relative flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
+                    {/* Lists section */}
+                    <div
+                      className={`pt-4 border-t border-white/5 space-y-3 ${
+                        isFocusSessionActive && isFocusSidebarLimited
+                          ? "hidden"
+                          : ""
+                      }`}
+                    >
+                      <div className="flex items-center justify-between group">
+                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400">
+                          Lists
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewListName("");
+                            setIsAddListModalOpen(true);
+                          }}
+                          className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-gray-200"
+                          aria-label="Add List"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <span className="text-base">{list.icon}</span>
-                            <span className="truncate">{list.label}</span>
-                          </div>
+                          +
+                        </button>
+                      </div>
 
-                          <div className="flex items-center">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenListMenuId((cur) =>
-                                  cur === list.id ? null : list.id,
-                                );
-                              }}
-                              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
-                              aria-label="List menu"
-                            >
-                              •••
-                            </button>
-                          </div>
+                      <div className="space-y-1">
+                        {todayLists.map((list) => (
+                          <div
+                            key={list.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => {
+                              handleSelectList(list.id);
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                handleSelectList(list.id);
+                              }
+                            }}
+                            className="group flex flex-col gap-2 rounded-xl px-3 py-2 text-sm text-gray-100 hover:bg-white/5 transition-colors duration-150"
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="text-base">{list.icon}</span>
+                                <span className="truncate">{list.label}</span>
+                              </div>
 
-                          {openListMenuId === list.id && (
-                            <div
-                              ref={listMenuRef}
-                              className="absolute right-2 top-10 z-[260] w-44 rounded-xl bg-[#18191f] border border-white/10 shadow-xl overflow-hidden"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setTodayLists((prev) =>
-                                    prev.filter((l) => l.id !== list.id),
-                                  );
-                                  if (selectedListId === list.id) setSelectedListId(null);
-                                  setOpenListMenuId(null);
-                                }}
-                                className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
-                              >
-                                Delete List
-                              </button>
+                              <div className="flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setOpenListMenuId((cur) =>
+                                      cur === list.id ? null : list.id,
+                                    );
+                                  }}
+                                  className={`opacity-0 group-hover:opacity-100 transition-opacity duration-150 text-gray-200 rounded-md w-7 h-7 flex items-center justify-center hover:bg-white/5`}
+                                  aria-label="List menu"
+                                >
+                                  •••
+                                </button>
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
 
-                  {isAddListModalOpen &&
-                    !(isFocusSessionActive && isFocusSidebarLimited) && (
-                    <div className="fixed inset-0 z-[600] bg-black/50 flex items-center justify-center px-6">
-                      <div className="w-full max-w-2xl rounded-2xl bg-[#18191f] border border-white/10 shadow-2xl p-4">
-                        <div className="flex items-center justify-between mb-4">
+                            {openListMenuId === list.id && (
+                              <div
+                                ref={listMenuRef}
+                                className="w-full rounded-xl bg-[#18191f] border border-white/10 shadow-sm overflow-hidden"
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setTodayLists((prev) =>
+                                      prev.filter((l) => l.id !== list.id),
+                                    );
+                                    setTasksByListId((prev) => {
+                                      const next = { ...prev };
+                                      delete next[list.id];
+                                      return next;
+                                    });
+                                    if (selectedListId === list.id) {
+                                      setSelectedListId(null);
+                                      setTasks([]);
+                                      setSelectedTaskId(null);
+                                    }
+                                    setOpenListMenuId(null);
+                                  }}
+                                  className="w-full text-left px-3 py-2 text-sm text-gray-200 hover:bg-white/5 transition-colors duration-150"
+                                >
+                                  Delete List
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {isAddListModalOpen && (
+                      <div className="mt-3 rounded-2xl bg-[#18191f] border border-white/10 p-4">
+                        <div className="flex items-center justify-between mb-3">
                           <p className="text-sm font-semibold text-gray-100">
                             Add List
                           </p>
@@ -1749,9 +1897,8 @@ export default function App() {
                           </button>
                         </div>
                       </div>
-                    </div>
-                  )}
-                </div>
+                    )}
+                  </div>
 
                   {/* Bottom: Completed */}
                   <div
@@ -1761,210 +1908,444 @@ export default function App() {
                         : ""
                     }`}
                   >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCollapsedCompletedDates({});
-                      setTodayMainMode("completed");
-                    }}
-                    className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
-                  >
-                    <span className="tracking-[0.18em] uppercase">Completed</span>
-                  </button>
-                </div>
-              </aside>
-            )}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCollapsedCompletedDates({});
+                        setTodayMainMode("completed");
+                      }}
+                      className="w-full flex items-center justify-between rounded-xl px-3 py-2 text-xs text-gray-300 hover:bg-white/5 transition-colors duration-150"
+                    >
+                      <span className="tracking-[0.18em] uppercase">
+                        Completed
+                      </span>
+                    </button>
+                  </div>
+                </aside>
+              )}
 
             {/* Content panel overlay */}
-            <section
-              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none bg-zinc-950 border-l border-zinc-800 ${
-                !isSimulation && activeView === "today" && !isTodayPanelCollapsed
-                  ? "left-80"
-                  : "left-16"
-              }`}
-            >
-              <div className="w-full px-8 py-16 h-full flex flex-col">
-                <div className="flex items-center justify-between mb-8 pointer-events-auto">
+            {!isFocusSessionActive && (
+              <section
+                className={`flex-1 h-screen ${
+                  activeView === "today" &&
+                  selectedListId &&
+                  todayMainMode === "tasks"
+                    ? "overflow-hidden"
+                    : "overflow-y-auto"
+                }`}
+              >
+                <div
+                  className={`w-full h-full flex flex-col ${
+                    activeView === "today" &&
+                    selectedListId &&
+                    todayMainMode === "tasks"
+                      ? "px-0 py-0"
+                      : "px-6 py-16"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-8 pointer-events-auto">
+                    {isFocusSessionActive ? (
+                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                        Hello {name}
+                      </h1>
+                    ) : activeView === "today" ? (
+                      <>
+                        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                          {todayMainMode === "completed"
+                            ? "Completed"
+                            : selectedListId
+                              ? (selectedList?.label ?? "Today")
+                              : ""}
+                        </h1>
+                        <button
+                          type="button"
+                          disabled
+                          className={`hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto ${
+                            selectedListId ? "" : "hidden"
+                          }`}
+                        >
+                          Collapse
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
+                          {activeView === "calendar" && "Calendar View"}
+                          {activeView === "analytics" && "Analytics View"}
+                          {activeView === "notifications" && "Notifications"}
+                          {activeView === "help" && "Help & Support"}
+                        </h1>
+                        <button
+                          type="button"
+                          onClick={handleGoHome}
+                          className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
+                        >
+                          Back to Hero
+                        </button>
+                      </>
+                    )}
+                  </div>
                   {isFocusSessionActive ? (
-                    <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                      Hello {name}
-                    </h1>
-                  ) : activeView === "today" ? (
-                    <>
-                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                        {todayMainMode === "completed"
-                          ? "Completed"
-                          : selectedListId
-                            ? selectedList?.label ?? "Today"
-                            : ""}
-                      </h1>
-                      <button
-                        type="button"
-                        disabled
-                        className={`hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto ${
-                          selectedListId ? "" : "hidden"
-                        }`}
-                      >
-                        Collapse
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
-                        {activeView === "calendar" && "Calendar View"}
-                        {activeView === "analytics" && "Analytics View"}
-                        {activeView === "notifications" && "Notifications"}
-                        {activeView === "help" && "Help & Support"}
-                      </h1>
-                      <button
-                        type="button"
-                        onClick={handleGoHome}
-                        className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase shadow-sm hover:shadow-md hover:scale-[1.02] transition-all pointer-events-auto"
-                      >
-                        Back to Hero
-                      </button>
-                    </>
-                  )}
-                </div>
-                {isFocusSessionActive ? (
-                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                    <div className="p-6 md:p-8">
-                      <div className="flex items-start justify-between gap-8">
-                        <div>
-                          <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                            Current Timer
-                          </p>
-                          <div className="mt-3 text-4xl md:text-5xl font-semibold text-white tabular-nums">
-                            {formatFocusSeconds(focusSeconds)}
+                    <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                      <div className="p-6 md:p-8">
+                        <div className="flex items-start justify-between gap-8">
+                          <div>
+                            <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                              Current Timer
+                            </p>
+                            <div className="mt-3 text-4xl md:text-5xl font-semibold text-white tabular-nums">
+                              {formatFocusSeconds(focusSeconds)}
+                            </div>
+                            <p className="mt-4 text-sm text-gray-300">
+                              Hello {name}...
+                            </p>
                           </div>
-                          <p className="mt-4 text-sm text-gray-300">
-                            Hello {name}...
-                          </p>
+
+                          <div className="text-right">
+                            <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                              Percent Improvement
+                            </p>
+                            <div className="mt-3 flex items-baseline justify-end gap-3">
+                              <span
+                                className={`text-3xl font-semibold ${
+                                  parseInt(improvementDelta) >= 0
+                                    ? "text-emerald-400"
+                                    : "text-red-400"
+                                }`}
+                              >
+                                {improvementDelta}%
+                              </span>
+                              <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
+                                {parseInt(improvementDelta) >= 0
+                                  ? "UP"
+                                  : "DOWN"}
+                              </span>
+                            </div>
+                          </div>
                         </div>
 
-                        <div className="text-right">
+                        <div className="mt-10 pt-6 border-t border-white/5">
                           <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                            Percent Improvement
+                            Next Objectives
                           </p>
-                          <div className="mt-3 flex items-baseline justify-end gap-3">
-                            <span
-                              className={`text-3xl font-semibold ${
-                                parseInt(improvementDelta) >= 0
-                                  ? "text-emerald-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {improvementDelta}%
-                            </span>
-                            <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
-                              {parseInt(improvementDelta) >= 0 ? "UP" : "DOWN"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-10 pt-6 border-t border-white/5">
-                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                          Next Objectives
-                        </p>
-                        <div className="mt-4 space-y-3">
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            1) Choose your top task and begin.
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            2) Stay in the block until the timer ends.
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            3) When done, log completion to build integrity.
+                          <div className="mt-4 space-y-3">
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                              1) Choose your top task and begin.
+                            </div>
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                              2) Stay in the block until the timer ends.
+                            </div>
+                            <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
+                              3) When done, log completion to build integrity.
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ) : activeView === "today" && todayMainMode === "completed" ? (
-                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                    <div className="p-6 md:p-8">
-                      {completedGroups.length === 0 ? (
-                        <div className="mt-6 text-sm text-gray-400">No completed tasks</div>
-                      ) : (
-                        <div className="space-y-2">
-                          {completedGroups.map((group) => {
-                            const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
-                            return (
-                              <div
-                                key={group.dateStr}
-                                className="rounded-2xl border border-white/5 overflow-hidden"
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    setCollapsedCompletedDates((prev) => ({
-                                      ...prev,
-                                      [group.dateStr]: !isCollapsed,
-                                    }))
-                                  }
-                                  className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
+                  ) : activeView === "today" &&
+                    todayMainMode === "completed" ? (
+                    <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
+                      <div className="p-6 md:p-8">
+                        {completedGroups.length === 0 ? (
+                          <div className="mt-6 text-sm text-gray-400">
+                            No completed tasks
+                          </div>
+                        ) : (
+                          <div className="space-y-2">
+                            {completedGroups.map((group) => {
+                              const isCollapsed =
+                                collapsedCompletedDates[group.dateStr] ?? false;
+                              return (
+                                <div
+                                  key={group.dateStr}
+                                  className="rounded-2xl border border-white/5 overflow-hidden"
                                 >
-                                  <span className="text-sm font-semibold text-gray-200">
-                                    {group.label}
-                                  </span>
-                                  <span className="text-xs text-gray-400">
-                                    {isCollapsed ? "Expand" : "Collapse"}
-                                  </span>
-                                </button>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setCollapsedCompletedDates((prev) => ({
+                                        ...prev,
+                                        [group.dateStr]: !isCollapsed,
+                                      }))
+                                    }
+                                    className="w-full flex items-center justify-between px-5 py-3 text-left hover:bg-white/5 transition-colors duration-150"
+                                  >
+                                    <span className="text-sm font-semibold text-gray-200">
+                                      {group.label}
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {isCollapsed ? "Expand" : "Collapse"}
+                                    </span>
+                                  </button>
 
-                                {!isCollapsed && (
-                                  <div className="divide-y divide-white/5">
-                                    {group.items.map((item) => (
-                                      <div
-                                        key={item.key}
-                                        className="px-7 py-2.5 flex items-start justify-between gap-4"
-                                      >
-                                        <span className="text-sm text-gray-100">
-                                          {item.taskName}
-                                        </span>
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">
-                                          {item.minutes}m
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
+                                  {!isCollapsed && (
+                                    <div className="divide-y divide-white/5">
+                                      {group.items.map((item) => (
+                                        <div
+                                          key={item.key}
+                                          className="px-7 py-2.5 flex items-start justify-between gap-4"
+                                        >
+                                          <span className="text-sm text-gray-100">
+                                            {item.taskName}
+                                          </span>
+                                          <span className="text-xs text-gray-500 whitespace-nowrap">
+                                            {item.minutes}m
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : activeView === "today" && selectedListId ? (
+                    <div className="w-full h-full rounded-2xl bg-zinc-900 border border-zinc-800 shadow-sm overflow-hidden">
+                      <div className="grid grid-cols-[70%_30%] h-full">
+                        {/* LEFT PANEL: tasks */}
+                        <div className="p-5 md:p-7 flex flex-col h-full">
+                          {/* Header + actions */}
+                          <div className="flex items-start justify-between gap-4 mb-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                type="button"
+                                onClick={handleToggleTodaySidebar}
+                                disabled={isTodayPanelAnimatingOut}
+                                className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-white/5 border border-white/10 text-gray-200 text-[11px] font-semibold tracking-[0.12em] uppercase hover:bg-white/10 transition-colors disabled:opacity-50"
+                                aria-label="Collapse Today sidebar"
+                                title="Collapse Today sidebar"
+                              >
+                                {isTodayPanelCollapsed ? ">" : "<"}
+                              </button>
+                              <span className="text-lg">
+                                {selectedList?.icon}
+                              </span>
+                              <h2 className="text-lg font-semibold text-gray-100 truncate">
+                                {selectedList?.label}
+                              </h2>
+                            </div>
+                          </div>
+
+                          {/* Task input bar */}
+                          <div className="bg-zinc-800 border border-zinc-800 rounded-2xl px-4 py-3 flex items-center gap-3">
+                            <input
+                              value={taskInput}
+                              onChange={(e) => setTaskInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key !== "Enter") return;
+                                const trimmed = taskInput.trim();
+                                if (!trimmed) return;
+                                const id = Date.now();
+                                const newTask: Task = {
+                                  id,
+                                  text: trimmed,
+                                  description: "",
+                                  removing: false,
+                                  createdAt: Date.now(),
+                                  workMode: "inside",
+                                };
+                                setTasks((prev) => [...prev, newTask]);
+                                setTaskInput("");
+                              }}
+                              placeholder="Add a task..."
+                              className="flex-1 bg-transparent text-gray-100 placeholder:text-gray-500 outline-none text-sm md:text-base"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const trimmed = taskInput.trim();
+                                if (!trimmed) return;
+                                const id = Date.now();
+                                const newTask: Task = {
+                                  id,
+                                  text: trimmed,
+                                  description: "",
+                                  removing: false,
+                                  createdAt: Date.now(),
+                                  workMode: "inside",
+                                };
+                                setTasks((prev) => [...prev, newTask]);
+                                setTaskInput("");
+                              }}
+                              className="px-4 py-2 rounded-xl bg-gray-900 text-white text-xs font-semibold tracking-[0.18em] uppercase hover:scale-[1.02] transition-transform disabled:opacity-50"
+                              disabled={!taskInput.trim()}
+                            >
+                              Add
+                            </button>
+                          </div>
+
+                          {/* Tasks list */}
+                          <div className="mt-5 flex-1 overflow-y-auto">
+                            {tasks.filter((t) => !t.removing).length === 0 ? (
+                              <div className="mt-10 text-sm text-gray-500/80 px-1">
+                                Add a task to see details.
                               </div>
-                            );
-                          })}
+                            ) : (
+                              <div className="space-y-2">
+                                {tasks
+                                  .filter((t) => !t.removing)
+                                  .map((t) => {
+                                    const isSelected = selectedTaskId === t.id;
+                                    return (
+                                      <div
+                                        key={t.id}
+                                        ref={(el) => {
+                                          taskItemRefs.current[t.id] = el;
+                                        }}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => {
+                                          if (draggingTaskId != null) return;
+                                          setSelectedTaskId(t.id);
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key !== "Enter") return;
+                                          setSelectedTaskId(t.id);
+                                        }}
+                                        onDragOver={(e) => {
+                                          e.preventDefault();
+                                          if (draggingTaskId == null) return;
+                                          if (draggingTaskId === t.id) return;
+                                          if (
+                                            lastDragOverIdRef.current === t.id
+                                          )
+                                            return;
+                                          lastDragOverIdRef.current = t.id;
+                                          reorderVisibleTasksWithFlip(
+                                            draggingTaskId,
+                                            t.id,
+                                          );
+                                        }}
+                                        onDrop={(e) => {
+                                          e.preventDefault();
+                                          lastDragOverIdRef.current = null;
+                                          setDraggingTaskId(null);
+                                        }}
+                                        className={`group rounded-xl border px-4 py-3 flex items-center justify-between gap-3 transition-colors cursor-pointer ${
+                                          isSelected
+                                            ? "border-blue-500/30 bg-blue-500/10"
+                                            : "border-zinc-800 bg-zinc-900/40 hover:bg-zinc-900/60"
+                                        } ${draggingTaskId === t.id ? "opacity-40" : ""}`}
+                                      >
+                                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                                          <div
+                                            draggable
+                                            onDragStart={(e) => {
+                                              setDraggingTaskId(t.id);
+                                              lastDragOverIdRef.current = t.id;
+                                              e.dataTransfer.effectAllowed =
+                                                "move";
+                                              e.dataTransfer.setData(
+                                                "text/plain",
+                                                String(t.id),
+                                              );
+                                            }}
+                                            onDragEnd={() => {
+                                              lastDragOverIdRef.current = null;
+                                              setDraggingTaskId(null);
+                                            }}
+                                            className="w-7 h-7 rounded-lg border border-zinc-800 bg-zinc-900/20 text-zinc-400 opacity-60 group-hover:opacity-100 hover:text-zinc-200 cursor-grab transition-opacity flex items-center justify-center select-none"
+                                            aria-label="Drag to reorder"
+                                          >
+                                            ≡
+                                          </div>
+                                          <span className="text-sm text-gray-100 truncate">
+                                            {t.text}
+                                          </span>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setTasks((prev) =>
+                                              prev.filter((x) => x.id !== t.id),
+                                            );
+                                            if (selectedTaskId === t.id) {
+                                              setSelectedTaskId(null);
+                                            }
+                                          }}
+                                          className="w-8 h-8 rounded-lg border border-zinc-800 text-gray-300 hover:border-red-500/30 hover:text-red-200 hover:bg-red-500/10 transition-colors"
+                                          aria-label="Delete task"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* RIGHT PANEL: task details */}
+                        <div className="border-l border-zinc-800/70 bg-zinc-900 p-5 md:p-7 flex flex-col h-full">
+                          <div
+                            className={`transition-all duration-200 ${
+                              selectedTask
+                                ? "opacity-100 translate-x-0"
+                                : "opacity-0 translate-x-2"
+                            } ${selectedTask ? "" : "pointer-events-none"}`}
+                          >
+                            {selectedTask ? (
+                              <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4 md:p-5">
+                                <div className="mb-4">
+                                  <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                    Task
+                                  </p>
+                                  <h3 className="mt-2 text-base font-semibold text-gray-100 truncate">
+                                    {selectedTask.text}
+                                  </h3>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                  <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
+                                    Description
+                                  </p>
+                                  <textarea
+                                    value={selectedTask.description}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      setTasks((prev) =>
+                                        prev.map((t) =>
+                                          t.id === selectedTask.id
+                                            ? { ...t, description: val }
+                                            : t,
+                                        ),
+                                      );
+                                    }}
+                                    placeholder="Add a description..."
+                                    className="w-full h-40 rounded-2xl bg-zinc-900/50 border border-zinc-800 px-4 py-3 text-gray-100 outline-none placeholder:text-gray-500 resize-none"
+                                  />
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="min-h-[60vh] pointer-events-auto">
+                      {activeView === "today" ? null : (
+                        <div className="flex items-center justify-center h-full pt-8">
+                          <p className="text-sm md:text-base text-gray-500">
+                            {activeView === "calendar" && "Calendar View"}
+                            {activeView === "analytics" && "Analytics View"}
+                            {activeView === "notifications" &&
+                              "Notifications Center"}
+                            {activeView === "help" && "Help & Support"}
+                          </p>
                         </div>
                       )}
                     </div>
-                  </div>
-                ) : activeView === "today" && selectedListId ? (
-                  <div className="rounded-3xl bg-[#18191f] border border-white/10 shadow-sm min-h-[60vh] pointer-events-auto">
-                    <div className="p-6 md:p-8">
-                      <input
-                        placeholder="Add task"
-                        className="w-full px-5 py-4 rounded-2xl bg-white/5 border border-white/10 text-gray-100 outline-none placeholder:text-gray-400 focus:border-blue-500/40 transition-all"
-                      />
-                      <div className="mt-10 text-sm text-gray-400">No tasks</div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="min-h-[60vh] pointer-events-auto">
-                    {activeView === "today" ? null : (
-                      <div className="flex items-center justify-center h-full pt-8">
-                        <p className="text-sm md:text-base text-gray-500">
-                          {activeView === "calendar" && "Calendar View"}
-                          {activeView === "analytics" && "Analytics View"}
-                          {activeView === "notifications" &&
-                            "Notifications Center"}
-                          {activeView === "help" && "Help & Support"}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </section>
-          </>
+                  )}
+                </div>
+              </section>
+            )}
+          </div>
         )}
 
         {/* HERO + FEATURE LAYOUT WITH STICKY PREVIEW */}
@@ -2576,9 +2957,9 @@ export default function App() {
           </section>
         )}
 
-        {!isSimulation && (
+        {!isSimulation && isFocusSessionActive && (
           <div
-            className="flex flex-col items-center gap-10 relative z-20"
+            className="flex flex-col items-center gap-10 relative z-20 w-full"
             style={{
               paddingTop: "5rem",
               transform: "none",
@@ -2819,6 +3200,7 @@ export default function App() {
                       const newTask: Task = {
                         id,
                         text: taskInput,
+                        description: "",
                         removing: false,
                         createdAt: Date.now(),
                         workMode: "inside",
