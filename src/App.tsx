@@ -1072,7 +1072,7 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900 selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full ${isSimulation ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-zinc-950 text-gray-100"} selection:bg-blue-500/30 font-sans transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* VIGNETTE & AURA */}
         <div
@@ -1354,7 +1354,7 @@ export default function App() {
         {!isSimulation && (
           <>
             {/* Left sidebar (main) */}
-            <aside className="fixed left-0 top-0 h-screen w-16 bg-[#1f2125] border-r border-black/60 shadow-[4px_0_18px_rgba(0,0,0,0.55)] flex flex-col items-center justify-between py-3 z-[250]">
+            <aside className="fixed inset-y-0 left-0 h-screen w-16 bg-zinc-900 border-r border-zinc-800 shadow-[0_0_0_1px_rgba(0,0,0,0.2)] flex flex-col items-center justify-between py-3 z-[250]">
               {/* Top: profile */}
               <div className="flex flex-col items-center gap-4">
                 <button
@@ -1547,7 +1547,7 @@ export default function App() {
               activeView === "today" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`fixed left-16 top-0 h-screen w-64 bg-[#23252b] border-r border-black/40 shadow-[4px_0_18px_rgba(0,0,0,0.6)] flex flex-col justify-between py-4 px-3 z-[245] transition-all duration-200 ease-out ${
+                  className={`fixed left-16 top-0 h-screen w-64 bg-zinc-950 border-r border-zinc-800 shadow-none flex flex-col justify-between py-4 px-3 z-[245] transition-all duration-200 ease-out ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
@@ -1777,13 +1777,13 @@ export default function App() {
 
             {/* Content panel overlay */}
             <section
-              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none ${
+              className={`fixed top-0 bottom-0 right-0 z-[240] pointer-events-none bg-zinc-950 border-l border-zinc-800 ${
                 !isSimulation && activeView === "today" && !isTodayPanelCollapsed
                   ? "left-80"
                   : "left-16"
               }`}
             >
-              <div className="max-w-5xl mx-auto px-6 py-16 h-full flex flex-col">
+              <div className="w-full px-8 py-16 h-full flex flex-col">
                 <div className="flex items-center justify-between mb-8 pointer-events-auto">
                   {isFocusSessionActive ? (
                     <h1 className="text-xl md:text-2xl font-semibold text-gray-900">
@@ -1796,12 +1796,14 @@ export default function App() {
                           ? "Completed"
                           : selectedListId
                             ? selectedList?.label ?? "Today"
-                            : "Today View"}
+                            : ""}
                       </h1>
                       <button
                         type="button"
                         disabled
-                        className="hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto"
+                        className={`hidden md:inline-flex items-center gap-2 px-4 py-2 rounded-full bg-gray-100 text-gray-400 text-xs font-semibold tracking-[0.18em] uppercase shadow-sm transition-all pointer-events-auto ${
+                          selectedListId ? "" : "hidden"
+                        }`}
                       >
                         Collapse
                       </button>
@@ -1946,14 +1948,18 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-3xl bg-white/95 border border-gray-200 shadow-sm min-h-[60vh] flex items-center justify-center pointer-events-auto">
-                    <p className="text-sm md:text-base text-gray-500">
-                      {activeView === "today" && "Today View"}
-                      {activeView === "calendar" && "Calendar View"}
-                      {activeView === "analytics" && "Analytics View"}
-                      {activeView === "notifications" && "Notifications Center"}
-                      {activeView === "help" && "Help & Support"}
-                    </p>
+                  <div className="min-h-[60vh] pointer-events-auto">
+                    {activeView === "today" ? null : (
+                      <div className="flex items-center justify-center h-full pt-8">
+                        <p className="text-sm md:text-base text-gray-500">
+                          {activeView === "calendar" && "Calendar View"}
+                          {activeView === "analytics" && "Analytics View"}
+                          {activeView === "notifications" &&
+                            "Notifications Center"}
+                          {activeView === "help" && "Help & Support"}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
