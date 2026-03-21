@@ -210,12 +210,24 @@ export default function App() {
   /* --- Focus Session Mode STATE --- */
   const FOCUS_SESSION_DURATION_SECONDS = 25 * 60;
   const [isFocusSessionActive, setIsFocusSessionActive] = useState(false);
-  const [isFocusSidebarLimited, setIsFocusSidebarLimited] = useState(false);
   const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
   const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] = useState(false);
   const [focusSeconds, setFocusSeconds] = useState(
     FOCUS_SESSION_DURATION_SECONDS,
   );
+  type FocusQuitPending =
+    | { action: "view"; view: AppView }
+    | { action: "list"; listId: string }
+    | { action: "completed" }
+    | { action: "addList" }
+    | { action: "home" }
+    | { action: "quitOnly" };
+  type FocusSessionDialog =
+    | null
+    | { kind: "quit"; pending: FocusQuitPending }
+    | { kind: "reset" };
+  const [focusSessionDialog, setFocusSessionDialog] =
+    useState<FocusSessionDialog>(null);
 
   type TodayList = { id: string; label: string; icon: string; color: string | null };
   const DEFAULT_LIST_ICON = "≡";
@@ -612,7 +624,7 @@ export default function App() {
     }, 600);
   };
 
-  const handleGoHome = () => {
+  const runGoHomeTransition = () => {
     setIsTransitioning(true);
     setTimeout(() => {
       setIsSimulation(true);
@@ -634,29 +646,116 @@ export default function App() {
     }, 600);
   };
 
+  const handleGoHome = () => {
+    if (isFocusSessionActive) {
+      setFocusSessionDialog({ kind: "quit", pending: { action: "home" } });
+      return;
+    }
+    runGoHomeTransition();
+  };
+
   const handleSidebarNavClick = (view: AppView) => {
     if (isFocusSessionActive) {
-      // Lock navigation: show limited “Quit Session?” sidebar only.
-      setIsFocusSidebarLimited(true);
-      setIsTodayPanelAnimatingOut(false);
-      setIsTodayPanelCollapsed(false);
-      setIsAddListModalOpen(false);
-      setOpenListMenuId(null);
-      setTodayMainMode("tasks");
+      setFocusSessionDialog({ kind: "quit", pending: { action: "view", view } });
       return;
     }
     setActiveView(view);
   };
 
+  /** Log current focus integrity when leaving a session early (no task time stored). */
+  const logIntegrityOnFocusQuit = () => {
+    if (isSimulation) return;
+    const todayStr = getTodayStr();
+    const v = Math.round(Math.max(0, Math.min(100, integrityScoreNum)));
+    setBestFocusIntegrity((prev) => Math.max(prev, v));
+    setHistory((prev) => ({
+      ...prev,
+      "Focus Integrity": [
+        ...(prev["Focus Integrity"] || []),
+        { value: v, date: todayStr },
+      ],
+    }));
+    setHeatmapData((prev) => {
+      const idx = prev.findIndex((d) => d.date === todayStr);
+      if (idx === -1) return prev;
+      const next = [...prev];
+      const existing = next[idx];
+      next[idx] = {
+        ...existing,
+        focusIntegrity:
+          existing.focusIntegrity > 0
+            ? (existing.focusIntegrity + v) / 2
+            : v,
+      };
+      return next;
+    });
+  };
+
+  const cleanupFocusSessionAfterQuit = () => {
+    setTimerAccumulator(0);
+    setRunning(false);
+    setIsFocusSessionActive(false);
+    setIsTodayPanelCollapsed(false);
+    setIsTodayPanelAnimatingOut(false);
+    setTodayMainMode("tasks");
+    setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
+    setIsAddListModalOpen(false);
+    setOpenListMenuId(null);
+  };
+
+  const applyListSelection = (listId: string) => {
+    isSwitchingListRef.current = true;
+    if (selectedListId) {
+      setTasksByListId((prev) => ({
+        ...prev,
+        [selectedListId]: tasks,
+      }));
+    }
+    setSelectedListId(listId);
+    setSelectedTaskId(null);
+    setTodayMainMode("tasks");
+    setOpenListMenuId(null);
+    setTasks(tasksByListId[listId] ?? []);
+    isSwitchingListRef.current = false;
+  };
+
+  const applyPendingAfterQuit = (pending: FocusQuitPending) => {
+    if (pending.action === "quitOnly") return;
+    if (pending.action === "view") {
+      setActiveView(pending.view);
+    } else if (pending.action === "list") {
+      applyListSelection(pending.listId);
+    } else if (pending.action === "completed") {
+      setCollapsedCompletedDates({});
+      setTodayMainMode("completed");
+    } else if (pending.action === "addList") {
+      setNewListName("");
+      setNewListColor("#eab308");
+      setIsAddListModalOpen(true);
+    } else if (pending.action === "home") {
+      runGoHomeTransition();
+    }
+  };
+
+  const confirmFocusQuitYes = (pending: FocusQuitPending) => {
+    logIntegrityOnFocusQuit();
+    cleanupFocusSessionAfterQuit();
+    applyPendingAfterQuit(pending);
+    setFocusSessionDialog(null);
+  };
+
   const handleStartFocusSession = () => {
+    if (isFocusSessionActive) {
+      setFocusSessionDialog({ kind: "reset" });
+      return;
+    }
     setIsFocusSessionActive(true);
-    setIsFocusSidebarLimited(false);
     setIsAddListModalOpen(false);
     setOpenListMenuId(null);
     setTodayMainMode("tasks");
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
+    setActiveView("today");
 
-    // Animate the second sidebar away, then remove it.
     setIsTodayPanelAnimatingOut(true);
     window.setTimeout(() => {
       setIsTodayPanelCollapsed(true);
@@ -665,14 +764,21 @@ export default function App() {
   };
 
   const handleQuitFocusSession = () => {
-    setIsFocusSessionActive(false);
-    setIsFocusSidebarLimited(false);
-    setIsTodayPanelCollapsed(false);
-    setIsTodayPanelAnimatingOut(false);
-    setTodayMainMode("tasks");
+    setFocusSessionDialog({ kind: "quit", pending: { action: "quitOnly" } });
+  };
+
+  const handleResetSessionConfirm = () => {
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
-    setIsAddListModalOpen(false);
-    setOpenListMenuId(null);
+    setSeconds(0);
+    setRunning(false);
+    setIntegrityPenalty(0);
+    setTimerAccumulator(0);
+    setTimerSessionStart(null);
+    setShowReflection(false);
+    setReflectionPrompt(null);
+    setReflectionText("");
+    setWarning(null);
+    setFocusSessionDialog(null);
   };
 
   const handleToggleTodaySidebar = () => {
@@ -691,24 +797,14 @@ export default function App() {
   };
 
   const handleSelectList = (listId: string) => {
-    isSwitchingListRef.current = true;
-
-    // Persist current tasks for the previously selected list.
-    if (selectedListId) {
-      setTasksByListId((prev) => ({
-        ...prev,
-        [selectedListId]: tasks,
-      }));
+    if (isFocusSessionActive) {
+      setFocusSessionDialog({
+        kind: "quit",
+        pending: { action: "list", listId },
+      });
+      return;
     }
-
-    setSelectedListId(listId);
-    setSelectedTaskId(null);
-    setTodayMainMode("tasks");
-    setOpenListMenuId(null);
-
-    setTasks(tasksByListId[listId] ?? []);
-
-    isSwitchingListRef.current = false;
+    applyListSelection(listId);
   };
 
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
@@ -1201,7 +1297,7 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full ${isSimulation ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-black text-zinc-200 antialiased"} selection:bg-blue-500/30 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full ${isSimulation || isFocusSessionActive ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-black text-zinc-200 antialiased"} selection:bg-blue-500/30 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {/* VIGNETTE & AURA (landing / timer only — keep app shell pure black) */}
         {isSimulation && (
@@ -1483,8 +1579,8 @@ export default function App() {
           </nav>
         )}
 
-        {/* APP SHELL LAYOUT (only when app view is active and not in focus session) */}
-        {!isSimulation && !isFocusSessionActive && (
+        {/* APP SHELL LAYOUT (dashboard — includes focus session) */}
+        {!isSimulation && (
           <>
           <div className="h-screen min-h-0 flex w-full bg-black text-zinc-200 overflow-hidden">
             {/* Left sidebar (main) — flush to viewport edge */}
@@ -1688,37 +1784,17 @@ export default function App() {
                   }`}
                 >
                 {/* Top: Start focus session */}
-                <div
-                  className={
-                    isFocusSessionActive && isFocusSidebarLimited
-                      ? "flex-1 flex items-center"
-                      : "space-y-6"
-                  }
-                >
-                  {isFocusSessionActive && isFocusSidebarLimited ? (
-                    <button
-                      type="button"
-                      onClick={handleQuitFocusSession}
-                      className="w-full rounded-2xl bg-red-500/15 border border-red-400/30 text-red-200 text-xs font-semibold tracking-[0.2em] uppercase py-3 shadow-[0_12px_30px_rgba(239,68,68,0.25)] hover:bg-red-500/20 hover:border-red-400/40 transition-all duration-150"
-                    >
-                      Quit Session?
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleStartFocusSession}
-                      className="w-full rounded-md bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-semibold tracking-wide py-2.5 px-3 transition-colors duration-150"
-                    >
-                      Start Focus Session
-                    </button>
-                  )}
+                <div className="space-y-6">
+                  <button
+                    type="button"
+                    onClick={handleStartFocusSession}
+                    className="w-full rounded-md bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-[11px] font-semibold tracking-wide py-2.5 px-3 transition-colors duration-150"
+                  >
+                    Start Focus Session
+                  </button>
 
                   {/* Lists section */}
-                  <div
-                    className={`pt-4 border-t border-white/5 space-y-3 ${
-                      isFocusSessionActive && isFocusSidebarLimited ? "hidden" : ""
-                    }`}
-                  >
+                  <div className="pt-4 border-t border-white/5 space-y-3">
                     <div className="flex items-center justify-between group">
                       <p className="text-[11px] font-medium text-zinc-500">
                         Lists
@@ -1726,6 +1802,13 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => {
+                          if (isFocusSessionActive) {
+                            setFocusSessionDialog({
+                              kind: "quit",
+                              pending: { action: "addList" },
+                            });
+                            return;
+                          }
                           setNewListName("");
                           setNewListColor("#eab308");
                           setIsAddListModalOpen(true);
@@ -1829,16 +1912,17 @@ export default function App() {
                 </div>
 
                   {/* Bottom: Completed */}
-                  <div
-                    className={`border-t border-white/5 pt-3 ${
-                      isFocusSessionActive && isFocusSidebarLimited
-                        ? "hidden"
-                        : ""
-                    }`}
-                  >
+                  <div className="border-t border-white/5 pt-3">
                   <button
                     type="button"
                     onClick={() => {
+                      if (isFocusSessionActive) {
+                        setFocusSessionDialog({
+                          kind: "quit",
+                          pending: { action: "completed" },
+                        });
+                        return;
+                      }
                       setCollapsedCompletedDates({});
                       setTodayMainMode("completed");
                     }}
@@ -1863,7 +1947,35 @@ export default function App() {
               </aside>
             )}
 
-            {/* Content panel overlay */}
+            {/* Expand lists sidebar (focus session, TickTick-style) */}
+            {isFocusSessionActive &&
+              activeView === "today" &&
+              isTodayPanelCollapsed &&
+              !isTodayPanelAnimatingOut && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsTodayPanelCollapsed(false);
+                    setIsTodayPanelAnimatingOut(false);
+                  }}
+                  className="h-screen w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#141414] border-r border-[#2a2a2a] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
+                  aria-label="Expand lists sidebar"
+                  title="Show lists"
+                >
+                  <svg
+                    className="w-4 h-4"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    aria-hidden
+                  >
+                    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              )}
+
+            {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
             <section
               className={`flex-1 min-h-0 h-screen ${
@@ -1886,11 +1998,7 @@ export default function App() {
                       : "mb-6"
                   }`}
                 >
-                  {isFocusSessionActive ? (
-                    <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                      Hello {name}
-                    </h1>
-                  ) : activeView === "today" ? (
+                  {activeView === "today" ? (
                     <>
                       <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
                         {todayMainMode === "completed"
@@ -1927,62 +2035,7 @@ export default function App() {
                     </>
                   )}
                 </div>
-                {isFocusSessionActive ? (
-                  <div className="min-h-[60vh] border-t border-zinc-800 bg-black pointer-events-auto">
-                    <div className="p-5 md:p-6">
-                      <div className="flex items-start justify-between gap-8">
-                        <div>
-                          <p className="text-[11px] font-medium text-zinc-500">
-                            Current Timer
-                          </p>
-                          <div className="mt-2 text-3xl md:text-4xl font-semibold text-zinc-100 tabular-nums tracking-tight">
-                            {formatFocusSeconds(focusSeconds)}
-                          </div>
-                          <p className="mt-3 text-[13px] text-zinc-500">
-                            Hello {name}...
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <p className="text-[11px] font-medium text-zinc-500">
-                            Percent Improvement
-                          </p>
-                          <div className="mt-3 flex items-baseline justify-end gap-3">
-                            <span
-                              className={`text-3xl font-semibold ${
-                                parseInt(improvementDelta) >= 0
-                                  ? "text-emerald-400"
-                                  : "text-red-400"
-                              }`}
-                            >
-                              {improvementDelta}%
-                            </span>
-                            <span className="text-xs text-gray-500 font-semibold tracking-[0.18em] uppercase">
-                              {parseInt(improvementDelta) >= 0 ? "UP" : "DOWN"}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="mt-10 pt-6 border-t border-white/5">
-                        <p className="text-[10px] tracking-[0.22em] uppercase text-gray-400 font-semibold">
-                          Next Objectives
-                        </p>
-                        <div className="mt-4 space-y-3">
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            1) Choose your top task and begin.
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            2) Stay in the block until the timer ends.
-                          </div>
-                          <div className="rounded-xl bg-white/5 border border-white/10 px-4 py-3 text-sm text-gray-200">
-                            3) When done, log completion to build integrity.
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : activeView === "today" && todayMainMode === "completed" ? (
+                {activeView === "today" && todayMainMode === "completed" ? (
                   <div className="min-h-[60vh] border-t border-zinc-800 bg-black pointer-events-auto">
                     <div className="p-4 md:p-5">
                       {completedGroups.length === 0 ? (
@@ -2459,6 +2512,538 @@ export default function App() {
               </div>
             </section>
             )}
+
+            {isFocusSessionActive && (
+              <div className="flex-1 min-h-0 h-screen overflow-y-auto overflow-x-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900">
+                <div
+                  className="pointer-events-none absolute inset-0 z-0"
+                  style={{
+                    background:
+                      "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
+                  }}
+                />
+                <div
+                  className="relative z-10 flex flex-col items-center gap-10 w-full"
+                  style={{
+                    paddingTop: "5rem",
+                    transform: "none",
+                  }}
+                >
+                  {/* inner focus content inserted below — duplicate removed from page bottom */}
+                  {warning && (
+              <div className="fixed top-24 bg-blue-600 text-white px-8 py-2 rounded-full z-[100] animate-pulse text-[10px] font-bold tracking-widest uppercase shadow-xl">
+                {warning}
+              </div>
+            )}
+            {floatingTime && (
+              <div
+                key={floatingTime.id}
+                className="fixed top-1/2 text-6xl font-black text-blue-400 animate-float-fade z-[300] drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+              >
+                {floatingTime.text}
+              </div>
+            )}
+
+            <div
+              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || showReflection ? "blur-lg opacity-0" : "opacity-100"}`}
+            >
+              {!isSimulation && (
+                <div className="flex justify-center mb-4">
+                  <button
+                    type="button"
+                    onClick={handleGoHome}
+                    className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
+                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                      Home
+                    </span>
+                  </button>
+                </div>
+              )}
+              <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
+                Hello <span className="text-blue-600">{name}</span>.
+              </h1>
+              <p className="text-lg text-gray-500 font-light italic">
+                {randomGreeting}
+              </p>
+              <div className="text-[10px] tracking-[0.3em] uppercase text-gray-500">
+                🔥 {streak} day streak
+              </div>
+
+              {!isSimulation && (
+                <div className="pt-6 flex justify-center">
+                  <div className="bg-white border border-gray-200 rounded-[32px] p-8 flex gap-12 shadow-lg relative">
+                    <div className="text-left">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
+                        YESTERDAY
+                      </div>
+                      <div className="text-3xl font-mono font-bold tracking-tighter text-gray-900">
+                        {yesterdayTotalFocusMinutes}{" "}
+                        <span className="text-[10px] text-gray-500 uppercase">
+                          MIN
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-left">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
+                        TODAY
+                      </div>
+                      <div className="text-3xl font-mono font-bold tracking-tighter text-blue-600">
+                        {todayTotalFocusMinutes}{" "}
+                        <span className="text-[10px] text-blue-600/80 uppercase">
+                          MIN
+                        </span>
+                      </div>
+                    </div>
+                    <div
+                      className={`flex items-end pb-1 text-[10px] font-black uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                    >
+                      <span className="mr-1">
+                        {parseInt(improvementDelta) >= 0 ? "▲" : "▼"}
+                      </span>
+                      {Math.abs(parseInt(improvementDelta))}% IMPROVEMENT
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* TIMER CARD */}
+            <div className="relative flex items-center justify-center z-[200]">
+              <svg className="absolute w-[360px] h-[360px] -rotate-90">
+                <circle
+                  cx="180"
+                  cy="180"
+                  r={RADIUS}
+                  stroke="rgba(0,0,0,0.08)"
+                  strokeWidth="12"
+                  fill="none"
+                />
+                <circle
+                  cx="180"
+                  cy="180"
+                  r={RADIUS}
+                  stroke={
+                    auraColor === "37, 99, 235"
+                      ? "#3b82f6"
+                      : auraColor === "168, 85, 247"
+                        ? "#a855f7"
+                        : "#ef4444"
+                  }
+                  strokeWidth="12"
+                  fill="none"
+                  strokeDasharray={CIRCUMFERENCE}
+                  strokeDashoffset={CIRCUMFERENCE - progressPercent}
+                  strokeLinecap="round"
+                  style={{
+                    transition: "stroke-dashoffset 1s linear, stroke 0.5s ease",
+                  }}
+                />
+              </svg>
+              <div
+                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden`}
+              >
+                {!showReflection ? (
+                  <>
+                    <div
+                      className={`text-7xl font-mono tracking-tighter text-gray-900`}
+                    >
+                      {String(Math.floor(Math.abs(seconds) / 60)).padStart(
+                        2,
+                        "0",
+                      )}
+                      :{String(Math.abs(seconds) % 60).padStart(2, "0")}
+                    </div>
+
+                    {running && (
+                      <div
+                        className={`mt-2 text-[10px] tracking-[0.2em] font-black uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-125 animate-glitch" : "text-blue-400/60 opacity-100"}`}
+                      >
+                        Focus Integrity: {integrityScore}%
+                      </div>
+                    )}
+
+                    {!running && (
+                      <div className="flex flex-col gap-3 mt-8">
+                        <button
+                          disabled={isSimulation}
+                          onClick={() => {
+                            setSeconds((s) => s + 900);
+                            setInitialSeconds((s) => s + 900);
+                          }}
+                          className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
+                        >
+                          +15 MIN
+                        </button>
+                        {seconds > 0 && (
+                          <button
+                            onClick={startTimer}
+                            className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
+                          >
+                            START
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center px-6 text-center w-full animate-reflection-in">
+                    {!reflectionPrompt ? (
+                      <div className="space-y-2 w-full">
+                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">
+                          Reflect
+                        </div>
+                        {prompts.map((p, i) => (
+                          <button
+                            key={i}
+                            onClick={() => setReflectionPrompt(p)}
+                            className="w-full text-left p-3 rounded-2xl bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-[10px] group"
+                          >
+                            <span className="text-gray-500 group-hover:text-gray-900 transition-colors font-medium line-clamp-1">
+                              {p}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-4 w-full flex flex-col items-center">
+                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
+                          {reflectionPrompt}
+                        </div>
+                        <textarea
+                          autoFocus
+                          value={reflectionText}
+                          onChange={(e) => setReflectionText(e.target.value)}
+                          placeholder="..."
+                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-2xl p-4 outline-none text-[10px] text-gray-900 focus:border-blue-400 transition-all resize-none"
+                        />
+                        <div className="flex gap-2 w-full">
+                          <button
+                            onClick={() => {
+                              setReflectionPrompt(null);
+                              setReflectionText("");
+                            }}
+                            className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl font-bold text-[8px] tracking-widest uppercase text-gray-700"
+                          >
+                            BACK
+                          </button>
+                          <button
+                            onClick={handleReflectionSubmit}
+                            disabled={!reflectionText.trim()}
+                            className="flex-1 py-2 bg-gray-900 text-white rounded-xl font-black text-[8px] uppercase tracking-widest"
+                          >
+                            SYNC
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="w-full max-w-4xl space-y-12 pb-32">
+              <div
+                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || showReflection ? "opacity-40" : "opacity-100"}`}
+              >
+                <div className="flex gap-3">
+                  <input
+                    disabled={isSimulation}
+                    value={taskInput}
+                    onChange={(e) => setTaskInput(e.target.value)}
+                    placeholder={
+                      isSimulation ? "Simulating input..." : "Next objective..."
+                    }
+                    className="flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all placeholder-gray-400"
+                  />
+                  <button
+                    disabled={isSimulation}
+                    onClick={() => {
+                      if (!taskInput) return;
+                      const id = Date.now();
+                      const newTask: Task = {
+                        id,
+                        text: taskInput,
+                        description: "",
+                        removing: false,
+                        createdAt: Date.now(),
+                        workMode: "inside",
+                        completed: false,
+                      };
+                      setTasks((prev) => [...prev, newTask]);
+                      setTaskInput("");
+                      setPendingWorkModeTaskId(id);
+                      setIsWorkModeModalOpen(true);
+                    }}
+                    className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
+                  >
+                    ADD
+                  </button>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  {tasks.map((task, index) => {
+                    const isActive = index === 0;
+                    const isLocked = index > 0;
+                    return (
+                      <div
+                        key={task.id}
+                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                          task.removing
+                            ? "opacity-0 translate-x-12"
+                            : "opacity-100"
+                        } ${
+                          running && isActive
+                            ? "bg-blue-50/80 border-blue-300"
+                            : ""
+                        } ${isLocked ? "opacity-60" : ""}`}
+                      >
+                        <div className="flex flex-col gap-1 flex-1">
+                          <div className="flex items-center gap-5">
+                            <div
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                running && isActive
+                                  ? "bg-blue-500"
+                                  : "bg-gray-400"
+                              }`}
+                            />
+                            <span className="text-base text-gray-800">
+                              {task.text}
+                            </span>
+                          </div>
+                          {isLocked && (
+                            <span className="pl-6 text-[11px] text-gray-400">
+                              Complete the current task first
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          disabled={isSimulation || !isActive}
+                          onClick={() => completeTask(task.id)}
+                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                          title={
+                            isLocked
+                              ? "Complete the current task first"
+                              : undefined
+                          }
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div
+                className={`transition-all duration-1000 ${running || showReflection ? "blur-3xl opacity-0 scale-90 pointer-events-none" : "blur-0 opacity-100 scale-100"}`}
+              >
+                <div className="mt-10 w-full max-w-4xl mx-auto space-y-8">
+                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-6">
+                    <h2 className="text-[10px] tracking-[0.4em] uppercase text-gray-500 font-black">
+                      PERFORMANCE DASHBOARD
+                    </h2>
+                    <div className="flex gap-4 items-center">
+                      {selectedStat === "Speed" && (
+                        <select
+                          value={selectedTaskGraph}
+                          onChange={(e) => setSelectedTaskGraph(e.target.value)}
+                          className="bg-white border border-gray-200 rounded-full px-5 py-2 text-[9px] uppercase tracking-widest font-black text-gray-700 outline-none hover:bg-gray-50 transition shadow-sm"
+                        >
+                          <option value="">Select Task</option>
+                          {Object.keys(taskHistory).map((task) => (
+                            <option
+                              key={task}
+                              value={task}
+                              className="bg-white text-gray-900"
+                            >
+                              {task}
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-full shadow-inner">
+                        {["Integrity", "Speed"].map((type) => (
+                          <button
+                            key={type}
+                            onClick={() => setSelectedStat(type)}
+                            className={`px-6 py-2 rounded-full text-[9px] uppercase tracking-[0.2em] font-black transition-all duration-500 ${selectedStat === type ? "bg-white text-gray-900 shadow-md scale-100" : "text-gray-500 hover:text-gray-700 scale-95"}`}
+                          >
+                            {type}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid gap-8">
+                    <div className="bg-white border border-gray-200 rounded-[48px] overflow-hidden relative group min-h-[350px] shadow-lg">
+                      <div className="absolute top-10 left-12 z-10">
+                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-black">
+                          SESSION ANALYTICS
+                        </div>
+                        <div className="text-2xl font-mono font-bold text-blue-600 tracking-tighter uppercase">
+                          {selectedStat === "Integrity"
+                            ? "FOCUS INTEGRITY"
+                            : selectedTaskGraph
+                              ? `TASK: ${selectedTaskGraph}`
+                              : "COMPLETION SECONDS"}
+                        </div>
+                      </div>
+                      <svg
+                        viewBox="0 0 100 100"
+                        preserveAspectRatio="none"
+                        className="absolute inset-0 w-full h-full"
+                      >
+                        <defs>
+                          <filter id="glow">
+                            <feGaussianBlur
+                              stdDeviation="2.5"
+                              result="coloredBlur"
+                            />
+                            <feMerge>
+                              <feMergeNode in="coloredBlur" />
+                              <feMergeNode in="SourceGraphic" />
+                            </feMerge>
+                          </filter>
+                          <linearGradient
+                            id="graphGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="0%"
+                            y2="100%"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#3b82f6"
+                              stopOpacity="0.6"
+                            />
+                            <stop
+                              offset="50%"
+                              stopColor="#3b82f6"
+                              stopOpacity="0.2"
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#3b82f6"
+                              stopOpacity="0"
+                            />
+                          </linearGradient>
+                          <linearGradient
+                            id="lineGradient"
+                            x1="0%"
+                            y1="0%"
+                            x2="100%"
+                            y2="0%"
+                          >
+                            <stop offset="0%" stopColor="#3b82f6" />
+                            <stop offset="50%" stopColor="#60a5fa" />
+                            <stop offset="100%" stopColor="#a855f7" />
+                          </linearGradient>
+                        </defs>
+                        <path
+                          d={generateLinearPath(currentData)}
+                          fill="url(#graphGradient)"
+                          stroke="url(#lineGradient)"
+                          strokeWidth="0.8"
+                          filter="url(#glow)"
+                          className="transition-all duration-1000 ease-out"
+                        />
+                      </svg>
+                      <div className="absolute bottom-10 right-12 text-[10px] font-mono text-gray-400 uppercase tracking-widest">
+                        STRUCTURAL INTEGRITY: 100%
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-8 mt-12">
+                  {/* DISCIPLINE LOG: Real Calendar Mapping */}
+                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
+                    <div className="flex justify-between items-center mb-10">
+                      <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
+                        DISCIPLINE LOG
+                      </h2>
+                      <span className="text-[10px] font-mono font-bold text-blue-600 uppercase">
+                        {getCurrentMonthName()}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-7 gap-3">
+                      {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
+                        <div
+                          key={i}
+                          className="text-[8px] font-black text-gray-400 text-center mb-2"
+                        >
+                          {day}
+                        </div>
+                      ))}
+
+                      {heatmapData.map((day, i) => {
+                        const todayDateNum = new Date().getDate();
+                        const isToday = i + 1 === todayDateNum;
+
+                        return (
+                          <div
+                            key={i}
+                            className={`group relative aspect-square rounded-xl border transition-all duration-500 ${getHeatmapClass(day.symbol || "⬜", isToday)} hover:scale-110 flex items-center justify-center overflow-hidden cursor-help`}
+                          >
+                            <span className="text-xs group-hover:scale-125 transition-transform z-10">
+                              {day.symbol || "⬜"}
+                            </span>
+                            {day.date && (
+                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-4 bg-white border border-gray-200 rounded-2xl text-[10px] text-gray-700 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[300] shadow-xl">
+                                <div className="font-bold border-b border-gray-200 pb-2 mb-2 uppercase">
+                                  {day.date}
+                                </div>
+                                <div className="flex justify-between text-gray-600 uppercase">
+                                  <span>FOCUS:</span>
+                                  <span>
+                                    {Math.floor(day.totalFocusSeconds / 60)} MIN
+                                  </span>
+                                </div>
+                                <div className="flex justify-between text-gray-600 uppercase">
+                                  <span>INTEGRITY:</span>
+                                  <span>{day.focusIntegrity.toFixed(0)}%</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200 text-blue-600 font-bold flex justify-between uppercase">
+                                  <span>GRADE:</span>
+                                  <span>{day.symbol}</span>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
+                    <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
+                      PERFORMANCE ANALYTICS
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4">
+                      {stats.map((stat, i) => (
+                        <div
+                          key={i}
+                          className="p-5 bg-gray-50 border border-gray-200 rounded-3xl hover:scale-[1.03] transition-all duration-500 group shadow-sm"
+                        >
+                          <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-2 group-hover:text-blue-600 transition-colors font-black">
+                            {stat.label}
+                          </div>
+                          <div className="text-lg font-mono font-bold text-gray-900">
+                            {stat.val}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+            )}
+
           </div>
 
           {isAddListModalOpen && (
@@ -2625,6 +3210,96 @@ export default function App() {
                       ))}
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isSimulation && focusSessionDialog?.kind === "quit" && (
+            <div
+              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]"
+              onClick={() => setFocusSessionDialog(null)}
+              role="presentation"
+            >
+              <div
+                className="w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/60 bg-[#2d2d2d] p-6"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="focus-quit-title"
+              >
+                <h3
+                  id="focus-quit-title"
+                  className="text-lg font-semibold text-zinc-100 mb-2"
+                >
+                  Quit Session?
+                </h3>
+                <p className="text-sm text-zinc-400 mb-6">
+                  You&apos;ll leave the focus session. Integrity up to now can
+                  still be saved; task time for incomplete work won&apos;t be
+                  logged.
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (focusSessionDialog?.kind === "quit") {
+                        confirmFocusQuitYes(focusSessionDialog.pending);
+                      }
+                    }}
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFocusSessionDialog(null)}
+                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+                  >
+                    No
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!isSimulation && focusSessionDialog?.kind === "reset" && (
+            <div
+              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]"
+              onClick={() => setFocusSessionDialog(null)}
+              role="presentation"
+            >
+              <div
+                className="w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/60 bg-[#2d2d2d] p-6"
+                onClick={(e) => e.stopPropagation()}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="focus-reset-title"
+              >
+                <h3
+                  id="focus-reset-title"
+                  className="text-lg font-semibold text-zinc-100 mb-2"
+                >
+                  Reset Session?
+                </h3>
+                <p className="text-sm text-zinc-400 mb-6">
+                  Restart the timer and integrity tracking from the beginning.
+                </p>
+                <div className="flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={handleResetSessionConfirm}
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setFocusSessionDialog(null)}
+                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+                  >
+                    No
+                  </button>
                 </div>
               </div>
             </div>
@@ -3239,527 +3914,6 @@ export default function App() {
               </div>
             </div>
           </section>
-        )}
-
-        {!isSimulation && isFocusSessionActive && (
-          <div
-            className="flex flex-col items-center gap-10 relative z-20 w-full"
-            style={{
-              paddingTop: "5rem",
-              transform: "none",
-            }}
-          >
-            {warning && (
-              <div className="fixed top-24 bg-blue-600 text-white px-8 py-2 rounded-full z-[100] animate-pulse text-[10px] font-bold tracking-widest uppercase shadow-xl">
-                {warning}
-              </div>
-            )}
-            {floatingTime && (
-              <div
-                key={floatingTime.id}
-                className="fixed top-1/2 text-6xl font-black text-blue-400 animate-float-fade z-[300] drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]"
-              >
-                {floatingTime.text}
-              </div>
-            )}
-
-            <div
-              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || showReflection ? "blur-lg opacity-0" : "opacity-100"}`}
-            >
-              {!isSimulation && (
-                <div className="flex justify-center mb-4">
-                  <button
-                    type="button"
-                    onClick={handleGoHome}
-                    className="group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
-                      Home
-                    </span>
-                  </button>
-                </div>
-              )}
-              <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-                Hello <span className="text-blue-600">{name}</span>.
-              </h1>
-              <p className="text-lg text-gray-500 font-light italic">
-                {randomGreeting}
-              </p>
-              <div className="text-[10px] tracking-[0.3em] uppercase text-gray-500">
-                🔥 {streak} day streak
-              </div>
-
-              {!isSimulation && (
-                <div className="pt-6 flex justify-center">
-                  <div className="bg-white border border-gray-200 rounded-[32px] p-8 flex gap-12 shadow-lg relative">
-                    <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
-                        YESTERDAY
-                      </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter text-gray-900">
-                        {yesterdayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-gray-500 uppercase">
-                          MIN
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
-                        TODAY
-                      </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter text-blue-600">
-                        {todayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-blue-600/80 uppercase">
-                          MIN
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={`flex items-end pb-1 text-[10px] font-black uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
-                    >
-                      <span className="mr-1">
-                        {parseInt(improvementDelta) >= 0 ? "▲" : "▼"}
-                      </span>
-                      {Math.abs(parseInt(improvementDelta))}% IMPROVEMENT
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* TIMER CARD */}
-            <div className="relative flex items-center justify-center z-[200]">
-              <svg className="absolute w-[360px] h-[360px] -rotate-90">
-                <circle
-                  cx="180"
-                  cy="180"
-                  r={RADIUS}
-                  stroke="rgba(0,0,0,0.08)"
-                  strokeWidth="12"
-                  fill="none"
-                />
-                <circle
-                  cx="180"
-                  cy="180"
-                  r={RADIUS}
-                  stroke={
-                    auraColor === "37, 99, 235"
-                      ? "#3b82f6"
-                      : auraColor === "168, 85, 247"
-                        ? "#a855f7"
-                        : "#ef4444"
-                  }
-                  strokeWidth="12"
-                  fill="none"
-                  strokeDasharray={CIRCUMFERENCE}
-                  strokeDashoffset={CIRCUMFERENCE - progressPercent}
-                  strokeLinecap="round"
-                  style={{
-                    transition: "stroke-dashoffset 1s linear, stroke 0.5s ease",
-                  }}
-                />
-              </svg>
-              <div
-                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden`}
-              >
-                {!showReflection ? (
-                  <>
-                    <div
-                      className={`text-7xl font-mono tracking-tighter text-gray-900`}
-                    >
-                      {String(Math.floor(Math.abs(seconds) / 60)).padStart(
-                        2,
-                        "0",
-                      )}
-                      :{String(Math.abs(seconds) % 60).padStart(2, "0")}
-                    </div>
-
-                    {running && (
-                      <div
-                        className={`mt-2 text-[10px] tracking-[0.2em] font-black uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-125 animate-glitch" : "text-blue-400/60 opacity-100"}`}
-                      >
-                        Focus Integrity: {integrityScore}%
-                      </div>
-                    )}
-
-                    {!running && (
-                      <div className="flex flex-col gap-3 mt-8">
-                        <button
-                          disabled={isSimulation}
-                          onClick={() => {
-                            setSeconds((s) => s + 900);
-                            setInitialSeconds((s) => s + 900);
-                          }}
-                          className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
-                        >
-                          +15 MIN
-                        </button>
-                        {seconds > 0 && (
-                          <button
-                            onClick={startTimer}
-                            className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
-                          >
-                            START
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center px-6 text-center w-full animate-reflection-in">
-                    {!reflectionPrompt ? (
-                      <div className="space-y-2 w-full">
-                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">
-                          Reflect
-                        </div>
-                        {prompts.map((p, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setReflectionPrompt(p)}
-                            className="w-full text-left p-3 rounded-2xl bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-[10px] group"
-                          >
-                            <span className="text-gray-500 group-hover:text-gray-900 transition-colors font-medium line-clamp-1">
-                              {p}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-4 w-full flex flex-col items-center">
-                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
-                          {reflectionPrompt}
-                        </div>
-                        <textarea
-                          autoFocus
-                          value={reflectionText}
-                          onChange={(e) => setReflectionText(e.target.value)}
-                          placeholder="..."
-                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-2xl p-4 outline-none text-[10px] text-gray-900 focus:border-blue-400 transition-all resize-none"
-                        />
-                        <div className="flex gap-2 w-full">
-                          <button
-                            onClick={() => {
-                              setReflectionPrompt(null);
-                              setReflectionText("");
-                            }}
-                            className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl font-bold text-[8px] tracking-widest uppercase text-gray-700"
-                          >
-                            BACK
-                          </button>
-                          <button
-                            onClick={handleReflectionSubmit}
-                            disabled={!reflectionText.trim()}
-                            className="flex-1 py-2 bg-gray-900 text-white rounded-xl font-black text-[8px] uppercase tracking-widest"
-                          >
-                            SYNC
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="w-full max-w-4xl space-y-12 pb-32">
-              <div
-                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || showReflection ? "opacity-40" : "opacity-100"}`}
-              >
-                <div className="flex gap-3">
-                  <input
-                    disabled={isSimulation}
-                    value={taskInput}
-                    onChange={(e) => setTaskInput(e.target.value)}
-                    placeholder={
-                      isSimulation ? "Simulating input..." : "Next objective..."
-                    }
-                    className="flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all placeholder-gray-400"
-                  />
-                  <button
-                    disabled={isSimulation}
-                    onClick={() => {
-                      if (!taskInput) return;
-                      const id = Date.now();
-                      const newTask: Task = {
-                        id,
-                        text: taskInput,
-                        description: "",
-                        removing: false,
-                        createdAt: Date.now(),
-                        workMode: "inside",
-                        completed: false,
-                      };
-                      setTasks((prev) => [...prev, newTask]);
-                      setTaskInput("");
-                      setPendingWorkModeTaskId(id);
-                      setIsWorkModeModalOpen(true);
-                    }}
-                    className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
-                  >
-                    ADD
-                  </button>
-                </div>
-
-                <div className="flex flex-col gap-3">
-                  {tasks.map((task, index) => {
-                    const isActive = index === 0;
-                    const isLocked = index > 0;
-                    return (
-                      <div
-                        key={task.id}
-                        className={`flex items-center justify-between p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
-                          task.removing
-                            ? "opacity-0 translate-x-12"
-                            : "opacity-100"
-                        } ${
-                          running && isActive
-                            ? "bg-blue-50/80 border-blue-300"
-                            : ""
-                        } ${isLocked ? "opacity-60" : ""}`}
-                      >
-                        <div className="flex flex-col gap-1 flex-1">
-                          <div className="flex items-center gap-5">
-                            <div
-                              className={`w-1.5 h-1.5 rounded-full ${
-                                running && isActive
-                                  ? "bg-blue-500"
-                                  : "bg-gray-400"
-                              }`}
-                            />
-                            <span className="text-base text-gray-800">
-                              {task.text}
-                            </span>
-                          </div>
-                          {isLocked && (
-                            <span className="pl-6 text-[11px] text-gray-400">
-                              Complete the current task first
-                            </span>
-                          )}
-                        </div>
-                        <button
-                          disabled={isSimulation || !isActive}
-                          onClick={() => completeTask(task.id)}
-                          className="w-7 h-7 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
-                          title={
-                            isLocked
-                              ? "Complete the current task first"
-                              : undefined
-                          }
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div
-                className={`transition-all duration-1000 ${running || showReflection ? "blur-3xl opacity-0 scale-90 pointer-events-none" : "blur-0 opacity-100 scale-100"}`}
-              >
-                <div className="mt-10 w-full max-w-4xl mx-auto space-y-8">
-                  <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-6">
-                    <h2 className="text-[10px] tracking-[0.4em] uppercase text-gray-500 font-black">
-                      PERFORMANCE DASHBOARD
-                    </h2>
-                    <div className="flex gap-4 items-center">
-                      {selectedStat === "Speed" && (
-                        <select
-                          value={selectedTaskGraph}
-                          onChange={(e) => setSelectedTaskGraph(e.target.value)}
-                          className="bg-white border border-gray-200 rounded-full px-5 py-2 text-[9px] uppercase tracking-widest font-black text-gray-700 outline-none hover:bg-gray-50 transition shadow-sm"
-                        >
-                          <option value="">Select Task</option>
-                          {Object.keys(taskHistory).map((task) => (
-                            <option
-                              key={task}
-                              value={task}
-                              className="bg-white text-gray-900"
-                            >
-                              {task}
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                      <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-full shadow-inner">
-                        {["Integrity", "Speed"].map((type) => (
-                          <button
-                            key={type}
-                            onClick={() => setSelectedStat(type)}
-                            className={`px-6 py-2 rounded-full text-[9px] uppercase tracking-[0.2em] font-black transition-all duration-500 ${selectedStat === type ? "bg-white text-gray-900 shadow-md scale-100" : "text-gray-500 hover:text-gray-700 scale-95"}`}
-                          >
-                            {type}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-8">
-                    <div className="bg-white border border-gray-200 rounded-[48px] overflow-hidden relative group min-h-[350px] shadow-lg">
-                      <div className="absolute top-10 left-12 z-10">
-                        <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-black">
-                          SESSION ANALYTICS
-                        </div>
-                        <div className="text-2xl font-mono font-bold text-blue-600 tracking-tighter uppercase">
-                          {selectedStat === "Integrity"
-                            ? "FOCUS INTEGRITY"
-                            : selectedTaskGraph
-                              ? `TASK: ${selectedTaskGraph}`
-                              : "COMPLETION SECONDS"}
-                        </div>
-                      </div>
-                      <svg
-                        viewBox="0 0 100 100"
-                        preserveAspectRatio="none"
-                        className="absolute inset-0 w-full h-full"
-                      >
-                        <defs>
-                          <filter id="glow">
-                            <feGaussianBlur
-                              stdDeviation="2.5"
-                              result="coloredBlur"
-                            />
-                            <feMerge>
-                              <feMergeNode in="coloredBlur" />
-                              <feMergeNode in="SourceGraphic" />
-                            </feMerge>
-                          </filter>
-                          <linearGradient
-                            id="graphGradient"
-                            x1="0%"
-                            y1="0%"
-                            x2="0%"
-                            y2="100%"
-                          >
-                            <stop
-                              offset="0%"
-                              stopColor="#3b82f6"
-                              stopOpacity="0.6"
-                            />
-                            <stop
-                              offset="50%"
-                              stopColor="#3b82f6"
-                              stopOpacity="0.2"
-                            />
-                            <stop
-                              offset="100%"
-                              stopColor="#3b82f6"
-                              stopOpacity="0"
-                            />
-                          </linearGradient>
-                          <linearGradient
-                            id="lineGradient"
-                            x1="0%"
-                            y1="0%"
-                            x2="100%"
-                            y2="0%"
-                          >
-                            <stop offset="0%" stopColor="#3b82f6" />
-                            <stop offset="50%" stopColor="#60a5fa" />
-                            <stop offset="100%" stopColor="#a855f7" />
-                          </linearGradient>
-                        </defs>
-                        <path
-                          d={generateLinearPath(currentData)}
-                          fill="url(#graphGradient)"
-                          stroke="url(#lineGradient)"
-                          strokeWidth="0.8"
-                          filter="url(#glow)"
-                          className="transition-all duration-1000 ease-out"
-                        />
-                      </svg>
-                      <div className="absolute bottom-10 right-12 text-[10px] font-mono text-gray-400 uppercase tracking-widest">
-                        STRUCTURAL INTEGRITY: 100%
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid md:grid-cols-2 gap-8 mt-12">
-                  {/* DISCIPLINE LOG: Real Calendar Mapping */}
-                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
-                    <div className="flex justify-between items-center mb-10">
-                      <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
-                        DISCIPLINE LOG
-                      </h2>
-                      <span className="text-[10px] font-mono font-bold text-blue-600 uppercase">
-                        {getCurrentMonthName()}
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-7 gap-3">
-                      {["M", "T", "W", "T", "F", "S", "S"].map((day, i) => (
-                        <div
-                          key={i}
-                          className="text-[8px] font-black text-gray-400 text-center mb-2"
-                        >
-                          {day}
-                        </div>
-                      ))}
-
-                      {heatmapData.map((day, i) => {
-                        const todayDateNum = new Date().getDate();
-                        const isToday = i + 1 === todayDateNum;
-
-                        return (
-                          <div
-                            key={i}
-                            className={`group relative aspect-square rounded-xl border transition-all duration-500 ${getHeatmapClass(day.symbol || "⬜", isToday)} hover:scale-110 flex items-center justify-center overflow-hidden cursor-help`}
-                          >
-                            <span className="text-xs group-hover:scale-125 transition-transform z-10">
-                              {day.symbol || "⬜"}
-                            </span>
-                            {day.date && (
-                              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-4 bg-white border border-gray-200 rounded-2xl text-[10px] text-gray-700 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[300] shadow-xl">
-                                <div className="font-bold border-b border-gray-200 pb-2 mb-2 uppercase">
-                                  {day.date}
-                                </div>
-                                <div className="flex justify-between text-gray-600 uppercase">
-                                  <span>FOCUS:</span>
-                                  <span>
-                                    {Math.floor(day.totalFocusSeconds / 60)} MIN
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-gray-600 uppercase">
-                                  <span>INTEGRITY:</span>
-                                  <span>{day.focusIntegrity.toFixed(0)}%</span>
-                                </div>
-                                <div className="mt-2 pt-2 border-t border-gray-200 text-blue-600 font-bold flex justify-between uppercase">
-                                  <span>GRADE:</span>
-                                  <span>{day.symbol}</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
-                    <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
-                      PERFORMANCE ANALYTICS
-                    </h2>
-                    <div className="grid grid-cols-2 gap-4">
-                      {stats.map((stat, i) => (
-                        <div
-                          key={i}
-                          className="p-5 bg-gray-50 border border-gray-200 rounded-3xl hover:scale-[1.03] transition-all duration-500 group shadow-sm"
-                        >
-                          <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-2 group-hover:text-blue-600 transition-colors font-black">
-                            {stat.label}
-                          </div>
-                          <div className="text-lg font-mono font-bold text-gray-900">
-                            {stat.val}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Work mode selection modal */}
