@@ -2292,6 +2292,27 @@ export default function App() {
     return { min, max, range };
   }, [currentData, selectedStat]);
 
+  const analyticsGraphXLabels = useMemo(() => {
+    const d = currentData;
+    if (d.length === 0) return [];
+    if (d.length === 1) return [d[0].date];
+    const n = d.length;
+    const picks = new Set<number>([0, n - 1]);
+    if (n > 2) picks.add(Math.floor((n - 1) / 2));
+    if (n > 4) {
+      picks.add(Math.floor((n - 1) * 0.25));
+      picks.add(Math.floor((n - 1) * 0.75));
+    }
+    return [...picks]
+      .sort((a, b) => a - b)
+      .map((i) => d[i].date);
+  }, [currentData]);
+
+  const analyticsYTickValues = useMemo(() => {
+    const { max } = graphScale;
+    return [max, Math.round(max / 2), 0];
+  }, [graphScale]);
+
   function generateLinearPath(data: HistoryPoint[]) {
     const { min, range } = graphScale;
     const points = data.map((d, i) => [
@@ -2307,6 +2328,22 @@ export default function App() {
     return dStr + `L 100 100 Z`;
   }
 
+  /** Thin line only — same scale as generateLinearPath (analytics chart line stroke). */
+  function generateAnalyticsLinePath(data: HistoryPoint[]) {
+    const { min, range } = graphScale;
+    const points = data.map((d, i) => [
+      (i / (data.length - 1 || 1)) * 100,
+      100 - ((d.value - min) / range) * 90,
+    ]);
+    if (data.length <= 1)
+      return `M 0 ${points[0][1]} L 100 ${points[0][1]}`;
+    let dStr = `M ${points[0][0]} ${points[0][1]}`;
+    for (let i = 1; i < points.length; i++) {
+      dStr += ` L ${points[i][0]} ${points[i][1]}`;
+    }
+    return dStr;
+  }
+
   /* ------------------- UI STYLING ------------------- */
   const titleOpacity = isSimulation ? Math.max(0.4 - scrollY / 600, 0) : 0.1;
   const progressPercent =
@@ -2320,17 +2357,18 @@ export default function App() {
         ? "168, 85, 247"
         : "239, 68, 68";
 
+  /** Dark analytics heatmap — intensity steps (GitHub-style); only used on Analytics. */
   const getHeatmapClass = (symbol: string, isCurrentDay: boolean) => {
+    const base =
+      "rounded-[3px] border transition-colors duration-150 hover:brightness-110";
     if (isCurrentDay && symbol === "⬜")
-      return "bg-blue-100 border-blue-400 shadow-md";
-    if (symbol === "⬜") return "bg-gray-100 border-gray-200 shadow-none";
-    if (symbol === "🔹") return "bg-blue-100 border-blue-300";
-    if (symbol === "🔷") return "bg-blue-200 border-blue-400 shadow-sm";
-    if (symbol === "🔵")
-      return "bg-blue-400 border-blue-500 text-white shadow-md";
-    if (symbol === "🔥")
-      return "bg-blue-500 border-blue-600 text-white shadow-lg";
-    return "bg-gray-100";
+      return `${base} bg-zinc-800/90 border-blue-500/45 ring-1 ring-blue-500/30`;
+    if (symbol === "⬜") return `${base} bg-zinc-800/50 border-zinc-700/60`;
+    if (symbol === "🔹") return `${base} bg-blue-950/70 border-blue-900/50`;
+    if (symbol === "🔷") return `${base} bg-blue-900/75 border-blue-800/45`;
+    if (symbol === "🔵") return `${base} bg-blue-700/55 border-blue-600/40`;
+    if (symbol === "🔥") return `${base} bg-blue-600/65 border-blue-500/40`;
+    return `${base} bg-zinc-800/50 border-zinc-700/60`;
   };
 
   const improvementDelta = useMemo(() => {
@@ -3917,154 +3955,176 @@ export default function App() {
                         onTaskPick={openTaskFromCalendar}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#0c0c0d] text-zinc-100 antialiased">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-10 pb-20">
-                            <div className="w-full space-y-8">
-                              <div className="flex flex-col md:flex-row justify-between items-center gap-4 px-2 sm:px-6">
-                                <h2 className="text-[10px] tracking-[0.4em] uppercase text-gray-500 font-black">
-                                  PERFORMANCE DASHBOARD
-                                </h2>
-                                <div className="flex gap-4 items-center">
-                                  {selectedStat === "Speed" && (
-                                    <select
-                                      value={selectedTaskGraph}
-                                      onChange={(e) =>
-                                        setSelectedTaskGraph(e.target.value)
-                                      }
-                                      className="bg-white border border-gray-200 rounded-full px-5 py-2 text-[9px] uppercase tracking-widest font-black text-gray-700 outline-none hover:bg-gray-50 transition shadow-sm"
-                                    >
-                                      <option value="">Select Task</option>
-                                      {Object.keys(taskHistory).map((task) => (
-                                        <option
-                                          key={task}
-                                          value={task}
-                                          className="bg-white text-gray-900"
-                                        >
-                                          {task}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  )}
-                                  <div className="flex bg-gray-100 border border-gray-200 p-1 rounded-full shadow-inner">
-                                    {["Integrity", "Speed"].map((type) => (
-                                      <button
-                                        key={type}
-                                        type="button"
-                                        onClick={() => setSelectedStat(type)}
-                                        className={`px-6 py-2 rounded-full text-[9px] uppercase tracking-[0.2em] font-black transition-all duration-500 ${selectedStat === type ? "bg-white text-gray-900 shadow-md scale-100" : "text-gray-500 hover:text-gray-700 scale-95"}`}
+                          <div className="w-full max-w-5xl mx-auto px-4 sm:px-5 py-4 pb-10 space-y-4">
+                            <header className="border-b border-zinc-800/90 pb-3">
+                              <h1 className="text-[17px] font-semibold text-zinc-100 tracking-tight">
+                                Analytics
+                              </h1>
+                              <p className="text-[13px] text-zinc-500 mt-0.5 leading-snug">
+                                Focus trends and discipline at a glance
+                              </p>
+                            </header>
+
+                            <section className="rounded-lg border border-zinc-800/90 bg-[#131316] shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
+                              <div className="flex flex-col gap-3 p-3 sm:p-4 border-b border-zinc-800/80">
+                                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                                  <div>
+                                    <h2 className="text-[15px] font-semibold text-zinc-100">
+                                      {selectedStat === "Integrity"
+                                        ? "Focus integrity"
+                                        : selectedTaskGraph
+                                          ? `Task speed · ${selectedTaskGraph}`
+                                          : "Task speed"}
+                                    </h2>
+                                    <p className="text-[12px] text-zinc-500 mt-0.5">
+                                      {selectedStat === "Integrity"
+                                        ? "Session consistency over time"
+                                        : "Completion time per task run"}
+                                    </p>
+                                  </div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    {selectedStat === "Speed" && (
+                                      <select
+                                        value={selectedTaskGraph}
+                                        onChange={(e) =>
+                                          setSelectedTaskGraph(e.target.value)
+                                        }
+                                        className="rounded border border-zinc-700 bg-zinc-900/80 px-2.5 py-1.5 text-[11px] text-zinc-200 outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
                                       >
-                                        {type}
-                                      </button>
+                                        <option value="">Select task</option>
+                                        {Object.keys(taskHistory).map(
+                                          (task) => (
+                                            <option key={task} value={task}>
+                                              {task}
+                                            </option>
+                                          ),
+                                        )}
+                                      </select>
+                                    )}
+                                    <div className="inline-flex rounded border border-zinc-700/90 bg-zinc-900/40 p-0.5">
+                                      {(["Integrity", "Speed"] as const).map(
+                                        (type) => (
+                                          <button
+                                            key={type}
+                                            type="button"
+                                            onClick={() =>
+                                              setSelectedStat(type)
+                                            }
+                                            className={`rounded px-3 py-1 text-[11px] font-medium transition-colors ${
+                                              selectedStat === type
+                                                ? "bg-zinc-800 text-zinc-100 border border-blue-500/35 shadow-sm"
+                                                : "text-zinc-500 hover:text-zinc-300 border border-transparent"
+                                            }`}
+                                          >
+                                            {type}
+                                          </button>
+                                        ),
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="p-3 sm:p-4 pt-2">
+                                <div className="flex gap-2">
+                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-500 w-9 text-right leading-none">
+                                    {analyticsYTickValues.map((v) => (
+                                      <span key={v}>
+                                        {selectedStat === "Integrity"
+                                          ? `${v}%`
+                                          : v}
+                                      </span>
                                     ))}
                                   </div>
-                                </div>
-                              </div>
-
-                              <div className="grid gap-8">
-                                <div className="bg-white border border-gray-200 rounded-[48px] overflow-hidden relative group min-h-[350px] shadow-lg">
-                                  <div className="absolute top-10 left-12 z-10">
-                                    <div className="text-[10px] uppercase tracking-widest text-gray-500 mb-1 font-black">
-                                      SESSION ANALYTICS
-                                    </div>
-                                    <div className="text-2xl font-mono font-bold text-blue-600 tracking-tighter uppercase">
-                                      {selectedStat === "Integrity"
-                                        ? "FOCUS INTEGRITY"
-                                        : selectedTaskGraph
-                                          ? `TASK: ${selectedTaskGraph}`
-                                          : "COMPLETION SECONDS"}
-                                    </div>
-                                  </div>
-                                  <svg
-                                    viewBox="0 0 100 100"
-                                    preserveAspectRatio="none"
-                                    className="absolute inset-0 w-full h-full"
-                                  >
-                                    <defs>
-                                      <filter id="glow-analytics">
-                                        <feGaussianBlur
-                                          stdDeviation="2.5"
-                                          result="coloredBlur"
+                                  <div className="relative min-h-[200px] w-full max-h-[220px] flex-1">
+                                    <svg
+                                      viewBox="0 0 100 100"
+                                      preserveAspectRatio="none"
+                                      className="h-full w-full block"
+                                      aria-hidden
+                                    >
+                                      {[10, 32.5, 55, 77.5, 100].map((y) => (
+                                        <line
+                                          key={y}
+                                          x1="0"
+                                          y1={y}
+                                          x2="100"
+                                          y2={y}
+                                          stroke="#27272a"
+                                          strokeWidth="0.2"
+                                          vectorEffect="non-scaling-stroke"
                                         />
-                                        <feMerge>
-                                          <feMergeNode in="coloredBlur" />
-                                          <feMergeNode in="SourceGraphic" />
-                                        </feMerge>
-                                      </filter>
-                                      <linearGradient
-                                        id="graphGradient-analytics"
-                                        x1="0%"
-                                        y1="0%"
-                                        x2="0%"
-                                        y2="100%"
-                                      >
-                                        <stop
-                                          offset="0%"
-                                          stopColor="#3b82f6"
-                                          stopOpacity="0.6"
-                                        />
-                                        <stop
-                                          offset="50%"
-                                          stopColor="#3b82f6"
-                                          stopOpacity="0.2"
-                                        />
-                                        <stop
-                                          offset="100%"
-                                          stopColor="#3b82f6"
-                                          stopOpacity="0"
-                                        />
-                                      </linearGradient>
-                                      <linearGradient
-                                        id="lineGradient-analytics"
-                                        x1="0%"
-                                        y1="0%"
-                                        x2="100%"
-                                        y2="0%"
-                                      >
-                                        <stop offset="0%" stopColor="#3b82f6" />
-                                        <stop
-                                          offset="50%"
-                                          stopColor="#60a5fa"
-                                        />
-                                        <stop
-                                          offset="100%"
-                                          stopColor="#a855f7"
-                                        />
-                                      </linearGradient>
-                                    </defs>
-                                    <path
-                                      d={generateLinearPath(currentData)}
-                                      fill="url(#graphGradient-analytics)"
-                                      stroke="url(#lineGradient-analytics)"
-                                      strokeWidth="0.8"
-                                      filter="url(#glow-analytics)"
-                                      className="transition-all duration-1000 ease-out"
-                                    />
-                                  </svg>
-                                  <div className="absolute bottom-10 right-12 text-[10px] font-mono text-gray-400 uppercase tracking-widest">
-                                    STRUCTURAL INTEGRITY: 100%
+                                      ))}
+                                      {currentData.length > 1 &&
+                                        currentData.map((_, i) => {
+                                          const x =
+                                            (i /
+                                              (currentData.length - 1 || 1)) *
+                                            100;
+                                          return (
+                                            <line
+                                              key={i}
+                                              x1={x}
+                                              y1="10"
+                                              x2={x}
+                                              y2="100"
+                                              stroke="#27272a"
+                                              strokeWidth="0.12"
+                                              opacity={0.5}
+                                              vectorEffect="non-scaling-stroke"
+                                            />
+                                          );
+                                        })}
+                                      <path
+                                        d={generateLinearPath(currentData)}
+                                        fill="rgba(59,130,246,0.07)"
+                                        stroke="none"
+                                        className="transition-all duration-700 ease-out"
+                                      />
+                                      <path
+                                        d={generateAnalyticsLinePath(
+                                          currentData,
+                                        )}
+                                        fill="none"
+                                        stroke="#3b82f6"
+                                        strokeWidth="0.45"
+                                        strokeLinejoin="round"
+                                        strokeLinecap="round"
+                                        vectorEffect="non-scaling-stroke"
+                                        className="transition-all duration-700 ease-out"
+                                      />
+                                    </svg>
                                   </div>
                                 </div>
+                                <div className="mt-1.5 flex justify-between gap-1 pl-11 pr-0 text-[10px] text-zinc-500 tabular-nums">
+                                  {analyticsGraphXLabels.map((lab) => (
+                                    <span key={lab} className="truncate">
+                                      {lab}
+                                    </span>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
+                            </section>
 
-                            <div className="grid md:grid-cols-2 gap-8">
-                              <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
-                                <div className="flex justify-between items-center mb-10">
-                                  <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
-                                    DISCIPLINE LOG
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                              <section className="rounded-lg border border-zinc-800/90 bg-[#131316] p-3 sm:p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
+                                <div className="flex items-baseline justify-between gap-2 mb-3 border-b border-zinc-800/80 pb-2">
+                                  <h2 className="text-[14px] font-semibold text-zinc-100">
+                                    Discipline
                                   </h2>
-                                  <span className="text-[10px] font-mono font-bold text-blue-600 uppercase">
+                                  <span className="text-[11px] font-medium text-zinc-500 tabular-nums">
                                     {getCurrentMonthName()}
                                   </span>
                                 </div>
 
-                                <div className="grid grid-cols-7 gap-3">
+                                <div className="grid grid-cols-7 gap-1.5">
                                   {["M", "T", "W", "T", "F", "S", "S"].map(
                                     (day, i) => (
                                       <div
                                         key={i}
-                                        className="text-[8px] font-black text-gray-400 text-center mb-2"
+                                        className="text-[9px] font-medium text-zinc-500 text-center pb-0.5"
                                       >
                                         {day}
                                       </div>
@@ -4078,33 +4138,33 @@ export default function App() {
                                     return (
                                       <div
                                         key={i}
-                                        className={`group relative aspect-square rounded-xl border transition-all duration-500 ${getHeatmapClass(day.symbol || "⬜", isToday)} hover:scale-110 flex items-center justify-center overflow-hidden cursor-help`}
+                                        className={`group relative aspect-square ${getHeatmapClass(day.symbol || "⬜", isToday)} flex items-center justify-center overflow-hidden cursor-help`}
                                       >
-                                        <span className="text-xs group-hover:scale-125 transition-transform z-10">
+                                        <span className="text-[10px] leading-none opacity-90 z-10">
                                           {day.symbol || "⬜"}
                                         </span>
                                         {day.date && (
-                                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-40 p-4 bg-white border border-gray-200 rounded-2xl text-[10px] text-gray-700 opacity-0 group-hover:opacity-100 transition-all pointer-events-none z-[300] shadow-xl">
-                                            <div className="font-bold border-b border-gray-200 pb-2 mb-2 uppercase">
+                                          <div className="absolute bottom-full left-1/2 z-[300] mb-2 w-40 -translate-x-1/2 rounded-md border border-zinc-700 bg-zinc-900 p-3 text-[10px] text-zinc-300 opacity-0 shadow-md transition-opacity pointer-events-none group-hover:opacity-100">
+                                            <div className="font-medium border-b border-zinc-700 pb-2 mb-2 text-zinc-100">
                                               {day.date}
                                             </div>
-                                            <div className="flex justify-between text-gray-600 uppercase">
-                                              <span>FOCUS:</span>
-                                              <span>
+                                            <div className="flex justify-between gap-2 text-zinc-400">
+                                              <span>Focus</span>
+                                              <span className="text-zinc-200 tabular-nums">
                                                 {Math.floor(
                                                   day.totalFocusSeconds / 60,
                                                 )}{" "}
-                                                MIN
+                                                min
                                               </span>
                                             </div>
-                                            <div className="flex justify-between text-gray-600 uppercase">
-                                              <span>INTEGRITY:</span>
-                                              <span>
+                                            <div className="flex justify-between gap-2 text-zinc-400 mt-1">
+                                              <span>Integrity</span>
+                                              <span className="text-zinc-200 tabular-nums">
                                                 {day.focusIntegrity.toFixed(0)}%
                                               </span>
                                             </div>
-                                            <div className="mt-2 pt-2 border-t border-gray-200 text-blue-600 font-bold flex justify-between uppercase">
-                                              <span>GRADE:</span>
+                                            <div className="mt-2 flex justify-between border-t border-zinc-700 pt-2 text-blue-400/90">
+                                              <span>Grade</span>
                                               <span>{day.symbol}</span>
                                             </div>
                                           </div>
@@ -4113,28 +4173,32 @@ export default function App() {
                                     );
                                   })}
                                 </div>
-                              </div>
+                              </section>
 
-                              <div className="bg-white border border-gray-200 rounded-[48px] p-10 shadow-lg">
-                                <h2 className="text-[10px] tracking-[0.3em] uppercase text-gray-500 font-black">
-                                  PERFORMANCE ANALYTICS
+                              <section className="rounded-lg border border-zinc-800/90 bg-[#131316] p-3 sm:p-4 shadow-[0_1px_0_0_rgba(255,255,255,0.03)_inset] transition-colors hover:bg-[#141418]">
+                                <h2 className="text-[14px] font-semibold text-zinc-100 mb-3 border-b border-zinc-800/80 pb-2">
+                                  Performance
                                 </h2>
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-2 gap-2">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="p-5 bg-gray-50 border border-gray-200 rounded-3xl hover:scale-[1.03] transition-all duration-500 group shadow-sm"
+                                      className="rounded border border-zinc-800 bg-zinc-900/35 px-2.5 py-2 transition-colors hover:bg-zinc-900/55 hover:border-zinc-700"
                                     >
-                                      <div className="text-[8px] uppercase tracking-widest text-gray-500 mb-2 group-hover:text-blue-600 transition-colors font-black">
-                                        {stat.label}
+                                      <div className="text-[10px] text-zinc-500 leading-tight mb-1">
+                                        {stat.label
+                                          .toLowerCase()
+                                          .replace(/\b\w/g, (m) =>
+                                            m.toUpperCase(),
+                                          )}
                                       </div>
-                                      <div className="text-lg font-mono font-bold text-gray-900">
+                                      <div className="text-[15px] font-semibold tabular-nums text-zinc-100 tracking-tight">
                                         {stat.val}
                                       </div>
                                     </div>
                                   ))}
                                 </div>
-                              </div>
+                              </section>
                             </div>
                           </div>
                         </div>
