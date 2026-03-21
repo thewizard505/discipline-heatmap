@@ -700,6 +700,7 @@ export default function App() {
   /* ------------------- PRIMARY EVENT HANDLERS ------------------- */
   const handleGetStarted = () => {
     isSimAborted.current = true;
+    setTaskInput("");
     setIsTransitioning(true);
     setTimeout(() => {
       setIsSimulation(false);
@@ -712,6 +713,7 @@ export default function App() {
       setSelectedListId("work");
       setSeconds(0);
       setRunning(false);
+      setTaskInput("");
       setIsTransitioning(false);
       window.scrollTo({ top: 0, behavior: "instant" });
     }, 600);
@@ -1005,11 +1007,17 @@ export default function App() {
       for (const t of demoTasks) {
         setTaskInput("");
         for (let i = 0; i <= t.length; i++) {
-          if (isSimAborted.current) return;
+          if (isSimAborted.current) {
+            setTaskInput("");
+            return;
+          }
           setTaskInput(t.slice(0, i));
           await wait(80);
         }
-        if (isSimAborted.current) return;
+        if (isSimAborted.current) {
+          setTaskInput("");
+          return;
+        }
         setTasks((prev) => [
           ...prev,
           {
@@ -1933,14 +1941,14 @@ export default function App() {
                             handleSelectList(list.id);
                           }
                         }}
-                          className={`group flex flex-col gap-1 rounded-lg mx-1 px-2 py-1.5 text-[13px] transition-colors duration-150 ${
+                          className={`group flex flex-col gap-0.5 rounded-md mx-1 px-1.5 py-1 text-[12px] leading-tight transition-colors duration-150 ${
                             selectedListId === list.id
                               ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
                               : "text-zinc-200 hover:bg-white/[0.06]"
                           }`}
                         >
-                          <div className="flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-2 min-w-0">
                               <span className="text-base shrink-0">{list.icon}</span>
                               <span className="truncate text-[13px] font-normal">
                                 {list.label}
@@ -2024,7 +2032,7 @@ export default function App() {
                       setCollapsedCompletedDates({});
                       setTodayMainMode("completed");
                     }}
-                    className={`w-full flex items-center gap-2 rounded-lg px-2 py-2 text-[13px] transition-colors duration-150 ${
+                    className={`w-full flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[12px] leading-tight transition-colors duration-150 ${
                       todayMainMode === "completed"
                         ? "bg-[#2e2e2e] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]"
                         : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06]"
@@ -2177,15 +2185,6 @@ export default function App() {
                               Completed
                             </h2>
                           </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <button
-                              type="button"
-                              onClick={handleToggleTodaySidebar}
-                              className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-lg border border-zinc-700 bg-[#252525] text-zinc-200 text-[11px] font-medium hover:bg-zinc-800 transition-colors"
-                            >
-                              Collapse
-                            </button>
-                          </div>
                         </div>
 
                         <div className="flex-1 min-h-0 overflow-y-auto">
@@ -2221,9 +2220,6 @@ export default function App() {
                                       </span>
                                       <span className="flex-1 text-[14px] font-semibold text-zinc-200">
                                         {group.label}
-                                      </span>
-                                      <span className="text-[11px] text-zinc-500">
-                                        Collapse
                                       </span>
                                     </button>
                                     {!isCollapsed && (
