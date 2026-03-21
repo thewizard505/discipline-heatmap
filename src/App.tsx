@@ -35,7 +35,220 @@ type Task = {
   createdAt: number;
   workMode: "inside" | "external";
   completed?: boolean;
+  /** YYYY-MM-DD — Today list sets to current day; Tests/Projects/Long-Term via picker */
+  dueDate?: string | null;
 };
+
+const SYS_LIST_OVERDUE = "sys-overdue";
+
+const OVERDUE_SOURCE_LIST_IDS: readonly string[] = [
+  "sys-today",
+  "sys-tests",
+  "sys-projects",
+  "sys-longterm",
+];
+
+const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
+  "sys-tests",
+  "sys-projects",
+  "sys-longterm",
+]);
+
+function toISODate(d: Date): string {
+  const y = d.getFullYear();
+  const m = `${d.getMonth() + 1}`.padStart(2, "0");
+  const day = `${d.getDate()}`.padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseISODate(iso: string): Date {
+  const [yy, mm, dd] = iso.split("-").map((x) => parseInt(x, 10));
+  return new Date(yy, mm - 1, dd);
+}
+
+function formatDueButtonLabel(iso: string): string {
+  const d = parseISODate(iso);
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+/** Overdue row: “Yesterday” when due was calendar yesterday, else short date */
+function formatOverdueRowDue(iso: string, now = new Date()): string {
+  const due = parseISODate(iso);
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const dueStart = new Date(
+    due.getFullYear(),
+    due.getMonth(),
+    due.getDate(),
+  );
+  if (dueStart.getTime() === yesterdayStart.getTime()) return "Yesterday";
+  return due.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function migrateOverdueTasks(
+  prev: Record<string, Task[]>,
+  today: string,
+): Record<string, Task[]> {
+  const next: Record<string, Task[]> = { ...prev };
+  const overdueIds = new Set((next[SYS_LIST_OVERDUE] ?? []).map((t) => t.id));
+  let overdue = [...(next[SYS_LIST_OVERDUE] ?? [])];
+  let changed = false;
+
+  for (const listId of OVERDUE_SOURCE_LIST_IDS) {
+    const cur = [...(next[listId] ?? [])];
+    const stay: Task[] = [];
+    for (const t of cur) {
+      if (!t.completed && t.dueDate && t.dueDate < today) {
+        if (!overdueIds.has(t.id)) {
+          overdue.push(t);
+          overdueIds.add(t.id);
+          changed = true;
+        }
+      } else {
+        stay.push(t);
+      }
+    }
+    if (stay.length !== cur.length) {
+      changed = true;
+      next[listId] = stay;
+    }
+  }
+
+  const prevOd = prev[SYS_LIST_OVERDUE] ?? [];
+  if (overdue.length !== prevOd.length) changed = true;
+  next[SYS_LIST_OVERDUE] = overdue;
+
+  if (!changed) return prev;
+  return next;
+}
+
+type MiniDueDatePopoverProps = {
+  open: boolean;
+  anchor: DOMRect | null;
+  selectedIso: string | null;
+  onSelect: (iso: string) => void;
+  onClose: () => void;
+};
+
+function MiniDueDatePopover({
+  open,
+  anchor,
+  selectedIso,
+  onSelect,
+  onClose,
+}: MiniDueDatePopoverProps) {
+  const [cursor, setCursor] = useState(() => {
+    const d = selectedIso ? parseISODate(selectedIso) : new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+
+  useEffect(() => {
+    if (!open) return;
+    const d = selectedIso ? parseISODate(selectedIso) : new Date();
+    setCursor(new Date(d.getFullYear(), d.getMonth(), 1));
+  }, [open, selectedIso]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const el = document.getElementById("mini-due-date-popover");
+      if (el && !el.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open, onClose]);
+
+  if (!open || !anchor) return null;
+
+  const year = cursor.getFullYear();
+  const month = cursor.getMonth();
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDow; i++) cells.push(null);
+  for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+  const todayIso = toISODate(new Date());
+  const top = Math.min(anchor.bottom + 6, window.innerHeight - 300);
+  const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 276));
+
+  const monthLabel = cursor.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  const shiftMonth = (delta: number) => {
+    setCursor((c) => new Date(c.getFullYear(), c.getMonth() + delta, 1));
+  };
+
+  return (
+    <div
+      id="mini-due-date-popover"
+      className="fixed w-[268px] rounded-xl border border-white/[0.08] bg-[#1c1c1c] shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3 z-[500]"
+      style={{ top, left }}
+      role="dialog"
+      aria-label="Choose due date"
+    >
+      <div className="flex items-center justify-between gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => shiftMonth(-1)}
+          className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] text-sm"
+          aria-label="Previous month"
+        >
+          ‹
+        </button>
+        <span className="text-[13px] font-semibold text-zinc-200 tabular-nums">
+          {monthLabel}
+        </span>
+        <button
+          type="button"
+          onClick={() => shiftMonth(1)}
+          className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] text-sm"
+          aria-label="Next month"
+        >
+          ›
+        </button>
+      </div>
+      <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] font-medium text-zinc-500 uppercase tracking-wide mb-1">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
+          <div key={d}>{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => {
+          if (d == null) {
+            return <div key={`e-${i}`} className="h-8" />;
+          }
+          const iso = toISODate(new Date(year, month, d));
+          const isSelected = selectedIso === iso;
+          const isToday = iso === todayIso;
+          return (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => onSelect(iso)}
+              className={`h-8 rounded-lg text-[12px] font-medium transition-colors ${
+                isSelected
+                  ? "bg-white/[0.12] text-zinc-50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_0_0_1px_rgba(255,255,255,0.06)]"
+                  : isToday
+                    ? "text-blue-400 hover:bg-white/[0.06]"
+                    : "text-zinc-300 hover:bg-white/[0.06]"
+              }`}
+            >
+              {d}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
@@ -392,6 +605,15 @@ export default function App() {
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const selectedListIdRef = useRef<string | null>(null);
+  selectedListIdRef.current = selectedListId;
+  const skipNextTasksPersistRef = useRef(false);
+  const [calendarDay, setCalendarDay] = useState(() => toISODate(new Date()));
+  const [dueDatePopover, setDueDatePopover] = useState<null | {
+    taskId: number;
+    anchor: DOMRect;
+  }>(null);
+
   const [todayMainMode, setTodayMainMode] = useState<"tasks" | "completed">(
     "tasks",
   );
@@ -406,6 +628,15 @@ export default function App() {
   const selectedList = useMemo(
     () => allListsForSelection.find((l) => l.id === selectedListId) ?? null,
     [allListsForSelection, selectedListId],
+  );
+
+  const isUserListSelected = useMemo(
+    () =>
+      !!(
+        selectedListId &&
+        todayLists.some((l) => l.id === selectedListId)
+      ),
+    [selectedListId, todayLists],
   );
 
   const selectedTask = useMemo(() => {
@@ -569,11 +800,58 @@ export default function App() {
     if (!selectedListId) return;
     if (isSimulation) return;
     if (isSwitchingListRef.current) return;
+    if (skipNextTasksPersistRef.current) return;
     setTasksByListId((prev) => ({
       ...prev,
       [selectedListId]: tasks,
     }));
   }, [tasks, selectedListId, isSimulation]);
+
+  useEffect(() => {
+    if (isSimulation) return;
+    const id = window.setInterval(() => {
+      const n = toISODate(new Date());
+      setCalendarDay((c) => (c !== n ? n : c));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, [isSimulation]);
+
+  useEffect(() => {
+    const onVis = () => {
+      if (document.visibilityState === "visible") {
+        setCalendarDay(toISODate(new Date()));
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
+
+  useEffect(() => {
+    if (isSimulation) return;
+    const today = toISODate(new Date());
+    setTasksByListId((prev) => {
+      const next = migrateOverdueTasks(prev, today);
+      if (next === prev) return prev;
+      skipNextTasksPersistRef.current = true;
+      const sel = selectedListIdRef.current;
+      const needsSlice =
+        !!sel &&
+        (OVERDUE_SOURCE_LIST_IDS.includes(sel) || sel === SYS_LIST_OVERDUE);
+      if (needsSlice && sel) {
+        requestAnimationFrame(() => {
+          setTasks(next[sel] ?? []);
+          skipNextTasksPersistRef.current = false;
+        });
+      } else {
+        skipNextTasksPersistRef.current = false;
+      }
+      return next;
+    });
+  }, [calendarDay, isSimulation]);
+
+  useEffect(() => {
+    setDueDatePopover(null);
+  }, [selectedTaskId]);
 
   useEffect(() => {
     if (selectedTaskId == null) return;
@@ -1042,9 +1320,16 @@ export default function App() {
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
   const addTaskFromListInput = () => {
     if (!selectedListId) return;
+    if (selectedListId === SYS_LIST_OVERDUE) return;
     const trimmed = taskInput.trim();
     if (!trimmed) return;
     const id = Date.now();
+    let dueDate: string | null = null;
+    if (selectedListId === "sys-today") {
+      dueDate = toISODate(new Date());
+    } else if (DUE_DATE_PICKER_LIST_IDS.has(selectedListId)) {
+      dueDate = null;
+    }
     const newTask: Task = {
       id,
       text: trimmed,
@@ -1053,6 +1338,7 @@ export default function App() {
       createdAt: Date.now(),
       workMode: "inside",
       completed: false,
+      dueDate,
     };
     setTasks((prev) => [...prev, newTask]);
     setSelectedTaskId(id);
@@ -2047,13 +2333,23 @@ export default function App() {
                               handleSelectList(list.id);
                             }
                           }}
-                          className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 min-h-[44px] text-[13px] font-medium leading-snug transition-colors duration-150 cursor-pointer ${
+                          className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 min-h-[44px] text-[13px] font-medium leading-snug transition-colors duration-150 cursor-pointer overflow-visible ${
                             selectedListId === list.id
                               ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
                               : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
                           }`}
                         >
-                          <TaskSystemNavIcon listId={list.id} />
+                          {list.id === SYS_LIST_OVERDUE ? (
+                            <span className="relative flex items-center justify-center w-[22px] h-[22px] shrink-0">
+                              <span className="overdue-nav-aura-soft" aria-hidden />
+                              <span className="overdue-nav-aura" aria-hidden />
+                              <span className="relative z-[1] flex items-center justify-center">
+                                <TaskSystemNavIcon listId={list.id} />
+                              </span>
+                            </span>
+                          ) : (
+                            <TaskSystemNavIcon listId={list.id} />
+                          )}
                           <span className="truncate">{list.label}</span>
                         </div>
                       ))}
@@ -2576,31 +2872,41 @@ export default function App() {
                           </div>
                         </div>
 
-                        {/* Task input bar — slim, Enter to add only */}
-                        <div
-                          className="border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0"
-                          style={{ backgroundColor: TT_INPUT_ROW }}
-                        >
-                          <span className="text-zinc-500 text-base leading-none pl-0.5">+</span>
-                          <input
-                            value={taskInput}
-                            onChange={(e) => setTaskInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter") {
-                                e.preventDefault();
-                                addTaskFromListInput();
+                        {/* Task input bar — hidden for Overdue (system-fed only) */}
+                        {selectedListId !== SYS_LIST_OVERDUE && (
+                          <div
+                            className="border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0"
+                            style={{ backgroundColor: TT_INPUT_ROW }}
+                          >
+                            <span className="text-zinc-500 text-base leading-none pl-0.5">
+                              +
+                            </span>
+                            <input
+                              value={taskInput}
+                              onChange={(e) => setTaskInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  addTaskFromListInput();
+                                }
+                              }}
+                              placeholder={
+                                selectedListId
+                                  ? "Add task"
+                                  : "Select a list to add tasks"
                               }
-                            }}
-                            placeholder={
-                              selectedListId ? "Add task" : "Select a list to add tasks"
-                            }
-                            disabled={!selectedListId}
-                            className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed"
-                          />
-                        </div>
+                              disabled={!selectedListId}
+                              className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed"
+                            />
+                          </div>
+                        )}
 
                         {/* Tasks list */}
-                        <div className="mt-2 flex-1 min-h-0 overflow-y-auto">
+                        <div
+                          className={`flex-1 min-h-0 overflow-y-auto ${
+                            selectedListId === SYS_LIST_OVERDUE ? "mt-1" : "mt-2"
+                          }`}
+                        >
                           {!selectedListId ? (
                             <div className="h-full min-h-[240px] flex flex-col items-center justify-center px-6 text-center">
                               <p className="text-[15px] font-semibold text-zinc-200 mb-1">
@@ -2611,6 +2917,79 @@ export default function App() {
                               </p>
                             </div>
                           ) : tasks.filter((t) => !t.removing).length === 0 ? (
+                            selectedListId === SYS_LIST_OVERDUE ? (
+                              <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-6 py-12">
+                                <div className="w-[200px] h-[150px] mb-8">
+                                  <svg
+                                    viewBox="0 0 200 150"
+                                    className="w-full h-full"
+                                    fill="none"
+                                    aria-hidden
+                                  >
+                                    <rect
+                                      x="36"
+                                      y="78"
+                                      width="52"
+                                      height="10"
+                                      rx="2"
+                                      fill="#3f3f46"
+                                    />
+                                    <rect
+                                      x="44"
+                                      y="64"
+                                      width="44"
+                                      height="10"
+                                      rx="2"
+                                      fill="#52525b"
+                                    />
+                                    <ellipse
+                                      cx="108"
+                                      cy="92"
+                                      rx="32"
+                                      ry="20"
+                                      fill="#52525b"
+                                      opacity="0.55"
+                                    />
+                                    <ellipse
+                                      cx="102"
+                                      cy="86"
+                                      rx="14"
+                                      ry="12"
+                                      fill="#71717a"
+                                      opacity="0.45"
+                                    />
+                                    <rect
+                                      x="128"
+                                      y="58"
+                                      width="34"
+                                      height="42"
+                                      rx="3"
+                                      stroke="#52525b"
+                                      strokeWidth="1.5"
+                                    />
+                                    <path
+                                      d="M145 58V42"
+                                      stroke="#4ade80"
+                                      strokeOpacity="0.32"
+                                      strokeWidth="1.5"
+                                      strokeLinecap="round"
+                                    />
+                                    <path
+                                      d="M140 44l5-6 5 6"
+                                      stroke="#4ade80"
+                                      strokeOpacity="0.32"
+                                      strokeWidth="1.2"
+                                      fill="none"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                </div>
+                                <p className="text-[15px] font-medium text-zinc-300 text-center max-w-[280px] leading-relaxed">
+                                  Looks like nothing is missing. Nice work!
+                                </p>
+                              </div>
+                            ) : (
                             <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10">
                               <div className="relative w-[220px] h-[150px] mb-6">
                                 <div
@@ -2749,12 +3128,13 @@ export default function App() {
                                 </svg>
                               </div>
                               <p className="text-lg font-semibold text-zinc-100 tracking-tight">
-                                No tasks
+                                {isUserListSelected ? "No Items" : "No tasks"}
                               </p>
                               <p className="mt-1.5 text-sm text-zinc-400">
                                 Click the input box to add
                               </p>
                             </div>
+                            )
                           ) : (
                             <div className="space-y-0.5 pt-1">
                               {tasks
@@ -2829,6 +3209,18 @@ export default function App() {
                                       >
                                         {t.text}
                                       </span>
+                                      {t.dueDate &&
+                                        selectedListId &&
+                                        (DUE_DATE_PICKER_LIST_IDS.has(
+                                          selectedListId,
+                                        ) ||
+                                          selectedListId === SYS_LIST_OVERDUE) && (
+                                          <span className="shrink-0 text-[11px] text-zinc-500 tabular-nums max-w-[76px] truncate">
+                                            {selectedListId === SYS_LIST_OVERDUE
+                                              ? formatOverdueRowDue(t.dueDate)
+                                              : formatDueButtonLabel(t.dueDate)}
+                                          </span>
+                                        )}
                                       <button
                                         type="button"
                                         onClick={(e) => {
@@ -2905,17 +3297,77 @@ export default function App() {
                               </button>
                             </div>
 
-                            <div className="px-4 pt-1 flex items-start justify-between gap-3 shrink-0">
-                              <h3 className="text-lg font-semibold text-white leading-snug flex-1">
+                            <div className="px-4 pt-1 flex items-start justify-between gap-2 shrink-0">
+                              <h3 className="text-lg font-semibold text-white leading-snug flex-1 min-w-0">
                                 {selectedTask.text}
                               </h3>
-                              <button
-                                type="button"
-                                className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0"
-                                aria-label="Task menu"
-                              >
-                                ⋮
-                              </button>
+                              <div className="flex items-center gap-1 shrink-0">
+                                {selectedListId &&
+                                  DUE_DATE_PICKER_LIST_IDS.has(
+                                    selectedListId,
+                                  ) && (
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDueDatePopover({
+                                          taskId: selectedTask.id,
+                                          anchor:
+                                            e.currentTarget.getBoundingClientRect(),
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] bg-[#252525] px-2.5 py-1.5 text-[12px] font-medium text-zinc-300 hover:bg-[#2c2c2c] transition-colors"
+                                    >
+                                      {selectedTask.dueDate ? (
+                                        <>
+                                          <span className="tabular-nums">
+                                            {formatDueButtonLabel(
+                                              selectedTask.dueDate,
+                                            )}
+                                          </span>
+                                          <svg
+                                            className="w-3.5 h-3.5 text-zinc-500"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="2"
+                                            aria-hidden
+                                          >
+                                            <path d="M6 9l6 6 6-6" />
+                                          </svg>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <span>Due date</span>
+                                          <svg
+                                            className="w-3.5 h-3.5 text-zinc-500"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            strokeWidth="1.75"
+                                            aria-hidden
+                                          >
+                                            <rect
+                                              x="3"
+                                              y="5"
+                                              width="18"
+                                              height="16"
+                                              rx="2"
+                                            />
+                                            <path d="M8 3v4M16 3v4M3 11h18" />
+                                          </svg>
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                <button
+                                  type="button"
+                                  className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0"
+                                  aria-label="Task menu"
+                                >
+                                  ⋮
+                                </button>
+                              </div>
                             </div>
 
                             <div className="flex-1 min-h-0 px-4 pt-3 pb-6 overflow-y-auto">
@@ -2943,6 +3395,27 @@ export default function App() {
                         )}
                       </div>
                     </div>
+                    <MiniDueDatePopover
+                      open={dueDatePopover !== null}
+                      anchor={dueDatePopover?.anchor ?? null}
+                      selectedIso={
+                        dueDatePopover
+                          ? tasks.find((x) => x.id === dueDatePopover.taskId)
+                              ?.dueDate ?? null
+                          : null
+                      }
+                      onSelect={(iso) => {
+                        const tid = dueDatePopover?.taskId;
+                        if (tid == null) return;
+                        setTasks((prev) =>
+                          prev.map((x) =>
+                            x.id === tid ? { ...x, dueDate: iso } : x,
+                          ),
+                        );
+                        setDueDatePopover(null);
+                      }}
+                      onClose={() => setDueDatePopover(null)}
+                    />
                   </div>
                 ) : (
                   <div className="min-h-[60vh] pointer-events-auto">

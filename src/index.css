@@ -70,3 +70,56 @@
   opacity: 0.85;
   animation: focus-nav-aura-drift 4.8s ease-in-out infinite;
 }
+
+/* Subtle red mist around Overdue nav icon (matches Focus aura style) */
+@keyframes overdue-nav-aura-breathe {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 0.62;
+    transform: scale(1.05);
+  }
+}
+
+.overdue-nav-aura {
+  position: absolute;
+  width: 2.35rem;
+  height: 2.35rem;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 50% 45%,
+    rgba(248, 113, 113, 0.42) 0%,
+    rgba(220, 38, 38, 0.18) 40%,
+    transparent 68%
+  );
+  filter: blur(6px);
+  animation: overdue-nav-aura-breathe 3.4s ease-in-out infinite;
+}
+
+.overdue-nav-aura-soft {
+  position: absolute;
+  width: 2.85rem;
+  height: 2.85rem;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 48% 52%,
+    rgba(239, 68, 68, 0.14) 0%,
+    transparent 55%
+  );
+  filter: blur(10px);
+  opacity: 0.9;
+  animation: focus-nav-aura-drift 4.8s ease-in-out infinite;
+}
