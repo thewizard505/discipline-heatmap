@@ -1,6 +1,13 @@
 import React from "react";
 import { Analytics } from "@vercel/analytics/react";
-import { useState, useEffect, useMemo, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 
 /**
  * TUNNEL VISION - DISCIPLINE OPERATING SYSTEM
@@ -95,6 +102,83 @@ function getFocusSessionDisplayLabel(listId: string, taskText: string): string {
     return `Work on ${s}`;
   }
   return s;
+}
+
+/** Due-date reminders (Tests / Projects / Long-Term). */
+type AppNotificationItem = {
+  id: string;
+  type: "test" | "project" | "longterm";
+  title: string;
+  dueDate: string;
+  message: string;
+  daysRemaining: number;
+  read: boolean;
+};
+
+const NOTIFICATION_READS_STORAGE_KEY = "tunnelvision_notification_reads_v1";
+const CAL_DAY_MS = 24 * 60 * 60 * 1000;
+
+function calendarDaysUntilDue(todayIso: string, dueIso: string): number {
+  const a = parseISODate(todayIso);
+  const b = parseISODate(dueIso);
+  a.setHours(0, 0, 0, 0);
+  b.setHours(0, 0, 0, 0);
+  return Math.round((b.getTime() - a.getTime()) / CAL_DAY_MS);
+}
+
+function loadNotificationReadIds(): Set<string> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = localStorage.getItem(NOTIFICATION_READS_STORAGE_KEY);
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw) as string[];
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function buildDueDateNotifications(
+  tasksByListId: Record<string, Task[]>,
+  todayIso: string,
+): Omit<AppNotificationItem, "read">[] {
+  const out: Omit<AppNotificationItem, "read">[] = [];
+  const configs: {
+    listId: string;
+    type: AppNotificationItem["type"];
+    maxDays: number;
+  }[] = [
+    { listId: SYS_LIST_TESTS, type: "test", maxDays: 3 },
+    { listId: SYS_LIST_PROJECTS, type: "project", maxDays: 3 },
+    { listId: SYS_LIST_LONGTERM, type: "longterm", maxDays: 7 },
+  ];
+  for (const { listId, type, maxDays } of configs) {
+    const tasks = tasksByListId[listId] ?? [];
+    for (const t of tasks) {
+      if (t.completed || t.removing || !t.dueDate) continue;
+      const days = calendarDaysUntilDue(todayIso, t.dueDate);
+      if (days < 1 || days > maxDays) continue;
+      const title = (t.text || "").trim() || "Untitled";
+      const dayWord = days === 1 ? "1 day" : `${days} days`;
+      const message =
+        type === "test"
+          ? `You have your ${title} coming up in ${dayWord}. Make sure to study today.`
+          : `You have your ${title} coming up in ${dayWord}. Make sure to put time aside today to work on it.`;
+      out.push({
+        id: `notif:${listId}:${t.id}:${todayIso}`,
+        type,
+        title,
+        dueDate: t.dueDate,
+        message,
+        daysRemaining: days,
+      });
+    }
+  }
+  out.sort(
+    (a, b) =>
+      a.dueDate.localeCompare(b.dueDate) || a.title.localeCompare(b.title),
+  );
+  return out;
 }
 
 function toISODate(d: Date): string {
@@ -1169,6 +1253,17 @@ export default function App() {
   /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
   const allowFocusEnterRef = useRef(true);
 
+  const [notificationReadIds, setNotificationReadIds] = useState<Set<string>>(
+    () => loadNotificationReadIds(),
+  );
+  const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
+  const notificationsButtonRef = useRef<HTMLButtonElement>(null);
+  const notificationsPanelRef = useRef<HTMLDivElement>(null);
+  const [notificationsPanelPos, setNotificationsPanelPos] = useState({
+    left: 12,
+    bottom: 88,
+  });
+
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>([
     { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
@@ -1307,6 +1402,110 @@ export default function App() {
     }
     return map;
   }, [tasksByListId, isSimulation, todayLists]);
+
+  const [notificationDay, setNotificationDay] = useState(() =>
+    toISODate(new Date()),
+  );
+  useEffect(() => {
+    setNotificationDay(toISODate(new Date()));
+  }, [tasksByListId]);
+  useEffect(() => {
+    const id = window.setInterval(() => {
+      setNotificationDay(toISODate(new Date()));
+    }, 60_000);
+    const bump = () => setNotificationDay(toISODate(new Date()));
+    document.addEventListener("visibilitychange", bump);
+    window.addEventListener("focus", bump);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", bump);
+      window.removeEventListener("focus", bump);
+    };
+  }, []);
+
+  const notificationItems = useMemo(() => {
+    const built = buildDueDateNotifications(tasksByListId, notificationDay);
+    return built.map((n) => ({
+      ...n,
+      read: notificationReadIds.has(n.id),
+    }));
+  }, [tasksByListId, notificationDay, notificationReadIds]);
+
+  const hasUnreadNotifications = useMemo(
+    () => notificationItems.some((n) => !n.read),
+    [notificationItems],
+  );
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        NOTIFICATION_READS_STORAGE_KEY,
+        JSON.stringify([...notificationReadIds]),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [notificationReadIds]);
+
+  const updateNotificationsPanelPosition = useCallback(() => {
+    const btn = notificationsButtonRef.current;
+    if (!btn) return;
+    const rect = btn.getBoundingClientRect();
+    const gap = 8;
+    const panelW = 320;
+    const left = Math.max(
+      8,
+      Math.min(rect.left, window.innerWidth - panelW - 8),
+    );
+    const bottom = window.innerHeight - rect.top + gap;
+    setNotificationsPanelPos({ left, bottom });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!notificationsPanelOpen) return;
+    updateNotificationsPanelPosition();
+    window.addEventListener("resize", updateNotificationsPanelPosition);
+    window.addEventListener("scroll", updateNotificationsPanelPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateNotificationsPanelPosition);
+      window.removeEventListener(
+        "scroll",
+        updateNotificationsPanelPosition,
+        true,
+      );
+    };
+  }, [notificationsPanelOpen, updateNotificationsPanelPosition]);
+
+  useEffect(() => {
+    if (!notificationsPanelOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (notificationsButtonRef.current?.contains(t)) return;
+      if (notificationsPanelRef.current?.contains(t)) return;
+      setNotificationsPanelOpen(false);
+    };
+    document.addEventListener("mousedown", onMouseDown);
+    return () => document.removeEventListener("mousedown", onMouseDown);
+  }, [notificationsPanelOpen]);
+
+  const handleNotificationsButtonClick = () => {
+    setNotificationsPanelOpen((prev) => {
+      if (!prev) {
+        setNotificationReadIds((r) => {
+          const s = new Set(r);
+          for (const n of buildDueDateNotifications(
+            tasksByListId,
+            notificationDay,
+          )) {
+            s.add(n.id);
+          }
+          return s;
+        });
+        return true;
+      }
+      return false;
+    });
+  };
 
   const completedEntries = useMemo(() => {
     const entries = completedActivityLog.map((e) => ({
@@ -3394,10 +3593,20 @@ export default function App() {
               <div className="flex flex-col items-center gap-3">
                 {/* Notifications */}
                 <button
+                  ref={notificationsButtonRef}
                   type="button"
-                  onClick={() => {}}
+                  onClick={handleNotificationsButtonClick}
+                  aria-expanded={notificationsPanelOpen}
+                  aria-haspopup="dialog"
+                  aria-label="Notifications"
                   className="group relative flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-white/5 hover:text-zinc-200 transition-colors duration-150"
                 >
+                  {hasUnreadNotifications && (
+                    <span
+                      className="absolute top-0.5 right-0.5 z-[1] h-2 w-2 rounded-full bg-[#ef4444] ring-2 ring-[#141414]"
+                      aria-hidden
+                    />
+                  )}
                   <svg
                     className="w-5 h-5"
                     viewBox="0 0 24 24"
@@ -3444,6 +3653,60 @@ export default function App() {
                 </button>
               </div>
             </aside>
+
+            {notificationsPanelOpen && (
+              <div
+                ref={notificationsPanelRef}
+                id="app-notifications-panel"
+                role="dialog"
+                aria-label="Notifications"
+                className="pointer-events-auto fixed z-[280] w-[min(320px,calc(100vw-16px))] max-h-[min(420px,calc(100vh-24px))] flex flex-col rounded-2xl border border-white/[0.08] bg-[#1e1e22] shadow-[0_16px_48px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,0,0,0.35)] overflow-hidden"
+                style={{
+                  left: notificationsPanelPos.left,
+                  bottom: notificationsPanelPos.bottom,
+                }}
+              >
+                <div className="shrink-0 px-4 pt-3.5 pb-2.5 border-b border-white/[0.06]">
+                  <h2 className="text-[13px] font-semibold text-zinc-100 tracking-tight">
+                    Notifications
+                  </h2>
+                </div>
+                <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
+                  {notificationItems.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+                      <div className="text-[28px] mb-3 opacity-90" aria-hidden>
+                        📣
+                      </div>
+                      <p className="text-[13px] font-semibold text-zinc-100">
+                        No notifications
+                      </p>
+                      <p className="text-[11px] text-zinc-500 mt-1.5 max-w-[220px] leading-snug">
+                        Due date reminders for tests, projects, and long-term
+                        work will appear here.
+                      </p>
+                    </div>
+                  ) : (
+                    <ul className="py-1">
+                      {notificationItems.map((n) => (
+                        <li
+                          key={n.id}
+                          className="border-b border-white/[0.05] last:border-b-0"
+                        >
+                          <div className="px-3.5 py-2.5 hover:bg-white/[0.04] transition-colors">
+                            <p className="text-[12px] leading-snug text-zinc-200">
+                              {n.message}
+                            </p>
+                            <p className="text-[10px] text-zinc-500 mt-1 tabular-nums">
+                              Due {formatDueButtonLabel(n.dueDate)}
+                            </p>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Second sidebar: Tasks panel (only when Tasks view is active) */}
             {!isSimulation &&
