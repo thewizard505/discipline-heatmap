@@ -1207,6 +1207,17 @@ export default function App() {
     }));
   }, [tasksByListId]);
 
+  /** Task name shown in the work-mode modal (add one / add-all queue). */
+  const pendingWorkModeTaskTitle = useMemo(() => {
+    if (pendingWorkModeTaskId == null || pendingWorkModeListId == null) {
+      return null;
+    }
+    const list = tasksByListId[pendingWorkModeListId] ?? [];
+    return (
+      list.find((t) => t.id === pendingWorkModeTaskId)?.text?.trim() ?? null
+    );
+  }, [pendingWorkModeTaskId, pendingWorkModeListId, tasksByListId]);
+
   /** First task in the focus session queue (for integrity / tab visibility). */
   const activeFocusTaskForIntegrity = useMemo(() => {
     for (const e of focusSessionEntries) {
@@ -6380,6 +6391,14 @@ export default function App() {
                 <h2 className="text-xl font-semibold tracking-tight text-gray-900">
                   How will you work on this task?
                 </h2>
+                {pendingWorkModeTaskTitle ? (
+                  <p
+                    className="mt-3 font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-gray-900 line-clamp-3"
+                    title={pendingWorkModeTaskTitle}
+                  >
+                    {pendingWorkModeTaskTitle}
+                  </p>
+                ) : null}
                 <p className="mt-2 text-sm text-gray-500">
                   Choose where you&apos;ll focus so Tunnel Vision can score your
                   integrity fairly.
