@@ -77,6 +77,26 @@ const FOCUS_PICKER_LABELS: Record<string, string> = {
 
 type FocusSessionEntry = { listId: string; taskId: number };
 
+/**
+ * Completing a session task for these lists only removes it from the focus
+ * queue; the source task in Tasks/Projects/Tests/Long-Term stays.
+ */
+const FOCUS_SESSION_PRESERVE_SOURCE_LIST_IDS = new Set<string>([
+  SYS_LIST_TESTS,
+  SYS_LIST_PROJECTS,
+  SYS_LIST_LONGTERM,
+]);
+
+/** Session-only label shown under the timer (prefixed intent to study/work). */
+function getFocusSessionDisplayLabel(listId: string, taskText: string): string {
+  const s = taskText.trim();
+  if (listId === SYS_LIST_TESTS) return `Study ${s}`;
+  if (listId === SYS_LIST_PROJECTS || listId === SYS_LIST_LONGTERM) {
+    return `Work on ${s}`;
+  }
+  return s;
+}
+
 function toISODate(d: Date): string {
   const y = d.getFullYear();
   const m = `${d.getMonth() + 1}`.padStart(2, "0");
@@ -1213,9 +1233,9 @@ export default function App() {
       return null;
     }
     const list = tasksByListId[pendingWorkModeListId] ?? [];
-    return (
-      list.find((t) => t.id === pendingWorkModeTaskId)?.text?.trim() ?? null
-    );
+    const raw = list.find((t) => t.id === pendingWorkModeTaskId)?.text?.trim();
+    if (raw == null) return null;
+    return getFocusSessionDisplayLabel(pendingWorkModeListId, raw);
   }, [pendingWorkModeTaskId, pendingWorkModeListId, tasksByListId]);
 
   /** First task in the focus session queue (for integrity / tab visibility). */
@@ -2494,9 +2514,13 @@ export default function App() {
     const list = tasksByListId[listId] ?? [];
     const task = list.find((t) => t.id === taskId && !t.removing);
     if (!task) return;
+    const preserveSource =
+      FOCUS_SESSION_PRESERVE_SOURCE_LIST_IDS.has(listId);
+    const sessionLabel = getFocusSessionDisplayLabel(listId, task.text);
     const now = Date.now();
     const today = getTodayStr();
-    const taskKey = normalizeTaskKey(task.text);
+    const analyticsName = preserveSource ? sessionLabel : task.text;
+    const taskKey = normalizeTaskKey(analyticsName);
     const listLabel =
       allListsForSelection.find((l) => l.id === listId)?.label ?? "Focus";
 
@@ -2510,7 +2534,7 @@ export default function App() {
         ...prev,
         [taskKey]: [...(prev[taskKey] || []), { value: durationSecs, date: today }],
       }));
-      appendCompletedActivity(task.text, mins, listId, listLabel);
+      appendCompletedActivity(analyticsName, mins, listId, listLabel);
       setBestFocusIntegrity((prev) =>
         Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
       );
@@ -2521,23 +2545,25 @@ export default function App() {
         ...prev,
         [taskKey]: [...(prev[taskKey] || []), { value: 0, date: today }],
       }));
-      appendCompletedActivity(task.text, 0, listId, listLabel);
+      appendCompletedActivity(analyticsName, 0, listId, listLabel);
     }
 
-    setTasksByListId((prev) => {
-      const arr = prev[listId] ?? [];
-      const newArr = arr.map((t) =>
-        t.id === taskId ? { ...t, removing: true } : t,
-      );
-      return { ...prev, [listId]: newArr };
-    });
-    if (selectedListId === listId) {
-      setTasks((prev) => {
-        const newTasks = prev.map((t) =>
+    if (!preserveSource) {
+      setTasksByListId((prev) => {
+        const arr = prev[listId] ?? [];
+        const newArr = arr.map((t) =>
           t.id === taskId ? { ...t, removing: true } : t,
         );
-        return newTasks;
+        return { ...prev, [listId]: newArr };
       });
+      if (selectedListId === listId) {
+        setTasks((prev) => {
+          const newTasks = prev.map((t) =>
+            t.id === taskId ? { ...t, removing: true } : t,
+          );
+          return newTasks;
+        });
+      }
     }
 
     setFocusSessionEntries((prev) => {
@@ -2551,18 +2577,21 @@ export default function App() {
     });
 
     setLastTaskCompletionTime(now);
-    setTimeout(() => {
-      setTasksByListId((prev) => {
-        const arr = prev[listId] ?? [];
-        return {
-          ...prev,
-          [listId]: arr.filter((t) => t.id !== taskId),
-        };
-      });
-      if (selectedListId === listId) {
-        setTasks((prev) => prev.filter((t) => t.id !== taskId));
-      }
-    }, 300);
+
+    if (!preserveSource) {
+      setTimeout(() => {
+        setTasksByListId((prev) => {
+          const arr = prev[listId] ?? [];
+          return {
+            ...prev,
+            [listId]: arr.filter((t) => t.id !== taskId),
+          };
+        });
+        if (selectedListId === listId) {
+          setTasks((prev) => prev.filter((t) => t.id !== taskId));
+        }
+      }, 300);
+    }
   }
 
   function completeTask(id: number) {
@@ -5289,7 +5318,7 @@ export default function App() {
                           <div className="flex items-center gap-3 flex-1 min-w-0">
                             <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
                             <span className="text-base text-gray-800 truncate">
-                              {t.text}
+                              {getFocusSessionDisplayLabel(entry.listId, t.text)}
                             </span>
                           </div>
                           <button
