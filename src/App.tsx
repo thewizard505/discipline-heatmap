@@ -104,6 +104,99 @@ function getFocusSessionDisplayLabel(listId: string, taskText: string): string {
   return s;
 }
 
+/** Smart picks for the Today view “Focus for today” strip (Tests / Projects / Long-Term). */
+type FocusForTodayPick = {
+  listId: string;
+  taskId: number;
+  daysLeft: number;
+  displayTitle: string;
+  timeLabel: string;
+  urgency: "overdue" | "critical" | "soon" | "steady";
+};
+
+const FOCUS_FOR_TODAY_LIST_RANK = new Map<string, number>([
+  [SYS_LIST_TESTS, 0],
+  [SYS_LIST_PROJECTS, 1],
+  [SYS_LIST_LONGTERM, 2],
+]);
+
+function formatFocusTimeRemaining(daysLeft: number): string {
+  if (daysLeft < 0) {
+    const n = Math.abs(daysLeft);
+    return n === 1 ? "1 day overdue" : `${n} days overdue`;
+  }
+  if (daysLeft === 0) return "Due today";
+  if (daysLeft === 1) return "1 day left";
+  return `${daysLeft} days left`;
+}
+
+function focusUrgencyFromDays(daysLeft: number): FocusForTodayPick["urgency"] {
+  if (daysLeft < 0) return "overdue";
+  if (daysLeft <= 1) return "critical";
+  if (daysLeft <= 3) return "soon";
+  return "steady";
+}
+
+function buildFocusForTodayPicks(
+  tasksByListId: Record<string, Task[]>,
+  todayIso: string,
+): FocusForTodayPick[] {
+  const candidates: FocusForTodayPick[] = [];
+  for (const listId of [
+    SYS_LIST_TESTS,
+    SYS_LIST_PROJECTS,
+    SYS_LIST_LONGTERM,
+  ] as const) {
+    for (const t of tasksByListId[listId] ?? []) {
+      if (t.completed || t.removing || !t.dueDate) continue;
+      const daysLeft = calendarDaysUntilDue(todayIso, t.dueDate);
+      const raw = (t.text || "").trim() || "Untitled";
+      candidates.push({
+        listId,
+        taskId: t.id,
+        daysLeft,
+        displayTitle: getFocusSessionDisplayLabel(listId, raw),
+        timeLabel: formatFocusTimeRemaining(daysLeft),
+        urgency: focusUrgencyFromDays(daysLeft),
+      });
+    }
+  }
+  candidates.sort((a, b) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.listId) ?? 9;
+    const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.listId) ?? 9;
+    return ra - rb;
+  });
+  return candidates.slice(0, 3);
+}
+
+function focusForTodayUrgencyStyles(
+  urgency: FocusForTodayPick["urgency"],
+): { badge: string; bar: string } {
+  switch (urgency) {
+    case "overdue":
+      return {
+        badge: "bg-red-500/15 text-red-300 border border-red-500/25",
+        bar: "bg-red-500",
+      };
+    case "critical":
+      return {
+        badge: "bg-orange-500/15 text-orange-200 border border-orange-500/25",
+        bar: "bg-orange-500",
+      };
+    case "soon":
+      return {
+        badge: "bg-amber-500/12 text-amber-100 border border-amber-500/20",
+        bar: "bg-amber-400",
+      };
+    default:
+      return {
+        badge: "bg-zinc-600/35 text-zinc-300 border border-zinc-500/20",
+        bar: "bg-sky-500/80",
+      };
+  }
+}
+
 /** Due-date reminders (Tests / Projects / Long-Term). */
 type AppNotificationItem = {
   id: string;
@@ -1436,6 +1529,11 @@ export default function App() {
     [notificationItems],
   );
 
+  const focusForTodayItems = useMemo(
+    () => buildFocusForTodayPicks(tasksByListId, notificationDay),
+    [tasksByListId, notificationDay],
+  );
+
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -2253,6 +2351,31 @@ export default function App() {
       return;
     }
     runFocusEnterZenTransition();
+  };
+
+  const handleFocusForTodayStartSession = () => {
+    const top = focusForTodayItems[0];
+    if (!top) return;
+    if (isFocusTimerRunning) {
+      setWarning(
+        "Pause or finish your timer before starting a new focus session.",
+      );
+      setTimeout(() => setWarning(null), 3200);
+      return;
+    }
+    if (focusEnterZenActive) {
+      cancelFocusEnterZen();
+    }
+    if (isFocusSessionActive) {
+      cleanupFocusSessionAfterQuit();
+    }
+    workModePromptQueueRef.current = [];
+    setPendingWorkModeTaskId(null);
+    setPendingWorkModeListId(null);
+    setIsWorkModeModalOpen(false);
+    setFocusSessionEntries([{ listId: top.listId, taskId: top.taskId }]);
+    performOpenTaskInList(top.listId, top.taskId);
+    handleStartFocusSession();
   };
 
   const handleQuitFocusSession = () => {
@@ -4284,6 +4407,98 @@ export default function App() {
                             </button>
                           </div>
                         </div>
+
+                        {selectedListId === SYS_LIST_TODAY &&
+                          focusForTodayItems.length > 0 && (
+                            <>
+                              <div
+                                className="shrink-0 mb-4 rounded-2xl border border-white/[0.07] bg-gradient-to-b from-zinc-800/35 via-[#1a1a1d] to-zinc-900/25 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.04)] transition-shadow duration-300"
+                              >
+                                <div className="flex items-start justify-between gap-3 mb-3">
+                                  <div className="min-w-0">
+                                    <h3 className="text-[15px] font-semibold text-zinc-50 tracking-tight">
+                                      Focus for today
+                                    </h3>
+                                    <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
+                                      Top priorities from Tests, Projects, and
+                                      Long-Term by due date.
+                                    </p>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={handleFocusForTodayStartSession}
+                                    className="shrink-0 inline-flex items-center justify-center rounded-xl bg-blue-600 px-3.5 py-2 text-[12px] font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.35)] hover:bg-blue-500 active:scale-[0.98] transition-all duration-200"
+                                  >
+                                    Start Focus Session
+                                  </button>
+                                </div>
+                                <ul
+                                  className="space-y-2"
+                                  key={focusForTodayItems
+                                    .map((x) => `${x.listId}:${x.taskId}`)
+                                    .join("|")}
+                                >
+                                  {focusForTodayItems.map((pick) => {
+                                    const styles = focusForTodayUrgencyStyles(
+                                      pick.urgency,
+                                    );
+                                    return (
+                                      <li key={`${pick.listId}:${pick.taskId}`}>
+                                        <button
+                                          type="button"
+                                          onClick={() =>
+                                            openTaskFromCalendar(
+                                              pick.listId,
+                                              pick.taskId,
+                                            )
+                                          }
+                                          className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-start border border-transparent hover:border-white/[0.08] hover:bg-white/[0.04] transition-all duration-200 group"
+                                        >
+                                          <span
+                                            className={`mt-1.5 h-7 w-1 shrink-0 rounded-full ${styles.bar} opacity-90 group-hover:opacity-100 transition-opacity`}
+                                            aria-hidden
+                                          />
+                                          <div className="min-w-0 flex-1">
+                                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                              <span className="text-[15px] font-medium text-zinc-100 leading-snug">
+                                                {pick.displayTitle}
+                                              </span>
+                                              <span className="text-[13px] text-zinc-500 tabular-nums">
+                                                — {pick.timeLabel}
+                                              </span>
+                                            </div>
+                                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                                              <span
+                                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${styles.badge}`}
+                                              >
+                                                {pick.urgency === "overdue"
+                                                  ? "Overdue"
+                                                  : pick.urgency === "critical"
+                                                    ? "Due soon"
+                                                    : pick.urgency === "soon"
+                                                      ? "Upcoming"
+                                                      : "Planned"}
+                                              </span>
+                                              <span className="text-[10px] text-zinc-600">
+                                                {FOCUS_PICKER_LABELS[pick.listId] ??
+                                                  pick.listId}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        </button>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              </div>
+                              <div className="flex items-center gap-3 mb-3 px-0.5 shrink-0">
+                                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
+                                  All tasks
+                                </span>
+                                <div className="flex-1 h-px bg-zinc-700/55" />
+                              </div>
+                            </>
+                          )}
 
                         {/* Task input bar — hidden for Overdue (system-fed only) */}
                         {selectedListId !== SYS_LIST_OVERDUE && (
