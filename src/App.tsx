@@ -980,6 +980,10 @@ export default function App() {
   const [pendingWorkModeListId, setPendingWorkModeListId] = useState<
     string | null
   >(null);
+  /** Sequential work-mode prompts (single add = 1 item; add-all = N items). */
+  const workModePromptQueueRef = useRef<
+    Array<{ taskId: number; listId: string }>
+  >([]);
   const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
 
   const [selectedStat, setSelectedStat] = useState("Integrity");
@@ -1844,6 +1848,10 @@ export default function App() {
     setOpenListMenuId(null);
     setFocusSessionEntries([]);
     setFocusPickerExpanded({});
+    workModePromptQueueRef.current = [];
+    setPendingWorkModeTaskId(null);
+    setPendingWorkModeListId(null);
+    setIsWorkModeModalOpen(false);
   };
 
   const applyListSelection = (listId: string) => {
@@ -2104,6 +2112,10 @@ export default function App() {
     setShowReflection(false);
     setIntegrityPenalty(0);
     setFocusSessionEntries([]);
+    workModePromptQueueRef.current = [];
+    setPendingWorkModeTaskId(null);
+    setPendingWorkModeListId(null);
+    setIsWorkModeModalOpen(false);
     setWarning("System Purged");
     setTimeout(() => setWarning(null), 3000);
   };
@@ -2414,6 +2426,7 @@ export default function App() {
       }
       if (promptWorkMode && !isSimulation) {
         queueMicrotask(() => {
+          workModePromptQueueRef.current = [{ taskId, listId }];
           setPendingWorkModeTaskId(taskId);
           setPendingWorkModeListId(listId);
           setIsWorkModeModalOpen(true);
@@ -2421,6 +2434,19 @@ export default function App() {
       }
       return [...prev, { listId, taskId }];
     });
+  }
+
+  function advanceWorkModePromptQueue() {
+    workModePromptQueueRef.current = workModePromptQueueRef.current.slice(1);
+    const next = workModePromptQueueRef.current;
+    if (next.length > 0) {
+      setPendingWorkModeTaskId(next[0].taskId);
+      setPendingWorkModeListId(next[0].listId);
+    } else {
+      setPendingWorkModeTaskId(null);
+      setPendingWorkModeListId(null);
+      setIsWorkModeModalOpen(false);
+    }
   }
 
   function addAllTasksToFocusSession(listId: string) {
@@ -2435,7 +2461,20 @@ export default function App() {
         keys.add(key);
         added.push({ listId, taskId: t.id });
       }
-      return added.length ? [...prev, ...added] : prev;
+      if (!added.length) return prev;
+      if (!isSimulation) {
+        queueMicrotask(() => {
+          const queue = added.map((e) => ({
+            taskId: e.taskId,
+            listId: e.listId,
+          }));
+          workModePromptQueueRef.current = queue;
+          setPendingWorkModeTaskId(queue[0].taskId);
+          setPendingWorkModeListId(queue[0].listId);
+          setIsWorkModeModalOpen(true);
+        });
+      }
+      return [...prev, ...added];
     });
   }
 
@@ -6354,6 +6393,7 @@ export default function App() {
                       pendingWorkModeTaskId == null ||
                       pendingWorkModeListId == null
                     ) {
+                      workModePromptQueueRef.current = [];
                       setPendingWorkModeTaskId(null);
                       setPendingWorkModeListId(null);
                       setIsWorkModeModalOpen(false);
@@ -6377,9 +6417,7 @@ export default function App() {
                         ),
                       );
                     }
-                    setPendingWorkModeTaskId(null);
-                    setPendingWorkModeListId(null);
-                    setIsWorkModeModalOpen(false);
+                    advanceWorkModePromptQueue();
                   }}
                   className="group relative flex flex-col items-start gap-1 rounded-2xl border border-blue-500/70 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-3 text-left text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.55)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(37,99,235,0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 >
@@ -6400,6 +6438,7 @@ export default function App() {
                       pendingWorkModeTaskId == null ||
                       pendingWorkModeListId == null
                     ) {
+                      workModePromptQueueRef.current = [];
                       setPendingWorkModeTaskId(null);
                       setPendingWorkModeListId(null);
                       setIsWorkModeModalOpen(false);
@@ -6423,9 +6462,7 @@ export default function App() {
                         ),
                       );
                     }
-                    setPendingWorkModeTaskId(null);
-                    setPendingWorkModeListId(null);
-                    setIsWorkModeModalOpen(false);
+                    advanceWorkModePromptQueue();
                   }}
                   className="group flex flex-col items-start gap-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.26)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 >
