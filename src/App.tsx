@@ -141,7 +141,28 @@ function buildFocusForTodayPicks(
   tasksByListId: Record<string, Task[]>,
   todayIso: string,
 ): FocusForTodayPick[] {
-  const candidates: FocusForTodayPick[] = [];
+  const todayListPicks: FocusForTodayPick[] = [];
+  for (const t of tasksByListId[SYS_LIST_TODAY] ?? []) {
+    if (t.completed || t.removing) continue;
+    const daysLeft = t.dueDate
+      ? calendarDaysUntilDue(todayIso, t.dueDate)
+      : 0;
+    const raw = (t.text || "").trim() || "Untitled";
+    todayListPicks.push({
+      listId: SYS_LIST_TODAY,
+      taskId: t.id,
+      daysLeft,
+      displayTitle: raw,
+      timeLabel: formatFocusTimeRemaining(daysLeft),
+      urgency: focusUrgencyFromDays(daysLeft),
+    });
+  }
+  todayListPicks.sort((a, b) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    return a.displayTitle.localeCompare(b.displayTitle);
+  });
+
+  const bigCandidates: FocusForTodayPick[] = [];
   for (const listId of [
     SYS_LIST_TESTS,
     SYS_LIST_PROJECTS,
@@ -151,7 +172,7 @@ function buildFocusForTodayPicks(
       if (t.completed || t.removing || !t.dueDate) continue;
       const daysLeft = calendarDaysUntilDue(todayIso, t.dueDate);
       const raw = (t.text || "").trim() || "Untitled";
-      candidates.push({
+      bigCandidates.push({
         listId,
         taskId: t.id,
         daysLeft,
@@ -161,13 +182,29 @@ function buildFocusForTodayPicks(
       });
     }
   }
-  candidates.sort((a, b) => {
+
+  const dueTodayBig = bigCandidates.filter((x) => x.daysLeft === 0);
+  const otherBig = bigCandidates.filter((x) => x.daysLeft !== 0);
+  otherBig.sort((a, b) => {
     if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
     const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.listId) ?? 9;
     const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.listId) ?? 9;
-    return ra - rb;
+    return ra - rb || a.displayTitle.localeCompare(b.displayTitle);
   });
-  return candidates.slice(0, 3);
+  dueTodayBig.sort((a, b) => {
+    const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.listId) ?? 9;
+    const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.listId) ?? 9;
+    return ra - rb || a.displayTitle.localeCompare(b.displayTitle);
+  });
+
+  let bigPicks: FocusForTodayPick[];
+  if (dueTodayBig.length > 0) {
+    bigPicks = [...dueTodayBig, ...otherBig.slice(0, 2)];
+  } else {
+    bigPicks = otherBig.slice(0, 2);
+  }
+
+  return [...todayListPicks, ...bigPicks];
 }
 
 function focusForTodayUrgencyStyles(
@@ -203,7 +240,8 @@ type AppNotificationItem = {
   type: "test" | "project" | "longterm";
   title: string;
   dueDate: string;
-  message: string;
+  messageLine1: string;
+  messageLine2: string;
   daysRemaining: number;
   read: boolean;
 };
@@ -252,17 +290,17 @@ function buildDueDateNotifications(
       const days = calendarDaysUntilDue(todayIso, t.dueDate);
       if (days < 1 || days > maxDays) continue;
       const title = (t.text || "").trim() || "Untitled";
-      const dayWord = days === 1 ? "1 day" : `${days} days`;
-      const message =
-        type === "test"
-          ? `You have your ${title} coming up in ${dayWord}. Make sure to study today.`
-          : `You have your ${title} coming up in ${dayWord}. Make sure to put time aside today to work on it.`;
+      const duePhrase =
+        days === 1 ? "in 24h" : days === 2 ? "in 48h" : `in ${days} days`;
+      const messageLine1 = `⏳ ACTION REQUIRED "${title}" is due ${duePhrase}.`;
+      const messageLine2 = `⚠️ Upcoming Deadline "${title}" is approaching. Plan your work today.`;
       out.push({
         id: `notif:${listId}:${t.id}:${todayIso}`,
         type,
         title,
         dueDate: t.dueDate,
-        message,
+        messageLine1,
+        messageLine2,
         daysRemaining: days,
       });
     }
@@ -1141,6 +1179,48 @@ const TASK_CATEGORY_LISTS: TodayList[] = [
   { id: "sys-longterm", label: "Long-Term", icon: "", color: null, system: true },
 ];
 
+const DEFAULT_USER_TODAY_LISTS: TodayList[] = [
+  { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
+  { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
+  { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
+  { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
+  { id: "packing", label: "Packing list", icon: "✈️", color: "#38bdf8" },
+];
+
+const TASKS_BY_LIST_STORAGE_KEY = "tunnelvision_tasks_by_list_v1";
+const TODAY_LISTS_STORAGE_KEY = "tunnelvision_user_lists_v1";
+
+function loadTasksByListIdFromStorage(): Record<string, Task[]> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(TASKS_BY_LIST_STORAGE_KEY);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as Record<string, Task[]>;
+    if (!p || typeof p !== "object") return {};
+    return p;
+  } catch {
+    return {};
+  }
+}
+
+function hasStoredTasks(): boolean {
+  const t = loadTasksByListIdFromStorage();
+  return Object.values(t).some((arr) => Array.isArray(arr) && arr.length > 0);
+}
+
+function loadTodayListsFromStorage(): TodayList[] {
+  if (typeof window === "undefined") return DEFAULT_USER_TODAY_LISTS;
+  try {
+    const raw = localStorage.getItem(TODAY_LISTS_STORAGE_KEY);
+    if (!raw) return DEFAULT_USER_TODAY_LISTS;
+    const p = JSON.parse(raw) as TodayList[];
+    if (!Array.isArray(p) || p.length === 0) return DEFAULT_USER_TODAY_LISTS;
+    return p;
+  } catch {
+    return DEFAULT_USER_TODAY_LISTS;
+  }
+}
+
 type DayMetric = {
   date: string;
   focusIntegrity: number;
@@ -1155,7 +1235,9 @@ type DayMetric = {
  */
 export default function App() {
   /* ------------------- PRIMARY APPLICATION STATE ------------------- */
-  const [isSimulation, setIsSimulation] = useState(true);
+  const [isSimulation, setIsSimulation] = useState(
+    () => typeof window === "undefined" || !hasStoredTasks(),
+  );
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [name, setName] = useState("Alex");
   const [seconds, setSeconds] = useState(0);
@@ -1164,9 +1246,12 @@ export default function App() {
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
   const [tasksByListId, setTasksByListId] = useState<Record<string, Task[]>>(
-    {},
+    () => loadTasksByListIdFromStorage(),
   );
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasks, setTasks] = useState<Task[]>(() => {
+    const tbl = loadTasksByListIdFromStorage();
+    return tbl[SYS_LIST_TODAY] ?? [];
+  });
   const isSwitchingListRef = useRef(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   const tasksRef = useRef<Task[]>([]);
@@ -1358,13 +1443,9 @@ export default function App() {
   });
 
   const DEFAULT_LIST_ICON = "≡";
-  const [todayLists, setTodayLists] = useState<TodayList[]>([
-    { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
-    { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
-    { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
-    { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
-    { id: "packing", label: "Packing list", icon: "✈️", color: "#38bdf8" },
-  ]);
+  const [todayLists, setTodayLists] = useState<TodayList[]>(() =>
+    loadTodayListsFromStorage(),
+  );
   const [completedActivityLog, setCompletedActivityLog] = useState<
     CompletedActivityEntry[]
   >([]);
@@ -1374,7 +1455,9 @@ export default function App() {
   const [newListColor, setNewListColor] = useState<string | null>("#eab308");
   const listMenuRef = useRef<HTMLDivElement | null>(null);
 
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [selectedListId, setSelectedListId] = useState<string | null>(() =>
+    typeof window !== "undefined" && hasStoredTasks() ? SYS_LIST_TODAY : null,
+  );
   const selectedListIdRef = useRef<string | null>(null);
   selectedListIdRef.current = selectedListId;
   const skipNextTasksPersistRef = useRef(false);
@@ -1998,6 +2081,11 @@ export default function App() {
   };
 
   useEffect(() => {
+    if (isSimulation) return;
+    loadUserProgress();
+  }, [isSimulation]);
+
+  useEffect(() => {
     if (!isSimulation) {
       localStorage.setItem("efficiency_streak", streak.toString());
       localStorage.setItem("efficiency_history", JSON.stringify(history));
@@ -2017,6 +2105,14 @@ export default function App() {
         "tunnelvision_completed_activity",
         JSON.stringify(completedActivityLog),
       );
+      localStorage.setItem(
+        TASKS_BY_LIST_STORAGE_KEY,
+        JSON.stringify(tasksByListId),
+      );
+      localStorage.setItem(
+        TODAY_LISTS_STORAGE_KEY,
+        JSON.stringify(todayLists),
+      );
     }
   }, [
     history,
@@ -2026,6 +2122,8 @@ export default function App() {
     heatmapData,
     todayTotalFocusMinutes,
     completedActivityLog,
+    tasksByListId,
+    todayLists,
   ]);
 
   useEffect(() => {
@@ -2324,9 +2422,9 @@ export default function App() {
     }
     setFocusEnterZenActive(true);
     setFocusEnterZenBlocking(true);
-    const ENTER_MS = 2200;
-    const UNBLOCK_MS = 2350;
-    const CLEAR_MS = 4800;
+    const ENTER_MS = 3000;
+    const UNBLOCK_MS = 3180;
+    const CLEAR_MS = 6400;
     const t0 = window.setTimeout(() => {
       if (!allowFocusEnterRef.current) return;
       finishEnterFocusSession();
@@ -3210,36 +3308,36 @@ export default function App() {
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
         @keyframes focus-zen-mist {
           0%{ opacity:0.55 }
-          45%{ opacity:0.42 }
+          45%{ opacity:0.38 }
           100%{ opacity:0 }
         }
         @keyframes focus-zen-ripple-long {
-          0%{ transform:scale(0.04); opacity:0.72 }
+          0%{ transform:scale(0.04); opacity:0.45 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes focus-zen-bloom {
-          0%{ transform:scale(0.3); opacity:0.35 }
+          0%{ transform:scale(0.3); opacity:0.28 }
           100%{ transform:scale(1); opacity:0 }
         }
         .focus-zen-mist-overlay{
-          animation:focus-zen-mist 4.8s cubic-bezier(0.25,0.46,0.45,0.94) forwards;
+          animation:focus-zen-mist 6.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
         }
         .focus-zen-ripple-ring{
           position:absolute; left:50%; top:50%;
           width:min(160vmax,2600px); height:min(160vmax,2600px);
           margin-left:calc(min(160vmax,2600px)/-2); margin-top:calc(min(160vmax,2600px)/-2);
           border-radius:50%;
-          border:1.5px solid rgba(186,230,253,0.35);
+          border:1.5px solid rgba(186,230,253,0.32);
           box-shadow:
-            0 0 120px rgba(59,130,246,0.22),
-            0 0 220px rgba(147,197,253,0.12),
-            inset 0 0 100px rgba(255,255,255,0.08);
-          animation:focus-zen-ripple-long 2.6s cubic-bezier(0.2,0.85,0.25,1) forwards;
+            0 0 120px rgba(59,130,246,0.18),
+            0 0 220px rgba(147,197,253,0.1),
+            inset 0 0 100px rgba(255,255,255,0.06);
+          animation:focus-zen-ripple-long 4.2s cubic-bezier(0.15,0.75,0.2,1) forwards;
         }
         .focus-zen-ripple-ring-slow{
-          animation:focus-zen-ripple-long 3.2s cubic-bezier(0.15,0.75,0.2,1) forwards;
-          border-color:rgba(147,197,253,0.22);
-          box-shadow:0 0 180px rgba(59,130,246,0.15);
+          animation:focus-zen-ripple-long 5s cubic-bezier(0.18,0.72,0.22,1) forwards;
+          border-color:rgba(147,197,253,0.2);
+          box-shadow:0 0 200px rgba(59,130,246,0.12);
         }
         .focus-zen-bloom-core{
           position:absolute; left:50%; top:50%;
@@ -3247,7 +3345,7 @@ export default function App() {
           margin-left:calc(min(90vmax,1400px)/-2); margin-top:calc(min(90vmax,1400px)/-2);
           border-radius:50%;
           background:radial-gradient(circle, rgba(147,197,253,0.2) 0%, transparent 68%);
-          animation:focus-zen-bloom 3.4s ease-out forwards;
+          animation:focus-zen-bloom 4.8s cubic-bezier(0.2,0.8,0.2,1) forwards;
         }
       `}</style>
 
@@ -3561,7 +3659,7 @@ export default function App() {
                   <div
                     key={i}
                     className={`focus-zen-ripple-ring ${i === 6 ? "focus-zen-ripple-ring-slow" : ""}`}
-                    style={{ animationDelay: `${i * 180}ms` }}
+                    style={{ animationDelay: `${i * 280}ms` }}
                   />
                 ))}
               </div>
@@ -3816,11 +3914,14 @@ export default function App() {
                           className="border-b border-white/[0.05] last:border-b-0"
                         >
                           <div className="px-3.5 py-2.5 hover:bg-white/[0.04] transition-colors">
-                            <p className="text-[12px] leading-snug text-zinc-200">
-                              {n.message}
+                            <p className="text-[12px] leading-snug text-zinc-100 font-semibold">
+                              {n.messageLine1}
                             </p>
-                            <p className="text-[10px] text-zinc-500 mt-1 tabular-nums">
-                              Due {formatDueButtonLabel(n.dueDate)}
+                            <p className="text-[11px] leading-snug text-zinc-300 mt-1.5">
+                              {n.messageLine2}
+                            </p>
+                            <p className="text-[11px] text-zinc-500 mt-2 tabular-nums">
+                              {formatDueButtonLabel(n.dueDate)}
                             </p>
                           </div>
                         </li>
@@ -4412,22 +4513,22 @@ export default function App() {
                           focusForTodayItems.length > 0 && (
                             <>
                               <div
-                                className="shrink-0 mb-4 rounded-2xl border border-white/[0.07] bg-gradient-to-b from-zinc-800/35 via-[#1a1a1d] to-zinc-900/25 p-4 shadow-[0_12px_40px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.04)] transition-shadow duration-300"
+                                className="shrink-0 mb-5 rounded-2xl border border-sky-500/15 bg-gradient-to-br from-zinc-800/50 via-[#1c1c22] to-zinc-950/40 p-5 shadow-[0_16px_48px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.06),0_0_32px_rgba(59,130,246,0.06)] transition-[box-shadow,transform] duration-500 hover:shadow-[0_20px_56px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.08),0_0_40px_rgba(59,130,246,0.09)]"
                               >
-                                <div className="flex items-start justify-between gap-3 mb-3">
-                                  <div className="min-w-0">
-                                    <h3 className="text-[15px] font-semibold text-zinc-50 tracking-tight">
+                                <div className="flex items-start justify-between gap-3 mb-4">
+                                  <div className="min-w-0 pr-2">
+                                    <h3 className="text-[clamp(1.25rem,2.8vw,1.65rem)] font-extrabold tracking-[-0.03em] leading-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-white to-zinc-200 drop-shadow-[0_2px_18px_rgba(255,255,255,0.12)]">
                                       Focus for today
                                     </h3>
-                                    <p className="text-[11px] text-zinc-500 mt-1 leading-snug">
-                                      Top priorities from Tests, Projects, and
-                                      Long-Term by due date.
+                                    <p className="text-[12px] text-zinc-500 mt-2 leading-relaxed max-w-[20rem]">
+                                      Plan your day: everything on Today, plus
+                                      Tests, Projects, and Long-Term by urgency.
                                     </p>
                                   </div>
                                   <button
                                     type="button"
                                     onClick={handleFocusForTodayStartSession}
-                                    className="shrink-0 inline-flex items-center justify-center rounded-xl bg-blue-600 px-3.5 py-2 text-[12px] font-semibold text-white shadow-[0_4px_16px_rgba(37,99,235,0.35)] hover:bg-blue-500 active:scale-[0.98] transition-all duration-200"
+                                    className="shrink-0 inline-flex items-center justify-center rounded-xl bg-blue-600 px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_6px_28px_rgba(37,99,235,0.45)] active:scale-[0.98] transition-all duration-300"
                                   >
                                     Start Focus Session
                                   </button>
@@ -4452,7 +4553,7 @@ export default function App() {
                                               pick.taskId,
                                             )
                                           }
-                                          className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-start border border-transparent hover:border-white/[0.08] hover:bg-white/[0.04] transition-all duration-200 group"
+                                          className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-start border border-transparent hover:border-white/[0.1] hover:bg-white/[0.05] transition-all duration-300 ease-out group"
                                         >
                                           <span
                                             className={`mt-1.5 h-7 w-1 shrink-0 rounded-full ${styles.bar} opacity-90 group-hover:opacity-100 transition-opacity`}
