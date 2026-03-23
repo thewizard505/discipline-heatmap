@@ -833,9 +833,24 @@ type CalendarPlacedTask = {
 
 const CALENDAR_TASKS_VISIBLE_CAP = 4;
 
-/** Single blue accent; category + title row inside (TickTick-style). */
-const CALENDAR_TASK_CHIP =
-  "group w-full text-left rounded-md px-2 py-1.5 border border-sky-500/35 bg-gradient-to-b from-sky-600/90 to-sky-700/95 hover:from-sky-500/95 hover:to-sky-600/95 text-left min-w-0 shadow-[0_1px_3px_rgba(0,0,0,0.45),inset_0_1px_0_rgba(255,255,255,0.12)] transition-[box-shadow,background-color,border-color] duration-150 active:scale-[0.99]";
+/** Muted category-colored blocks (month view) — flat, no neon glow. */
+function calendarTaskChipClassForList(listId: string): string {
+  const base =
+    "group w-full text-left rounded-[3px] px-2 py-1.5 text-left min-w-0 border transition-[background-color,border-color] duration-150 active:scale-[0.99] shadow-[0_1px_0_rgba(0,0,0,0.45)]";
+  const byList: Record<string, string> = {
+    [SYS_LIST_OVERDUE]:
+      "border-rose-900/45 bg-rose-950/70 hover:bg-rose-950/85",
+    [SYS_LIST_TODAY]:
+      "border-slate-600/40 bg-slate-800/60 hover:bg-slate-700/70",
+    [SYS_LIST_PROJECTS]:
+      "border-amber-900/40 bg-amber-950/55 hover:bg-amber-950/70",
+    [SYS_LIST_TESTS]:
+      "border-cyan-900/35 bg-teal-950/55 hover:bg-teal-950/68",
+    [SYS_LIST_LONGTERM]:
+      "border-violet-900/40 bg-violet-950/50 hover:bg-violet-950/65",
+  };
+  return `${base} ${byList[listId] ?? "border-zinc-700/55 bg-zinc-800/75 hover:bg-zinc-700/85"}`;
+}
 
 type CalendarGridCell =
   | { kind: "outside"; key: string; displayDay: number }
@@ -984,14 +999,14 @@ function TasksDueCalendarMonth({
                 key={cell.key}
                 className={`relative bg-[#131313] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.045)] ${
                   isToday
-                    ? "ring-1 ring-inset ring-sky-500/45 bg-[radial-gradient(ellipse_at_50%_0%,rgba(56,189,248,0.09),transparent_55%)]"
+                    ? "ring-1 ring-inset ring-zinc-600/45 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.05),transparent_55%)]"
                     : ""
                 }`}
               >
                 <div className="mb-1 shrink-0">
                   {isToday ? (
                     <span
-                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-sky-600 text-[11px] font-semibold text-white tabular-nums shadow-[0_1px_4px_rgba(14,165,233,0.45),inset_0_1px_0_rgba(255,255,255,0.2)]"
+                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-zinc-700 text-[11px] font-semibold text-zinc-100 tabular-nums ring-1 ring-zinc-600/60 shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
                       title="Today"
                     >
                       {cell.day}
@@ -1008,7 +1023,7 @@ function TasksDueCalendarMonth({
                       key={`${t.listId}-${t.id}`}
                       type="button"
                       onClick={() => onTaskPick(t.listId, t.id)}
-                      className={CALENDAR_TASK_CHIP}
+                      className={calendarTaskChipClassForList(t.listId)}
                       title={`${t.categoryLabel} — ${t.text}`}
                     >
                       <span className="flex items-baseline gap-1 min-w-0 w-full">
@@ -1475,6 +1490,8 @@ export default function App() {
   const isFocusTimerRunning = isFocusSessionActive && running;
   /** Full-screen zen transition when entering Focus from the nav (dartboard). */
   const [focusEnterZenActive, setFocusEnterZenActive] = useState(false);
+  /** After session UI appears, fade zen overlay so ripples linger over focus view. */
+  const [focusZenFadeOut, setFocusZenFadeOut] = useState(false);
   const [zenOverlayOrigin, setZenOverlayOrigin] = useState<{
     x: number;
     y: number;
@@ -1493,6 +1510,10 @@ export default function App() {
   const focusEnterTimeoutsRef = useRef<number[]>([]);
   /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
   const allowFocusEnterRef = useRef(true);
+  /** Work-mode prompts queued from “Focus for today” — shown after zen ripple, not before. */
+  const pendingWorkModeAfterZenRef = useRef<
+    Array<{ taskId: number; listId: string }> | null
+  >(null);
 
   const [notificationReadIds, setNotificationReadIds] = useState<Set<string>>(
     () => loadNotificationReadIds(),
@@ -2279,9 +2300,11 @@ export default function App() {
   const cancelFocusEnterZen = () => {
     allowFocusEnterRef.current = false;
     clearFocusEnterTimers();
+    pendingWorkModeAfterZenRef.current = null;
     setFocusEnterZenActive(false);
     setZenOverlayOrigin(null);
     setFocusEnterZenBlocking(false);
+    setFocusZenFadeOut(false);
   };
 
   const handleSidebarNavClick = (view: AppView) => {
@@ -2340,6 +2363,7 @@ export default function App() {
     setFocusSessionEntries([]);
     setFocusPickerExpanded({});
     workModePromptQueueRef.current = [];
+    pendingWorkModeAfterZenRef.current = null;
     setPendingWorkModeTaskId(null);
     setPendingWorkModeListId(null);
     setIsWorkModeModalOpen(false);
@@ -2446,6 +2470,9 @@ export default function App() {
   }, []);
 
   const finishEnterFocusSession = () => {
+    const pending = pendingWorkModeAfterZenRef.current;
+    pendingWorkModeAfterZenRef.current = null;
+
     setIsFocusSessionActive(true);
     setFocusPickerExpanded({});
     setIsAddListModalOpen(false);
@@ -2459,6 +2486,15 @@ export default function App() {
       setIsTodayPanelCollapsed(true);
       setIsTodayPanelAnimatingOut(false);
     }, 220);
+
+    if (pending && pending.length > 0 && !isSimulation) {
+      queueMicrotask(() => {
+        workModePromptQueueRef.current = pending;
+        setPendingWorkModeTaskId(pending[0].taskId);
+        setPendingWorkModeListId(pending[0].listId);
+        setIsWorkModeModalOpen(true);
+      });
+    }
   };
 
   /** Zen transition when tapping the Focus (dartboard) nav — then reveal the focus page. */
@@ -2472,24 +2508,27 @@ export default function App() {
     }
     clearFocusEnterTimers();
     allowFocusEnterRef.current = true;
+    setFocusZenFadeOut(false);
     setZenOverlayOrigin({
       x: window.innerWidth / 2,
       y: window.innerHeight / 2,
     });
     setFocusEnterZenActive(true);
     setFocusEnterZenBlocking(true);
-    const ENTER_MS = 2400;
-    const UNBLOCK_MS = 2560;
-    const CLEAR_MS = 4600;
+    const ENTER_MS = 3000;
+    const UNBLOCK_MS = 3180;
+    const CLEAR_MS = 6200;
     const t0 = window.setTimeout(() => {
       if (!allowFocusEnterRef.current) return;
       finishEnterFocusSession();
+      setFocusZenFadeOut(true);
     }, ENTER_MS);
     const t1 = window.setTimeout(() => setFocusEnterZenBlocking(false), UNBLOCK_MS);
     const t2 = window.setTimeout(() => {
       setFocusEnterZenActive(false);
       setZenOverlayOrigin(null);
       setFocusEnterZenBlocking(false);
+      setFocusZenFadeOut(false);
     }, CLEAR_MS);
     focusEnterTimeoutsRef.current.push(t0, t1, t2);
   };
@@ -2534,16 +2573,12 @@ export default function App() {
     const first = focusForTodayItems[0];
     performOpenTaskInList(first.listId, first.taskId);
     if (!isSimulation && entries.length > 0) {
-      queueMicrotask(() => {
-        const queue = entries.map((e) => ({
-          taskId: e.taskId,
-          listId: e.listId,
-        }));
-        workModePromptQueueRef.current = queue;
-        setPendingWorkModeTaskId(queue[0].taskId);
-        setPendingWorkModeListId(queue[0].listId);
-        setIsWorkModeModalOpen(true);
-      });
+      pendingWorkModeAfterZenRef.current = entries.map((e) => ({
+        taskId: e.taskId,
+        listId: e.listId,
+      }));
+    } else {
+      pendingWorkModeAfterZenRef.current = null;
     }
     handleStartFocusSession();
   };
@@ -3379,17 +3414,19 @@ export default function App() {
         .workmode-modal-enter{ animation:workmode-modal-in .18s ease-out; }
         .animate-chevron-bounce{ animation:chevron-bounce 2s ease-in-out infinite }
         @keyframes focus-zen-mist {
-          0%{ opacity:0.55 }
-          45%{ opacity:0.38 }
+          0%{ opacity:0.5 }
+          35%{ opacity:0.42 }
           100%{ opacity:0 }
         }
         @keyframes focus-zen-ripple-long {
-          0%{ transform:scale(0.02); opacity:0.5 }
-          55%{ opacity:0.14 }
+          0%{ transform:scale(0.015); opacity:0 }
+          8%{ opacity:0.62 }
+          22%{ opacity:0.38 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes focus-zen-bloom {
-          0%{ transform:scale(0.22); opacity:0.32 }
+          0%{ transform:scale(0.12); opacity:0.45 }
+          30%{ opacity:0.22 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes app-notif-enter {
@@ -3401,32 +3438,35 @@ export default function App() {
           50%{ box-shadow:0 0 0 1px rgba(239,68,68,0.12),0 8px 28px -12px rgba(239,68,68,0.18) }
         }
         .focus-zen-mist-overlay{
-          animation:focus-zen-mist 4.8s cubic-bezier(0.22,0.61,0.36,1) forwards;
+          animation:focus-zen-mist 5.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
         }
         .focus-zen-ripple-ring{
           position:absolute; left:50%; top:50%;
-          width:min(150vmax,2400px); height:min(150vmax,2400px);
-          margin-left:calc(min(150vmax,2400px)/-2); margin-top:calc(min(150vmax,2400px)/-2);
+          width:min(155vmax,2600px); height:min(155vmax,2600px);
+          margin-left:calc(min(155vmax,2600px)/-2); margin-top:calc(min(155vmax,2600px)/-2);
           border-radius:50%;
-          border:1.25px solid rgba(186,230,253,0.28);
+          border:1.5px solid rgba(186,230,253,0.42);
           box-shadow:
-            0 0 100px rgba(59,130,246,0.16),
-            0 0 180px rgba(147,197,253,0.08),
-            inset 0 0 80px rgba(255,255,255,0.05);
-          animation:focus-zen-ripple-long 2.75s cubic-bezier(0.2,0.65,0.15,1) forwards;
+            0 0 140px rgba(59,130,246,0.28),
+            0 0 260px rgba(147,197,253,0.14),
+            0 0 420px rgba(59,130,246,0.08),
+            inset 0 0 100px rgba(255,255,255,0.07);
+          animation:focus-zen-ripple-long 3.4s cubic-bezier(0.08,0.55,0.12,1) forwards;
         }
         .focus-zen-ripple-ring-slow{
-          animation:focus-zen-ripple-long 3.1s cubic-bezier(0.22,0.68,0.18,1) forwards;
-          border-color:rgba(147,197,253,0.18);
-          box-shadow:0 0 160px rgba(59,130,246,0.1);
+          animation:focus-zen-ripple-long 3.85s cubic-bezier(0.1,0.52,0.15,1) forwards;
+          border-color:rgba(186,230,253,0.32);
+          box-shadow:
+            0 0 200px rgba(59,130,246,0.2),
+            0 0 360px rgba(125,211,252,0.1);
         }
         .focus-zen-bloom-core{
           position:absolute; left:50%; top:50%;
-          width:min(85vmax,1300px); height:min(85vmax,1300px);
-          margin-left:calc(min(85vmax,1300px)/-2); margin-top:calc(min(85vmax,1300px)/-2);
+          width:min(92vmax,1500px); height:min(92vmax,1500px);
+          margin-left:calc(min(92vmax,1500px)/-2); margin-top:calc(min(92vmax,1500px)/-2);
           border-radius:50%;
-          background:radial-gradient(circle, rgba(147,197,253,0.18) 0%, transparent 70%);
-          animation:focus-zen-bloom 3.2s cubic-bezier(0.2,0.82,0.15,1) forwards;
+          background:radial-gradient(circle, rgba(186,230,253,0.22) 0%, rgba(59,130,246,0.06) 42%, transparent 72%);
+          animation:focus-zen-bloom 3.6s cubic-bezier(0.12,0.75,0.18,1) forwards;
         }
         .app-notif-item{
           animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both;
@@ -3725,8 +3765,12 @@ export default function App() {
           <>
           {focusEnterZenActive && zenOverlayOrigin && (
             <div
-              className={`fixed inset-0 z-[265] overflow-hidden transition-opacity duration-700 ${
-                focusEnterZenBlocking
+              className={`fixed inset-0 z-[265] overflow-hidden ${
+                focusZenFadeOut
+                  ? "opacity-0 transition-opacity duration-[2200ms] ease-out"
+                  : "opacity-100"
+              } ${
+                focusEnterZenBlocking && !focusZenFadeOut
                   ? "pointer-events-auto cursor-wait"
                   : "pointer-events-none"
               }`}
@@ -3743,11 +3787,11 @@ export default function App() {
                 }}
               >
                 <div className="focus-zen-bloom-core" />
-                {Array.from({ length: 5 }).map((_, i) => (
+                {Array.from({ length: 8 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`focus-zen-ripple-ring ${i === 4 ? "focus-zen-ripple-ring-slow" : ""}`}
-                    style={{ animationDelay: `${i * 200}ms` }}
+                    className={`focus-zen-ripple-ring ${i === 7 ? "focus-zen-ripple-ring-slow" : ""}`}
+                    style={{ animationDelay: `${i * 165}ms` }}
                   />
                 ))}
               </div>
@@ -4634,12 +4678,12 @@ export default function App() {
                         {selectedListId === SYS_LIST_TODAY &&
                           focusForTodayItems.length > 0 && (
                             <>
-                              <div className="mb-5 shrink-0 overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b]">
+                              <div className="mb-5 shrink-0 overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
                                 <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex min-w-0 flex-1 items-start gap-2">
                                       <span
-                                        className="mt-0.5 inline-flex shrink-0 text-zinc-400"
+                                        className="mt-0.5 inline-flex shrink-0 text-zinc-500"
                                         aria-hidden
                                       >
                                         <svg
@@ -4661,10 +4705,10 @@ export default function App() {
                                         </svg>
                                       </span>
                                       <div className="min-w-0">
-                                        <h3 className="font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-zinc-100">
+                                        <h3 className="text-[1.0625rem] font-semibold leading-7 tracking-normal text-zinc-50 sm:text-xl">
                                           Focus for today
                                         </h3>
-                                        <p className="mt-0.5 max-w-[20rem] text-[11px] leading-snug text-zinc-500">
+                                        <p className="mt-0.5 max-w-[20rem] text-[11px] leading-relaxed text-zinc-400">
                                           Prioritized based on urgency and due
                                           dates
                                         </p>
@@ -4674,7 +4718,7 @@ export default function App() {
                                       <button
                                         type="button"
                                         onClick={handleFocusForTodayStartSession}
-                                        className="rounded-md border border-[#2a2a2a] bg-[#0a0a0b] px-2.5 py-1.5 text-[11px] font-medium leading-none text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-white/[0.04] hover:text-zinc-100"
+                                        className="rounded-md border border-zinc-600/70 bg-zinc-800/90 px-3 py-1.5 text-[11px] font-semibold leading-none text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-500 hover:bg-zinc-700/95 active:scale-[0.98]"
                                       >
                                         Start Focus Session
                                       </button>
@@ -4752,17 +4796,17 @@ export default function App() {
                                             <TaskSystemNavIcon
                                               listId={pick.listId}
                                               dayOfMonth={dayNum}
-                                              className="h-5 w-5 shrink-0 text-zinc-400"
+                                              className="h-5 w-5 shrink-0 text-zinc-500"
                                             />
                                             <div className="min-w-0 flex-1">
-                                              <div className="truncate text-[13px] font-semibold leading-snug text-zinc-100">
+                                              <div className="truncate text-[13px] font-semibold leading-snug text-zinc-50">
                                                 {pick.displayTitle}
                                               </div>
-                                              <div className="mt-0.5 text-[12px] leading-snug text-zinc-500">
+                                              <div className="mt-0.5 text-[12px] leading-snug text-zinc-400">
                                                 {pick.timeLabel}
                                               </div>
                                             </div>
-                                            <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-500">
+                                            <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-400">
                                               {tagLabel}
                                             </span>
                                             <svg
