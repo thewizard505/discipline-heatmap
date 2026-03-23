@@ -257,6 +257,206 @@
 }
 
 /* ========== Micro-interactions (fast, ease-out / spring) ========== */
+/* Adaptive motion (Part 9): html[data-motion-tier="fast"|"smooth"] overrides */
+:root {
+  --motion-press-ms: 220ms;
+  --motion-hint-ms: 150ms;
+  --motion-row-ms: 260ms;
+  --motion-view-ms: 220ms;
+  --motion-list-shell-ms: 240ms;
+  --motion-empty-ms: 180ms;
+  --motion-main-in-ms: 280ms;
+  --motion-timer-nudge-ms: 700ms;
+  --motion-progress-ms: 380ms;
+  --motion-streak-up-ms: 320ms;
+  --motion-streak-down-ms: 400ms;
+}
+
+html[data-motion-tier="fast"] {
+  --motion-press-ms: 155ms;
+  --motion-hint-ms: 105ms;
+  --motion-row-ms: 185ms;
+  --motion-view-ms: 155ms;
+  --motion-list-shell-ms: 165ms;
+  --motion-empty-ms: 130ms;
+  --motion-main-in-ms: 200ms;
+  --motion-timer-nudge-ms: 520ms;
+  --motion-progress-ms: 260ms;
+  --motion-streak-up-ms: 240ms;
+  --motion-streak-down-ms: 300ms;
+}
+
+html[data-motion-tier="smooth"] {
+  --motion-press-ms: 280ms;
+  --motion-hint-ms: 185ms;
+  --motion-row-ms: 320ms;
+  --motion-view-ms: 280ms;
+  --motion-list-shell-ms: 300ms;
+  --motion-empty-ms: 220ms;
+  --motion-main-in-ms: 340ms;
+  --motion-timer-nudge-ms: 880ms;
+  --motion-progress-ms: 480ms;
+  --motion-streak-up-ms: 400ms;
+  --motion-streak-down-ms: 480ms;
+}
+
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+.skeleton-row {
+  background: linear-gradient(
+    90deg,
+    rgba(39, 39, 42, 0.55) 0%,
+    rgba(63, 63, 70, 0.65) 45%,
+    rgba(39, 39, 42, 0.55) 90%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.1s ease-in-out infinite;
+}
+
+@keyframes micro-content-reveal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.micro-content-reveal {
+  animation: micro-content-reveal var(--motion-view-ms, 220ms) ease-out
+    forwards;
+}
+
+@keyframes micro-input-invalid {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-4px);
+  }
+  80% {
+    transform: translateX(4px);
+  }
+}
+.micro-input-invalid {
+  animation: micro-input-invalid 380ms ease-out;
+  box-shadow:
+    0 0 0 1px rgba(239, 68, 68, 0.45),
+    0 0 16px rgba(239, 68, 68, 0.25);
+}
+
+@keyframes micro-snackbar-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.micro-snackbar-in {
+  animation: micro-snackbar-in var(--motion-hint-ms, 150ms) ease-out forwards;
+}
+
+@keyframes microcopy-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.microcopy-in {
+  animation: microcopy-in 150ms ease-out forwards;
+}
+
+@keyframes micro-completion-s {
+  0% {
+    opacity: 0;
+  }
+  35% {
+    opacity: 0.12;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.micro-completion-burst--s {
+  background: radial-gradient(
+    circle at 50% 85%,
+    rgba(59, 130, 246, 0.35),
+    transparent 55%
+  );
+  animation: micro-completion-s var(--motion-row-ms, 260ms) ease-out forwards;
+}
+
+@keyframes micro-completion-m {
+  0% {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  40% {
+    opacity: 0.18;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1);
+  }
+}
+.micro-completion-burst--m {
+  background: radial-gradient(
+    circle at 50% 80%,
+    rgba(99, 102, 241, 0.4),
+    transparent 50%
+  );
+  animation: micro-completion-m calc(var(--motion-row-ms, 260ms) * 1.45)
+    cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+@keyframes micro-completion-l {
+  0% {
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.22;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.micro-completion-burst--l {
+  background: radial-gradient(
+    circle at 50% 75%,
+    rgba(234, 179, 8, 0.35),
+    transparent 48%
+  );
+  animation: micro-completion-l 520ms ease-out forwards;
+}
+
+.btn-press-instant {
+  transition:
+    transform 80ms ease-out,
+    background-color 100ms ease-out,
+    opacity 100ms ease-out;
+}
+.btn-press-instant:active:not(:disabled) {
+  transform: scale(0.96);
+}
 
 @keyframes micro-input-press {
   0% {
@@ -270,7 +470,8 @@
   }
 }
 .micro-input-press {
-  animation: micro-input-press 220ms cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
+  animation: micro-input-press var(--motion-press-ms, 220ms)
+    cubic-bezier(0.34, 1.35, 0.64, 1) forwards;
 }
 
 @keyframes micro-hint-in {
@@ -284,7 +485,7 @@
   }
 }
 .micro-hint-in {
-  animation: micro-hint-in 150ms ease-out forwards;
+  animation: micro-hint-in var(--motion-hint-ms, 150ms) ease-out forwards;
 }
 
 @keyframes micro-row-enter {
@@ -312,7 +513,8 @@
   }
 }
 .micro-list-shell-in {
-  animation: micro-list-shell-in 240ms ease-out forwards;
+  animation: micro-list-shell-in var(--motion-list-shell-ms, 240ms) ease-out
+    forwards;
 }
 
 @keyframes micro-empty-out {
@@ -324,7 +526,7 @@
   }
 }
 .micro-empty-out {
-  animation: micro-empty-out 180ms ease-out forwards;
+  animation: micro-empty-out var(--motion-empty-ms, 180ms) ease-out forwards;
 }
 
 @keyframes micro-focus-main-in {
@@ -376,11 +578,12 @@
   }
 }
 .micro-timer-nudge {
-  animation: micro-timer-nudge 700ms ease-out;
+  animation: micro-timer-nudge var(--motion-timer-nudge-ms, 700ms) ease-out;
 }
 
 .micro-progress-fill {
-  transition: width 380ms cubic-bezier(0.34, 1.2, 0.64, 1);
+  transition: width var(--motion-progress-ms, 380ms)
+    cubic-bezier(0.34, 1.2, 0.64, 1);
 }
 
 @keyframes micro-streak-up {
@@ -395,7 +598,7 @@
   }
 }
 .micro-streak-up {
-  animation: micro-streak-up 320ms ease-out;
+  animation: micro-streak-up var(--motion-streak-up-ms, 320ms) ease-out;
 }
 
 @keyframes micro-streak-down {
@@ -409,7 +612,8 @@
   }
 }
 .micro-streak-down {
-  animation: micro-streak-down 400ms ease-out forwards;
+  animation: micro-streak-down var(--motion-streak-down-ms, 400ms) ease-out
+    forwards;
 }
 
 @keyframes micro-last-task-pulse {
@@ -424,7 +628,7 @@
   }
 }
 .micro-last-task-row {
-  animation: micro-last-task-pulse 2.8s ease-in-out infinite;
+  animation: micro-last-task-pulse 2.2s ease-in-out infinite;
 }
 
 @keyframes micro-view-enter {
@@ -438,7 +642,7 @@
   }
 }
 .micro-view-enter {
-  animation: micro-view-enter 220ms ease-out forwards;
+  animation: micro-view-enter var(--motion-view-ms, 220ms) ease-out forwards;
 }
 
 .app-nav-icon-btn {

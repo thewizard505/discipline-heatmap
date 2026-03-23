@@ -1410,6 +1410,17 @@ const DEFAULT_USER_TODAY_LISTS: TodayList[] = [
 
 const TASKS_BY_LIST_STORAGE_KEY = "tunnelvision_tasks_by_list_v1";
 const TODAY_LISTS_STORAGE_KEY = "tunnelvision_user_lists_v1";
+const MOTION_PREF_STORAGE_KEY = "tunnelvision_motion_tier_v1";
+
+function TaskListSkeletonRows() {
+  return (
+    <div className="space-y-2 pt-1 px-1" aria-hidden>
+      {[0, 1, 2, 3, 4].map((i) => (
+        <div key={i} className="h-9 rounded-xl skeleton-row" />
+      ))}
+    </div>
+  );
+}
 
 function loadTasksByListIdFromStorage(): Record<string, Task[]> {
   if (typeof window === "undefined") return {};
@@ -1473,6 +1484,8 @@ export default function App() {
   const [tasksByListId, setTasksByListId] = useState<Record<string, Task[]>>(
     () => loadTasksByListIdFromStorage(),
   );
+  const tasksByListIdRef = useRef<Record<string, Task[]>>({});
+  tasksByListIdRef.current = tasksByListId;
   const [tasks, setTasks] = useState<Task[]>(() => {
     const tbl = loadTasksByListIdFromStorage();
     return tbl[SYS_LIST_TODAY] ?? [];
@@ -1588,6 +1601,33 @@ export default function App() {
   const [focusSessionNewRowId, setFocusSessionNewRowId] = useState<
     number | null
   >(null);
+
+  const [tasksListSkeletonVisible, setTasksListSkeletonVisible] =
+    useState(false);
+  const [invalidInputTarget, setInvalidInputTarget] = useState<
+    null | "list" | "focus"
+  >(null);
+  const [deleteUndoToast, setDeleteUndoToast] = useState<null | {
+    task: Task;
+    listId: string;
+  }>(null);
+  const deleteUndoToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const [completionBurstTier, setCompletionBurstTier] = useState<
+    null | "s" | "m" | "l"
+  >(null);
+  const [microRewardMsg, setMicroRewardMsg] = useState<string | null>(null);
+  const microRewardTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const elasticCompleteDayRef = useRef("");
+  const todayElasticCompleteCountRef = useRef(0);
+
+  const flashInvalidInput = useCallback((target: "list" | "focus") => {
+    setInvalidInputTarget(target);
+    window.setTimeout(() => setInvalidInputTarget(null), 420);
+  }, []);
 
   /* --- HERO PREVIEW SIMULATION STATE --- */
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
@@ -2267,6 +2307,7 @@ export default function App() {
       window.clearTimeout(tid),
     );
     completionAnimTimersRef.current = [];
+    setCompletionBurstTier(null);
   }, []);
 
   useEffect(() => {
@@ -2287,6 +2328,62 @@ export default function App() {
       }, ms);
       completionAnimTimersRef.current.push(tid);
     };
+
+    const arr = tasksByListIdRef.current[listId] ?? [];
+    const openBefore = arr.filter((x) => !x.completed && !x.removing).length;
+    const listSupportsElasticComplete =
+      listId !== SYS_LIST_OVERDUE &&
+      (ELASTIC_COMPLETE_SYS_LIST_IDS.has(listId) ||
+        todayLists.some((l) => l.id === listId));
+    const isLastInElasticList =
+      openBefore === 1 && listSupportsElasticComplete;
+
+    const dayKey = calendarDay;
+    if (elasticCompleteDayRef.current !== dayKey) {
+      elasticCompleteDayRef.current = dayKey;
+      todayElasticCompleteCountRef.current = 0;
+    }
+    todayElasticCompleteCountRef.current += 1;
+    const n = todayElasticCompleteCountRef.current;
+
+    let burstTier: "s" | "m" | "l" | null = null;
+    if (isLastInElasticList) {
+      burstTier = "l";
+    } else if (n >= 3 && n <= 5) {
+      burstTier = "m";
+    } else if (n === 1) {
+      burstTier = "s";
+    }
+    setCompletionBurstTier(burstTier);
+    if (burstTier) {
+      pushTimer(
+        () => setCompletionBurstTier(null),
+        burstTier === "l" ? 540 : burstTier === "m" ? 420 : 260,
+      );
+    }
+
+    if (
+      !isLastInElasticList &&
+      n >= 2 &&
+      Math.random() < 0.09
+    ) {
+      const msgs = [
+        "Strong progress today.",
+        "Solid pace.",
+        "Stay consistent.",
+        "Clear momentum.",
+      ];
+      const pick = msgs[Math.floor(Math.random() * msgs.length)]!;
+      if (microRewardTimerRef.current) {
+        clearTimeout(microRewardTimerRef.current);
+        microRewardTimerRef.current = null;
+      }
+      setMicroRewardMsg(pick);
+      microRewardTimerRef.current = setTimeout(() => {
+        setMicroRewardMsg(null);
+        microRewardTimerRef.current = null;
+      }, 1400);
+    }
 
     setTaskCheckAnimatingId(task.id);
     pushTimer(() => setTaskRowExitingId(task.id), 420);
@@ -2353,6 +2450,26 @@ export default function App() {
       );
     }
     setTaskReappearId(taskId);
+    window.setTimeout(() => setTaskReappearId(null), 650);
+  }
+
+  function undoDeleteTaskToast() {
+    if (!deleteUndoToast) return;
+    const { task, listId } = deleteUndoToast;
+    if (deleteUndoToastTimerRef.current) {
+      clearTimeout(deleteUndoToastTimerRef.current);
+      deleteUndoToastTimerRef.current = null;
+    }
+    setDeleteUndoToast(null);
+    setTasksByListId((prev) => ({
+      ...prev,
+      [listId]: [...(prev[listId] ?? []), task],
+    }));
+    if (selectedListIdRef.current === listId) {
+      setTasks((prev) => [...prev, task]);
+    }
+    setTaskReappearId(task.id);
+    setSelectedTaskId(task.id);
     window.setTimeout(() => setTaskReappearId(null), 650);
   }
 
@@ -2428,8 +2545,68 @@ export default function App() {
       if (taskDoneToastTimerRef.current) {
         clearTimeout(taskDoneToastTimerRef.current);
       }
+      if (deleteUndoToastTimerRef.current) {
+        clearTimeout(deleteUndoToastTimerRef.current);
+      }
+      if (microRewardTimerRef.current) {
+        clearTimeout(microRewardTimerRef.current);
+      }
     };
   }, []);
+
+  useLayoutEffect(() => {
+    if (typeof document === "undefined") return;
+    try {
+      const raw = localStorage.getItem(MOTION_PREF_STORAGE_KEY);
+      const tier =
+        raw === "fast" || raw === "smooth" || raw === "normal"
+          ? raw
+          : "normal";
+      document.documentElement.dataset.motionTier =
+        tier === "normal" ? "" : tier;
+    } catch {
+      document.documentElement.dataset.motionTier = "";
+    }
+  }, []);
+
+  useEffect(() => {
+    const gaps: number[] = [];
+    let lastTs = 0;
+    const onDown = () => {
+      const now = performance.now();
+      if (lastTs > 0) gaps.push(Math.min(now - lastTs, 8000));
+      lastTs = now;
+      if (gaps.length > 18) gaps.shift();
+      if (gaps.length < 6) return;
+      const avg = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+      let next: "fast" | "normal" | "smooth" = "normal";
+      if (avg < 420) next = "fast";
+      else if (avg > 1600) next = "smooth";
+      document.documentElement.dataset.motionTier =
+        next === "normal" ? "" : next;
+      try {
+        localStorage.setItem(MOTION_PREF_STORAGE_KEY, next);
+      } catch {
+        /* ignore */
+      }
+    };
+    document.addEventListener("pointerdown", onDown, true);
+    return () => document.removeEventListener("pointerdown", onDown, true);
+  }, []);
+
+  useEffect(() => {
+    if (
+      !selectedListId ||
+      todayMainMode !== "tasks" ||
+      activeView !== "tasks"
+    ) {
+      setTasksListSkeletonVisible(false);
+      return;
+    }
+    setTasksListSkeletonVisible(true);
+    const t = window.setTimeout(() => setTasksListSkeletonVisible(false), 220);
+    return () => clearTimeout(t);
+  }, [selectedListId, todayMainMode, activeView]);
 
   useEffect(() => {
     if (!selectedListId) return;
@@ -3165,7 +3342,10 @@ export default function App() {
     if (!selectedListId) return;
     if (selectedListId === SYS_LIST_OVERDUE) return;
     const trimmed = taskInput.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      if (opts?.fromEnter) flashInvalidInput("list");
+      return;
+    }
     const id = Date.now();
     let dueDate: string | null = null;
     if (selectedListId === SYS_LIST_TODAY) {
@@ -3554,10 +3734,17 @@ export default function App() {
     });
   }
 
-  function addTaskFromFocusBar(_opts?: { fromEnter?: boolean }) {
+  function addTaskFromFocusBar(
+    _opts?: { fromEnter?: boolean; fromButtonClick?: boolean },
+  ) {
     if (isSimulation) return;
     const trimmed = taskInput.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      if (_opts?.fromEnter || _opts?.fromButtonClick) {
+        flashInvalidInput("focus");
+      }
+      return;
+    }
     const targetListId = selectedListId ?? SYS_LIST_TODAY;
     if (targetListId === SYS_LIST_OVERDUE) return;
     triggerTaskInputPress();
@@ -5590,7 +5777,11 @@ export default function App() {
                           <div className="shrink-0 space-y-1">
                             <div
                               className={`border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0 ${
-                                taskInputShellPress ? "micro-input-press" : ""
+                                invalidInputTarget === "list"
+                                  ? "micro-input-invalid"
+                                  : taskInputShellPress
+                                    ? "micro-input-press"
+                                    : ""
                               }`}
                               style={{ backgroundColor: TT_INPUT_ROW }}
                             >
@@ -5638,10 +5829,16 @@ export default function App() {
 
                         {/* Tasks list */}
                         <div
-                          className={`flex-1 min-h-0 overflow-y-auto ${
+                          className={`relative flex-1 min-h-0 overflow-y-auto ${
                             selectedListId === SYS_LIST_OVERDUE ? "mt-1" : "mt-2"
                           }`}
                         >
+                          {completionBurstTier ? (
+                            <div
+                              className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`}
+                              aria-hidden
+                            />
+                          ) : null}
                           {!selectedListId ? (
                             <div className="h-full min-h-[240px] flex flex-col items-center justify-center px-6 text-center">
                               <p className="text-[15px] font-semibold text-zinc-200 mb-1">
@@ -5651,11 +5848,13 @@ export default function App() {
                                 Choose a list from the sidebar to add and view tasks.
                               </p>
                             </div>
+                          ) : tasksListSkeletonVisible ? (
+                            <TaskListSkeletonRows />
                           ) : visibleTasksForList.length === 0 ? (
                             allElasticListTasksComplete ? (
                               <div className="flex flex-col items-center justify-center min-h-[min(320px,50vh)] px-6 py-12 text-center">
-                                <p className="text-[15px] font-semibold text-zinc-200">
-                                  All tasks complete
+                                <p className="text-[15px] font-semibold text-zinc-200 microcopy-in">
+                                  Everything handled.
                                 </p>
                                 <p className="mt-1.5 text-sm text-zinc-500 max-w-xs">
                                   Open{" "}
@@ -5690,7 +5889,7 @@ export default function App() {
                             )
                           ) : (
                             <div
-                              className={`space-y-0.5 pt-1 ${
+                              className={`space-y-0.5 pt-1 micro-content-reveal ${
                                 listFirstTaskEnter ? "micro-list-shell-in" : ""
                               }`}
                             >
@@ -5766,7 +5965,7 @@ export default function App() {
                                             ),
                                           );
                                         }}
-                                        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors disabled:opacity-100 ${
+                                        className={`btn-press-instant shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors disabled:opacity-100 ${
                                           t.completed ||
                                           taskCheckAnimatingId === t.id
                                             ? "border-blue-500 bg-blue-500"
@@ -5851,14 +6050,32 @@ export default function App() {
                                         type="button"
                                         onClick={(e) => {
                                           e.stopPropagation();
+                                          if (!selectedListId) return;
+                                          if (deleteUndoToastTimerRef.current) {
+                                            clearTimeout(
+                                              deleteUndoToastTimerRef.current,
+                                            );
+                                            deleteUndoToastTimerRef.current =
+                                              null;
+                                          }
                                           setTasks((prev) =>
                                             prev.filter((x) => x.id !== t.id),
                                           );
                                           if (selectedTaskId === t.id) {
                                             setSelectedTaskId(null);
                                           }
+                                          setDeleteUndoToast({
+                                            task: { ...t },
+                                            listId: selectedListId,
+                                          });
+                                          deleteUndoToastTimerRef.current =
+                                            setTimeout(() => {
+                                              setDeleteUndoToast(null);
+                                              deleteUndoToastTimerRef.current =
+                                                null;
+                                            }, 8000);
                                         }}
-                                        className="shrink-0 w-7 h-7 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                        className="btn-press-instant shrink-0 w-7 h-7 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"
                                         aria-label="Delete task"
                                       >
                                         ✕
@@ -5920,7 +6137,7 @@ export default function App() {
                                     ),
                                   );
                                 }}
-                                className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
+                                className={`btn-press-instant shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
                                   selectedTask.completed ||
                                   taskCheckAnimatingId === selectedTask.id
                                     ? "border-blue-500 bg-blue-500"
@@ -6912,7 +7129,13 @@ export default function App() {
               >
                 <div className="space-y-1.5">
                   <div
-                    className={`flex gap-3 ${taskInputShellPress ? "micro-input-press" : ""}`}
+                    className={`flex gap-3 rounded-[24px] ${
+                      invalidInputTarget === "focus"
+                        ? "micro-input-invalid"
+                        : taskInputShellPress
+                          ? "micro-input-press"
+                          : ""
+                    }`}
                   >
                     <input
                       ref={focusSessionTaskInputRef}
@@ -6935,8 +7158,10 @@ export default function App() {
                     <button
                       disabled={isSimulation}
                       type="button"
-                      onClick={() => addTaskFromFocusBar()}
-                      className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase shrink-0"
+                      onClick={() =>
+                        addTaskFromFocusBar({ fromButtonClick: true })
+                      }
+                      className="btn-press-instant px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase shrink-0 active:bg-gray-800"
                     >
                       ADD
                     </button>
@@ -8395,37 +8620,74 @@ export default function App() {
           </section>
         )}
 
-        {taskDoneToast && (
+        {(deleteUndoToast || taskDoneToast) && (
           <div
-            className="fixed bottom-6 left-1/2 z-[620] flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
-            role="status"
+            className="fixed bottom-6 left-1/2 z-[620] flex w-[min(100vw-1.5rem,420px)] -translate-x-1/2 flex-col items-stretch gap-2 font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+            role="region"
+            aria-label="Notifications"
           >
-            <span className="text-[13px] font-medium text-zinc-100 whitespace-nowrap">
-              Task completed
-            </span>
-            <button
-              type="button"
-              onClick={undoTaskCompletionToast}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-500 transition hover:bg-white/[0.06] hover:text-amber-400"
-              aria-label="Undo complete task"
-              title="Undo"
-            >
-              <svg
-                className="h-[18px] w-[18px]"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
+            {deleteUndoToast && (
+              <div
+                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-2xl border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+                role="status"
               >
-                <path d="M3 7v6h6" />
-                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
-              </svg>
-            </button>
+                <span className="text-[13px] font-medium text-zinc-100 microcopy-in">
+                  Task deleted — Undo
+                </span>
+                <button
+                  type="button"
+                  onClick={undoDeleteTaskToast}
+                  className="btn-press-instant shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-amber-400 transition hover:bg-white/[0.06] hover:text-amber-300"
+                >
+                  Undo
+                </button>
+              </div>
+            )}
+            {taskDoneToast && (
+              <div
+                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-full border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+                role="status"
+              >
+                <span className="text-[13px] font-medium text-zinc-100 microcopy-in whitespace-nowrap">
+                  Locked in.
+                </span>
+                <button
+                  type="button"
+                  onClick={undoTaskCompletionToast}
+                  className="btn-press-instant flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-500 transition hover:bg-white/[0.06] hover:text-amber-400"
+                  aria-label="Undo complete task"
+                  title="Undo"
+                >
+                  <svg
+                    className="h-[18px] w-[18px]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <path d="M3 7v6h6" />
+                    <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+                  </svg>
+                </button>
+              </div>
+            )}
           </div>
         )}
+
+        {microRewardMsg ? (
+          <div
+            className="pointer-events-none fixed bottom-[5.5rem] left-1/2 z-[615] -translate-x-1/2 px-4"
+            role="status"
+            aria-live="polite"
+          >
+            <p className="microcopy-in rounded-full border border-white/[0.08] bg-zinc-900/90 px-3 py-1.5 text-center text-[12px] font-medium text-zinc-300 shadow-lg backdrop-blur-sm">
+              {microRewardMsg}
+            </p>
+          </div>
+        ) : null}
 
         <style>{`
 html { scroll-behavior: smooth; }
