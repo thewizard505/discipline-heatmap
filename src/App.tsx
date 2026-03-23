@@ -44,6 +44,10 @@ type Task = {
   completed?: boolean;
   /** YYYY-MM-DD — Today list sets to current day; Tests/Projects/Long-Term via picker */
   dueDate?: string | null;
+  /** User-provided quick estimate (Focus for today), minutes */
+  estimatedMinutes?: number | null;
+  /** User skipped or answered inline estimate prompt — do not ask again */
+  estimatePromptDismissed?: boolean;
 };
 
 const SYS_LIST_OVERDUE = "sys-overdue";
@@ -237,6 +241,140 @@ function buildFocusForTodayPicks(
   }
 
   return [...overduePicks, ...todayListPicks, ...bigPicks];
+}
+
+const ESTIMATE_PATTERNS_KEY = "tunnelvision_estimate_patterns_v1";
+const ESTIMATE_SESSION_ACTIONS_KEY = "tunnelvision_estimate_session_actions_v1";
+
+type EstimatePatternRow = { sum: number; count: number };
+
+function loadEstimatePatterns(): Record<string, EstimatePatternRow> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(ESTIMATE_PATTERNS_KEY);
+    if (!raw) return {};
+    const p = JSON.parse(raw) as Record<string, EstimatePatternRow>;
+    return p && typeof p === "object" ? p : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveEstimatePatterns(p: Record<string, EstimatePatternRow>) {
+  try {
+    localStorage.setItem(ESTIMATE_PATTERNS_KEY, JSON.stringify(p));
+  } catch {
+    /* ignore */
+  }
+}
+
+function normalizeEstimateKeyword(text: string): string {
+  return text.trim().toLowerCase().slice(0, 80);
+}
+
+function recordEstimatePattern(keyword: string, minutes: number) {
+  if (!keyword) return;
+  const p = loadEstimatePatterns();
+  const row = p[keyword] ?? { sum: 0, count: 0 };
+  row.sum += minutes;
+  row.count += 1;
+  p[keyword] = row;
+  saveEstimatePatterns(p);
+}
+
+function isVagueTaskTitle(raw: string): boolean {
+  const t = raw.trim().toLowerCase();
+  if (t.length < 2) return false;
+  if (/^(study|test|read|write|work|review|prep)$/.test(t)) return true;
+  if (/^work on (project|this|it|stuff|things?)$/.test(t)) return true;
+  if (/^work on\s+\w+$/.test(t) && t.split(/\s+/).length <= 3) return true;
+  return false;
+}
+
+/** Internal: task could use a quick estimate (no modal). */
+function taskNeedsEstimate(task: Task | undefined, listId: string): boolean {
+  if (!task || task.completed || task.removing) return false;
+  if (task.estimatePromptDismissed) return false;
+  if (task.estimatedMinutes != null && task.estimatedMinutes > 0) return false;
+  const raw = (task.text || "").trim();
+  if (!raw) return false;
+  if (isVagueTaskTitle(raw)) return true;
+  if (listId === SYS_LIST_PROJECTS || listId === SYS_LIST_LONGTERM) {
+    const words = raw.split(/\s+/).length;
+    return words <= 4 && raw.length <= 36;
+  }
+  return false;
+}
+
+function getTaskForPick(
+  tasksByListId: Record<string, Task[]>,
+  pick: FocusForTodayPick,
+): Task | undefined {
+  return (tasksByListId[pick.listId] ?? []).find((t) => t.id === pick.taskId);
+}
+
+function estimateMinutesForSort(task: Task | undefined): number | null {
+  const m = task?.estimatedMinutes;
+  if (m == null || m <= 0) return null;
+  return m;
+}
+
+/**
+ * Soft tie-break only: same segment + same primary sort keys → shorter estimate first.
+ * Does not change which tasks are selected (buildFocusForTodayPicks is unchanged).
+ */
+function applySoftEstimateReorder(
+  picks: FocusForTodayPick[],
+  tasksByListId: Record<string, Task[]>,
+): FocusForTodayPick[] {
+  if (picks.length === 0) return picks;
+  const overdue = picks.filter((p) => p.listId === SYS_LIST_OVERDUE);
+  const today = picks.filter((p) => p.listId === SYS_LIST_TODAY);
+  const big = picks.filter((p) =>
+    [SYS_LIST_TESTS, SYS_LIST_PROJECTS, SYS_LIST_LONGTERM].includes(p.listId),
+  );
+  const tieEst = (a: FocusForTodayPick, b: FocusForTodayPick) => {
+    const ea = estimateMinutesForSort(getTaskForPick(tasksByListId, a));
+    const eb = estimateMinutesForSort(getTaskForPick(tasksByListId, b));
+    if (ea != null && eb != null && ea !== eb) return ea - eb;
+    if (ea != null && eb == null) return -1;
+    if (ea == null && eb != null) return 1;
+    return a.displayTitle.localeCompare(b.displayTitle);
+  };
+  const sortOverdue = (a: FocusForTodayPick, b: FocusForTodayPick) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    return tieEst(a, b);
+  };
+  const sortToday = sortOverdue;
+  const sortBig = (a: FocusForTodayPick, b: FocusForTodayPick) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.listId) ?? 9;
+    const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.listId) ?? 9;
+    if (ra !== rb) return ra - rb;
+    return tieEst(a, b);
+  };
+  return [
+    ...[...overdue].sort(sortOverdue),
+    ...[...today].sort(sortToday),
+    ...[...big].sort(sortBig),
+  ];
+}
+
+function formatMinutesLabel(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}
+
+function formatFocusTimeLine(
+  pick: FocusForTodayPick,
+  task: Task | undefined,
+): string {
+  const base = pick.timeLabel;
+  const m = task?.estimatedMinutes;
+  if (m != null && m > 0) return `${base} • ${formatMinutesLabel(m)}`;
+  return base;
 }
 
 /** Muted urgency bar: overdue / due today → rose; 1–2d → amber; 3+d → zinc. */
@@ -1698,9 +1836,110 @@ export default function App() {
     [notificationItems],
   );
 
-  const focusForTodayItems = useMemo(
-    () => buildFocusForTodayPicks(tasksByListId, notificationDay),
-    [tasksByListId, notificationDay],
+  const focusForTodayItems = useMemo(() => {
+    const base = buildFocusForTodayPicks(tasksByListId, notificationDay);
+    return applySoftEstimateReorder(base, tasksByListId);
+  }, [tasksByListId, notificationDay]);
+
+  const [estimateSessionActions, setEstimateSessionActions] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    try {
+      return parseInt(
+        sessionStorage.getItem(ESTIMATE_SESSION_ACTIONS_KEY) || "0",
+        10,
+      );
+    } catch {
+      return 0;
+    }
+  });
+
+  const focusTodaySections = useMemo(() => {
+    const pinned = focusForTodayItems.filter((p) => p.daysLeft <= 0);
+    const upNext = focusForTodayItems.filter((p) => p.daysLeft > 0);
+    return { pinned, upNext };
+  }, [focusForTodayItems]);
+
+  const focusTodayFlatRows = useMemo(() => {
+    const { pinned, upNext } = focusTodaySections;
+    const out: Array<
+      | { kind: "header"; label: string }
+      | { kind: "row"; pick: FocusForTodayPick }
+    > = [];
+    if (pinned.length > 0) {
+      out.push({ kind: "header", label: "Overdue & Due Today" });
+      for (const p of pinned) out.push({ kind: "row", pick: p });
+    }
+    if (upNext.length > 0) {
+      out.push({ kind: "header", label: "Up Next" });
+      for (const p of upNext) out.push({ kind: "row", pick: p });
+    }
+    return out;
+  }, [focusTodaySections]);
+
+  const focusEstimatePromptKeys = useMemo(() => {
+    if (estimateSessionActions >= 2) return new Set<string>();
+    const scored = focusForTodayItems
+      .map((p) => {
+        const t = getTaskForPick(tasksByListId, p);
+        return { p, t };
+      })
+      .filter(
+        ({ t, p }) => t && taskNeedsEstimate(t, p.listId),
+      )
+      .sort((a, b) => {
+        if (a.p.daysLeft !== b.p.daysLeft) return a.p.daysLeft - b.p.daysLeft;
+        const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.p.listId) ?? 9;
+        const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.p.listId) ?? 9;
+        return ra - rb || a.p.displayTitle.localeCompare(b.p.displayTitle);
+      });
+    return new Set(
+      scored.slice(0, 2).map((x) => `${x.p.listId}:${x.p.taskId}`),
+    );
+  }, [focusForTodayItems, tasksByListId, estimateSessionActions]);
+
+  const bumpEstimateSessionAction = useCallback(() => {
+    setEstimateSessionActions((n) => {
+      const next = Math.min(n + 1, 99);
+      try {
+        sessionStorage.setItem(ESTIMATE_SESSION_ACTIONS_KEY, String(next));
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
+
+  const handleFocusEstimateInline = useCallback(
+    (listId: string, taskId: number, minutes: number | "skip") => {
+      setTasksByListId((prev) => {
+        const arr = [...(prev[listId] ?? [])];
+        const idx = arr.findIndex((t) => t.id === taskId);
+        if (idx === -1) return prev;
+        const t = arr[idx];
+        const next: Task = {
+          ...t,
+          estimatePromptDismissed: true,
+        };
+        if (minutes !== "skip") {
+          next.estimatedMinutes = minutes;
+          recordEstimatePattern(normalizeEstimateKeyword(t.text), minutes);
+        }
+        arr[idx] = next;
+        return { ...prev, [listId]: arr };
+      });
+      if (selectedListId === listId) {
+        setTasks((prev) =>
+          prev.map((tt) => {
+            if (tt.id !== taskId) return tt;
+            const u: Task = { ...tt, estimatePromptDismissed: true };
+            if (minutes !== "skip") u.estimatedMinutes = minutes;
+            return u;
+          }),
+        );
+      }
+      bumpEstimateSessionAction();
+    },
+    [bumpEstimateSessionAction, selectedListId],
   );
 
   useEffect(() => {
@@ -4758,12 +4997,26 @@ export default function App() {
                                 </div>
                                 <div className="bg-[#0a0a0b] px-2 py-1 sm:px-2.5">
                                   <ul
-                                    className="flex flex-col"
+                                    className="flex flex-col transition-all duration-300 ease-out"
                                     key={focusForTodayItems
                                       .map((x) => `${x.listId}:${x.taskId}`)
                                       .join("|")}
                                   >
-                                    {focusForTodayItems.map((pick, rowIdx) => {
+                                    {focusTodayFlatRows.map((item, rowIdx) => {
+                                      if (item.kind === "header") {
+                                        return (
+                                          <li
+                                            key={`hdr-${rowIdx}-${item.label}`}
+                                            className={`px-2 pb-1.5 ${rowIdx === 0 ? "pt-0.5" : "pt-3"}`}
+                                          >
+                                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                                              {item.label}
+                                            </span>
+                                            <div className="mt-1.5 h-px bg-[#2a2a2a]" />
+                                          </li>
+                                        );
+                                      }
+                                      const pick = item.pick;
                                       const visuals = focusForTodayRowVisuals(
                                         pick.urgency,
                                       );
@@ -4774,10 +5027,22 @@ export default function App() {
                                       const dayNum = parseISODate(
                                         notificationDay,
                                       ).getDate();
+                                      const task = getTaskForPick(
+                                        tasksByListId,
+                                        pick,
+                                      );
+                                      const timeLine = formatFocusTimeLine(
+                                        pick,
+                                        task,
+                                      );
+                                      const showEstimate =
+                                        focusEstimatePromptKeys.has(
+                                          `${pick.listId}:${pick.taskId}`,
+                                        );
                                       return (
                                         <li
                                           key={`${pick.listId}:${pick.taskId}`}
-                                          className={`border-b border-[#2a2a2a] last:border-b-0 ${rowIdx === 0 ? "pt-0.5" : ""}`}
+                                          className="border-b border-[#2a2a2a] transition-[opacity,transform] duration-300 ease-out last:border-b-0"
                                         >
                                           <button
                                             type="button"
@@ -4803,7 +5068,7 @@ export default function App() {
                                                 {pick.displayTitle}
                                               </div>
                                               <div className="mt-0.5 text-[12px] leading-snug text-zinc-400">
-                                                {pick.timeLabel}
+                                                {timeLine}
                                               </div>
                                             </div>
                                             <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-400">
@@ -4824,6 +5089,62 @@ export default function App() {
                                               />
                                             </svg>
                                           </button>
+                                          {showEstimate ? (
+                                            <div
+                                              className="pb-2.5 pl-[2.75rem] pr-2"
+                                              onClick={(e) =>
+                                                e.stopPropagation()
+                                              }
+                                            >
+                                              <p className="text-[10px] font-medium text-zinc-500 mb-1.5">
+                                                Quick estimate?
+                                              </p>
+                                              <div className="flex flex-wrap items-center gap-1.5">
+                                                {(
+                                                  [
+                                                    [15, "15m"],
+                                                    [30, "30m"],
+                                                    [60, "1h"],
+                                                    [120, "2h"],
+                                                  ] as const
+                                                ).map(([mins, lab]) => (
+                                                  <button
+                                                    key={mins}
+                                                    type="button"
+                                                    disabled={isSimulation}
+                                                    onClick={(e) => {
+                                                      e.preventDefault();
+                                                      e.stopPropagation();
+                                                      handleFocusEstimateInline(
+                                                        pick.listId,
+                                                        pick.taskId,
+                                                        mins,
+                                                      );
+                                                    }}
+                                                    className="rounded border border-zinc-700/80 bg-zinc-900/80 px-2 py-0.5 text-[10px] font-semibold text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800 hover:text-zinc-100 transition-colors disabled:opacity-40"
+                                                  >
+                                                    {lab}
+                                                  </button>
+                                                ))}
+                                                <button
+                                                  type="button"
+                                                  disabled={isSimulation}
+                                                  onClick={(e) => {
+                                                    e.preventDefault();
+                                                    e.stopPropagation();
+                                                    handleFocusEstimateInline(
+                                                      pick.listId,
+                                                      pick.taskId,
+                                                      "skip",
+                                                    );
+                                                  }}
+                                                  className="ml-0.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40"
+                                                >
+                                                  Skip
+                                                </button>
+                                              </div>
+                                            </div>
+                                          ) : null}
                                         </li>
                                       );
                                     })}
