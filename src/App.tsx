@@ -976,23 +976,23 @@ type CalendarPlacedTask = {
 
 const CALENDAR_TASKS_VISIBLE_CAP = 4;
 
-/** Solid category fills (month view) — opaque hex so nothing reads as a gradient over the grid. */
+/** Solid category fills (month view) — flat opaque colors, no gradient overlay. */
 function calendarTaskChipClassForList(listId: string): string {
   const base =
-    "w-full text-left rounded-[3px] px-2 py-1.5 min-w-0 border transition-colors duration-150 active:scale-[0.99]";
+    "w-full text-left rounded-[3px] px-2 py-1.5 min-w-0 border transition-colors duration-150 active:scale-[0.99] [background-image:none]";
   const byList: Record<string, string> = {
     [SYS_LIST_OVERDUE]:
-      "border-[#7a3040] bg-[#4a1c26] hover:bg-[#5c2430]",
+      "!border-[#7a3040] !bg-[#4a1c26] hover:!bg-[#5c2430]",
     [SYS_LIST_TODAY]:
-      "border-[#556987] bg-[#3d4a63] hover:bg-[#465673]",
+      "!border-[#556987] !bg-[#3d4a63] hover:!bg-[#465673]",
     [SYS_LIST_PROJECTS]:
-      "border-[#8b6a35] bg-[#5c4320] hover:bg-[#6d4f28]",
+      "!border-[#9a7828] !bg-[#6b4a18] hover:!bg-[#7d5520]",
     [SYS_LIST_TESTS]:
-      "border-[#3d7a7a] bg-[#1f4d4d] hover:bg-[#265c5c]",
+      "!border-[#3d7a7a] !bg-[#1f4d4d] hover:!bg-[#265c5c]",
     [SYS_LIST_LONGTERM]:
-      "border-[#6b5a8a] bg-[#3f3658] hover:bg-[#4a4065]",
+      "!border-[#6b5a8a] !bg-[#3f3658] hover:!bg-[#4a4065]",
   };
-  return `${base} ${byList[listId] ?? "border-[#5c5c66] bg-[#3f3f46] hover:bg-[#52525b]"}`;
+  return `${base} ${byList[listId] ?? "!border-[#5c5c66] !bg-[#3f3f46] hover:!bg-[#52525b]"}`;
 }
 
 type CalendarGridCell =
@@ -1142,7 +1142,7 @@ function TasksDueCalendarMonth({
                 key={cell.key}
                 className={`relative bg-[#131313] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.045)] ${
                   isToday
-                    ? "ring-1 ring-inset ring-zinc-600/45 bg-[radial-gradient(ellipse_at_50%_0%,rgba(255,255,255,0.05),transparent_55%)]"
+                    ? "ring-1 ring-inset ring-zinc-500/40 bg-[#161616]"
                     : ""
                 }`}
               >
@@ -1463,6 +1463,10 @@ export default function App() {
   const [name, setName] = useState("Alex");
   const [seconds, setSeconds] = useState(0);
   const [initialSeconds, setInitialSeconds] = useState(0);
+  const secondsRef = useRef(0);
+  const initialSecondsRef = useRef(0);
+  secondsRef.current = seconds;
+  initialSecondsRef.current = initialSeconds;
   const [running, setRunning] = useState(false);
   const [streak, setStreak] = useState(3);
   const [taskInput, setTaskInput] = useState("");
@@ -1556,6 +1560,7 @@ export default function App() {
   }>(null);
 
   const [focusFinaleOpen, setFocusFinaleOpen] = useState(false);
+  const [focusFinaleModalOpen, setFocusFinaleModalOpen] = useState(false);
   const [focusFinalePhase, setFocusFinalePhase] = useState<1 | 2 | 3>(1);
   const [focusFinaleSnapshot, setFocusFinaleSnapshot] = useState<{
     integrity: number;
@@ -1598,6 +1603,8 @@ export default function App() {
     useState(0);
   const [todayTotalFocusMinutes, setTodayTotalFocusMinutes] = useState(0);
   const [timerAccumulator, setTimerAccumulator] = useState(0);
+  const timerAccumulatorRef = useRef(0);
+  timerAccumulatorRef.current = timerAccumulator;
 
   /* --- FOCUS INTEGRITY ENGINE --- */
   const [integrityPenalty, setIntegrityPenalty] = useState(0);
@@ -2293,12 +2300,16 @@ export default function App() {
 
   useEffect(() => {
     if (!focusFinaleOpen || !focusFinaleSnapshot) return;
+    setFocusFinaleModalOpen(false);
     setFocusFinalePhase(1);
-    const t1 = window.setTimeout(() => setFocusFinalePhase(2), 500);
-    const t2 = window.setTimeout(() => setFocusFinalePhase(3), 1000);
+    const tModal = window.setTimeout(() => {
+      setFocusFinaleModalOpen(true);
+      setFocusFinalePhase(2);
+    }, 700);
+    const tStats = window.setTimeout(() => setFocusFinalePhase(3), 700 + 500);
     return () => {
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      window.clearTimeout(tModal);
+      window.clearTimeout(tStats);
     };
   }, [focusFinaleOpen, focusFinaleSnapshot]);
 
@@ -2758,6 +2769,7 @@ export default function App() {
 
   const cleanupFocusSessionAfterQuit = () => {
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -3378,6 +3390,7 @@ export default function App() {
     focusSessionTasksCompletedRef.current = 0;
     setIsVictory(false);
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -3545,8 +3558,9 @@ export default function App() {
   }
 
   function finishSessionManual() {
-    const partialMins = Math.floor(timerAccumulator / 60);
-    const elapsedSecs = Math.max(0, initialSeconds - seconds);
+    const partialMins = Math.floor(timerAccumulatorRef.current / 60);
+    const original = initialSecondsRef.current;
+    const elapsedSecs = Math.max(0, original - secondsRef.current);
     const integrity = Math.round(
       Math.max(0, Math.min(100, integrityScoreNum)),
     );
@@ -3564,12 +3578,14 @@ export default function App() {
     focusFinaleSnapshotRef.current = snap;
     setFocusFinaleSnapshot(snap);
     setFocusFinalePhase(1);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleOpen(true);
   }
 
   function dismissFocusFinale() {
     const snap = focusFinaleSnapshotRef.current;
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -6450,12 +6466,6 @@ export default function App() {
                       "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
                   }}
                 />
-                {focusFinaleOpen && (
-                  <div
-                    className="pointer-events-none absolute inset-0 z-[340] overflow-hidden focus-finale-streamers"
-                    aria-hidden
-                  />
-                )}
                 <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -6475,10 +6485,10 @@ export default function App() {
             )}
 
             <div
-              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || focusFinaleOpen ? "blur-lg opacity-0" : "opacity-100"}`}
+              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || focusFinaleModalOpen ? "blur-lg opacity-0" : "opacity-100"}`}
             >
               <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-                Hello <span className="text-blue-600">{name}</span>.
+                Hello <span className="text-blue-600">User</span>.
               </h1>
               <p className="text-lg text-gray-500 font-light italic">
                 {randomGreeting}
@@ -6529,7 +6539,13 @@ export default function App() {
             <div
               className={`relative flex items-center justify-center z-[200] transition-all duration-500 ${focusFinaleOpen ? "focus-finale-timer-wrap" : ""}`}
             >
-              <svg className="absolute w-[360px] h-[360px] -rotate-90">
+              {focusFinaleOpen && (
+                <div
+                  className="pointer-events-none absolute -inset-10 z-0 rounded-[3.75rem] focus-finale-streamers-ring"
+                  aria-hidden
+                />
+              )}
+              <svg className="absolute z-[1] w-[360px] h-[360px] -rotate-90">
                 <circle
                   cx="180"
                   cy="180"
@@ -6560,7 +6576,7 @@ export default function App() {
                 />
               </svg>
               <div
-                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
+                className={`relative z-[2] w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
               >
                 <>
                   <div
@@ -6611,7 +6627,7 @@ export default function App() {
                       <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-4xl space-y-12 px-4 pb-24 pt-2">
               <div
-                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || focusFinaleOpen ? "opacity-40" : "opacity-100"}`}
+                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="flex gap-3">
                   <input
@@ -6912,7 +6928,7 @@ export default function App() {
                     </div>
                   </div>
                 </div>
-                {focusFinaleOpen && focusFinaleSnapshot && (
+                {focusFinaleModalOpen && focusFinaleSnapshot && (
                   <div
                     className="absolute inset-0 z-[450] flex items-center justify-center p-6"
                     role="dialog"
@@ -6921,7 +6937,7 @@ export default function App() {
                   >
                     <button
                       type="button"
-                      className="absolute inset-0 bg-white/55 backdrop-blur-md cursor-pointer border-0 p-0"
+                      className="absolute inset-0 bg-white/50 backdrop-blur-xl cursor-pointer border-0 p-0"
                       aria-label="Dismiss celebration"
                       onClick={dismissFocusFinale}
                     />
@@ -8168,22 +8184,23 @@ html { scroll-behavior: smooth; }
     0 20px 50px rgba(234, 179, 8, 0.12),
     0 0 36px rgba(250, 204, 21, 0.18);
 }
-.focus-finale-streamers {
-  opacity: 0.85;
+.focus-finale-streamers-ring {
+  opacity: 0.92;
+  overflow: hidden;
   background-image:
-    linear-gradient(125deg, transparent 40%, rgba(234, 179, 8, 0.12) 50%, transparent 60%),
-    linear-gradient(210deg, transparent 35%, rgba(250, 204, 21, 0.1) 48%, transparent 58%),
+    linear-gradient(125deg, transparent 40%, rgba(234, 179, 8, 0.14) 50%, transparent 60%),
+    linear-gradient(210deg, transparent 35%, rgba(250, 204, 21, 0.12) 48%, transparent 58%),
     repeating-linear-gradient(
       90deg,
-      transparent 0 32px,
-      rgba(234, 179, 8, 0.07) 32px 33px
+      transparent 0 28px,
+      rgba(234, 179, 8, 0.09) 28px 29px
     );
-  background-size: 200% 200%, 180% 180%, 120px 100%;
+  background-size: 200% 200%, 180% 180%, 100px 100%;
   animation: focus-finale-streamer-move 2.8s linear infinite;
 }
 @keyframes focus-finale-streamer-move {
   0% { background-position: 0% 0%, 100% 0%, 0 0; }
-  100% { background-position: 100% 80%, 0% 100%, 120px 40px; }
+  100% { background-position: 100% 80%, 0% 100%, 100px 36px; }
 }
 ::-webkit-scrollbar { width: 6px; }
 `}</style>
