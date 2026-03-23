@@ -85,6 +85,15 @@ const FOCUS_PICKER_LABELS: Record<string, string> = {
   [SYS_LIST_LONGTERM]: "Long-Term Assignments",
 };
 
+/** Short labels for the Focus for today row tags (Todoist-like). */
+const FOCUS_FOR_TODAY_TAG_LABELS: Record<string, string> = {
+  [SYS_LIST_OVERDUE]: "Overdue",
+  [SYS_LIST_TODAY]: "Today",
+  [SYS_LIST_PROJECTS]: "Project",
+  [SYS_LIST_TESTS]: "Test",
+  [SYS_LIST_LONGTERM]: "Long-term",
+};
+
 type FocusSessionEntry = { listId: string; taskId: number };
 
 /**
@@ -135,8 +144,8 @@ function formatFocusTimeRemaining(daysLeft: number): string {
 
 function focusUrgencyFromDays(daysLeft: number): FocusForTodayPick["urgency"] {
   if (daysLeft < 0) return "overdue";
-  if (daysLeft <= 1) return "critical";
-  if (daysLeft <= 3) return "soon";
+  if (daysLeft === 0) return "critical";
+  if (daysLeft <= 2) return "soon";
   return "steady";
 }
 
@@ -230,30 +239,19 @@ function buildFocusForTodayPicks(
   return [...overduePicks, ...todayListPicks, ...bigPicks];
 }
 
-function focusForTodayUrgencyStyles(
+/** Muted urgency bar: overdue / due today → rose; 1–2d → amber; 3+d → zinc. */
+function focusForTodayRowVisuals(
   urgency: FocusForTodayPick["urgency"],
-): { badge: string; bar: string } {
+): { bar: string } {
   switch (urgency) {
     case "overdue":
-      return {
-        badge: "bg-red-500/15 text-red-300 border border-red-500/25",
-        bar: "bg-red-500",
-      };
+      return { bar: "bg-rose-900/90" };
     case "critical":
-      return {
-        badge: "bg-orange-500/15 text-orange-200 border border-orange-500/25",
-        bar: "bg-orange-500",
-      };
+      return { bar: "bg-rose-800/75" };
     case "soon":
-      return {
-        badge: "bg-amber-500/12 text-amber-100 border border-amber-500/20",
-        bar: "bg-amber-400",
-      };
+      return { bar: "bg-amber-800/55" };
     default:
-      return {
-        badge: "bg-zinc-600/35 text-zinc-300 border border-zinc-500/20",
-        bar: "bg-sky-500/80",
-      };
+      return { bar: "bg-zinc-600/45" };
   }
 }
 
@@ -3437,6 +3435,27 @@ export default function App() {
           animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both,
             app-notif-urgency 3.2s ease-in-out 0.4s 2;
         }
+        @keyframes focus-today-particle-drift {
+          0%{ transform:translate3d(0,-8%,0); opacity:0 }
+          12%{ opacity:0.055 }
+          88%{ opacity:0.04 }
+          100%{ transform:translate3d(var(--ft-dx,0),108%,0); opacity:0 }
+        }
+        .focus-today-particle-shell{
+          position:absolute; inset:0; overflow:hidden; border-radius:inherit;
+          pointer-events:none; z-index:0;
+        }
+        .focus-today-particle{
+          position:absolute; top:-4%;
+          width:2px; height:2px; border-radius:9999px;
+          background:rgba(250,250,250,0.35);
+          animation:focus-today-particle-drift linear infinite;
+          opacity:0.5;
+          will-change:transform,opacity;
+        }
+        @media (prefers-reduced-motion:reduce){
+          .focus-today-particle{ animation:none !important; opacity:0 !important; }
+        }
       `}</style>
 
       <div
@@ -4636,85 +4655,99 @@ export default function App() {
                         {selectedListId === SYS_LIST_TODAY &&
                           focusForTodayItems.length > 0 && (
                             <>
-                              <div
-                                className="shrink-0 mb-5 rounded-2xl border border-sky-500/15 bg-gradient-to-br from-zinc-800/50 via-[#1c1c22] to-zinc-950/40 p-5 shadow-[0_16px_48px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.06),0_0_32px_rgba(59,130,246,0.06)] transition-[box-shadow,transform] duration-500 hover:shadow-[0_20px_56px_rgba(0,0,0,0.48),inset_0_1px_0_rgba(255,255,255,0.08),0_0_40px_rgba(59,130,246,0.09)]"
-                              >
-                                <div className="flex items-start justify-between gap-3 mb-4">
-                                  <div className="min-w-0 pr-2">
-                                    <h3 className="text-[clamp(1.25rem,2.8vw,1.65rem)] font-extrabold tracking-[-0.03em] leading-tight text-transparent bg-clip-text bg-gradient-to-r from-zinc-50 via-white to-zinc-200 drop-shadow-[0_2px_18px_rgba(255,255,255,0.12)]">
-                                      Focus for today
-                                    </h3>
-                                    <p className="text-[12px] text-zinc-500 mt-2 leading-relaxed max-w-[20rem]">
-                                      Plan your day: Overdue, Today, plus Tests,
-                                      Projects, and Long-Term by urgency.
-                                    </p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={handleFocusForTodayStartSession}
-                                    className="shrink-0 inline-flex items-center justify-center rounded-xl bg-blue-600 px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-[0_4px_20px_rgba(37,99,235,0.4)] hover:bg-blue-500 hover:shadow-[0_6px_28px_rgba(37,99,235,0.45)] active:scale-[0.98] transition-all duration-300"
-                                  >
-                                    Start Focus Session
-                                  </button>
-                                </div>
-                                <ul
-                                  className="space-y-2"
-                                  key={focusForTodayItems
-                                    .map((x) => `${x.listId}:${x.taskId}`)
-                                    .join("|")}
+                              <div className="relative shrink-0 mb-5 overflow-hidden rounded-lg border border-zinc-800/90 bg-[#121214] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
+                                <div
+                                  className="focus-today-particle-shell"
+                                  aria-hidden
                                 >
-                                  {focusForTodayItems.map((pick) => {
-                                    const styles = focusForTodayUrgencyStyles(
-                                      pick.urgency,
-                                    );
-                                    return (
-                                      <li key={`${pick.listId}:${pick.taskId}`}>
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openTaskFromCalendar(
-                                              pick.listId,
-                                              pick.taskId,
-                                            )
-                                          }
-                                          className="w-full text-left rounded-xl px-3 py-2.5 flex gap-3 items-start border border-transparent hover:border-white/[0.1] hover:bg-white/[0.05] transition-all duration-300 ease-out group"
-                                        >
-                                          <span
-                                            className={`mt-1.5 h-7 w-1 shrink-0 rounded-full ${styles.bar} opacity-90 group-hover:opacity-100 transition-opacity`}
-                                            aria-hidden
-                                          />
-                                          <div className="min-w-0 flex-1">
-                                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                                              <span className="text-[15px] font-medium text-zinc-100 leading-snug">
+                                  {[
+                                    { left: "7%", dx: "2px", dur: 22, delay: -4 },
+                                    { left: "23%", dx: "-3px", dur: 19, delay: -12 },
+                                    { left: "41%", dx: "4px", dur: 24, delay: -2 },
+                                    { left: "58%", dx: "-2px", dur: 21, delay: -18 },
+                                    { left: "74%", dx: "3px", dur: 26, delay: -8 },
+                                    { left: "89%", dx: "-4px", dur: 23, delay: -14 },
+                                  ].map((p, i) => (
+                                    <span
+                                      key={i}
+                                      className="focus-today-particle"
+                                      style={
+                                        {
+                                          left: p.left,
+                                          animationDuration: `${p.dur}s`,
+                                          animationDelay: `${p.delay}s`,
+                                          ["--ft-dx" as string]: p.dx,
+                                        } as React.CSSProperties
+                                      }
+                                    />
+                                  ))}
+                                </div>
+                                <div className="relative z-[1] px-3.5 py-3.5">
+                                  <div className="mb-3 flex items-start justify-between gap-4">
+                                    <div className="min-w-0">
+                                      <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-zinc-200">
+                                        Focus for today
+                                      </h3>
+                                      <p className="mt-1 max-w-[18rem] text-[11px] leading-snug text-zinc-500">
+                                        Prioritized based on urgency and due
+                                        dates
+                                      </p>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={handleFocusForTodayStartSession}
+                                      className="shrink-0 rounded border border-zinc-700/90 bg-zinc-900/70 px-2.5 py-1.5 text-[11px] font-medium leading-none text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800/90 hover:text-zinc-100 active:bg-zinc-800"
+                                    >
+                                      Start Focus Session
+                                    </button>
+                                  </div>
+                                  <ul
+                                    className="divide-y divide-zinc-800/80"
+                                    key={focusForTodayItems
+                                      .map((x) => `${x.listId}:${x.taskId}`)
+                                      .join("|")}
+                                  >
+                                    {focusForTodayItems.map((pick) => {
+                                      const visuals = focusForTodayRowVisuals(
+                                        pick.urgency,
+                                      );
+                                      const tagLabel =
+                                        FOCUS_FOR_TODAY_TAG_LABELS[
+                                          pick.listId
+                                        ] ?? "Task";
+                                      return (
+                                        <li key={`${pick.listId}:${pick.taskId}`}>
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              openTaskFromCalendar(
+                                                pick.listId,
+                                                pick.taskId,
+                                              )
+                                            }
+                                            className="flex w-full items-center gap-3 rounded-md py-2.5 pl-1 pr-1 text-left transition-colors hover:bg-white/[0.03]"
+                                          >
+                                            <span
+                                              className={`h-9 w-px shrink-0 rounded-full ${visuals.bar}`}
+                                              aria-hidden
+                                            />
+                                            <div className="min-w-0 flex-1">
+                                              <div className="text-[13px] font-medium leading-snug text-zinc-200">
                                                 {pick.displayTitle}
-                                              </span>
-                                              <span className="text-[13px] text-zinc-500 tabular-nums">
-                                                — {pick.timeLabel}
-                                              </span>
+                                              </div>
+                                              <div className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                                                {pick.timeLabel}
+                                              </div>
                                             </div>
-                                            <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                                              <span
-                                                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${styles.badge}`}
-                                              >
-                                                {pick.urgency === "overdue"
-                                                  ? "Overdue"
-                                                  : pick.urgency === "critical"
-                                                    ? "Due soon"
-                                                    : pick.urgency === "soon"
-                                                      ? "Upcoming"
-                                                      : "Planned"}
-                                              </span>
-                                              <span className="text-[10px] text-zinc-600">
-                                                {FOCUS_PICKER_LABELS[pick.listId] ??
-                                                  pick.listId}
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </button>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
+                                            <span className="shrink-0 rounded border border-zinc-700/70 bg-zinc-900/50 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                                              {tagLabel}
+                                            </span>
+                                          </button>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                </div>
                               </div>
                               <div className="flex items-center gap-3 mb-3 px-0.5 shrink-0">
                                 <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
