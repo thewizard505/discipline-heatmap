@@ -56,6 +56,14 @@ const SYS_LIST_PROJECTS = "sys-projects";
 const SYS_LIST_TESTS = "sys-tests";
 const SYS_LIST_LONGTERM = "sys-longterm";
 
+/** Lists that use elastic checkbox + “move to Completed” flow (excludes Overdue). */
+const ELASTIC_COMPLETE_SYS_LIST_IDS = new Set<string>([
+  SYS_LIST_TODAY,
+  SYS_LIST_TESTS,
+  SYS_LIST_PROJECTS,
+  SYS_LIST_LONGTERM,
+]);
+
 const OVERDUE_SOURCE_LIST_IDS: readonly string[] = [
   SYS_LIST_TODAY,
   SYS_LIST_TESTS,
@@ -1467,6 +1475,8 @@ export default function App() {
   });
   const isSwitchingListRef = useRef(false);
   const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
+  const selectedTaskIdRef = useRef<number | null>(null);
+  selectedTaskIdRef.current = selectedTaskId;
   const tasksRef = useRef<Task[]>([]);
   const [isWorkModeModalOpen, setIsWorkModeModalOpen] = useState(false);
   const [pendingWorkModeTaskId, setPendingWorkModeTaskId] = useState<
@@ -1517,10 +1527,41 @@ export default function App() {
     number | null
   >(null);
   const [isVictory, setIsVictory] = useState(false);
-  const [showReflection, setShowReflection] = useState(false);
   const [reflectionPrompt, setReflectionPrompt] = useState<string | null>(null);
   const [reflectionText, setReflectionText] = useState("");
   const [scrollY, setScrollY] = useState(0);
+
+  const focusSessionTasksCompletedRef = useRef(0);
+  const taskDoneToastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const completionAnimTimersRef = useRef<number[]>([]);
+  const focusFinaleSnapshotRef = useRef<{
+    integrity: number;
+    elapsedSecs: number;
+    tasksDone: number;
+  } | null>(null);
+
+  const [taskCheckAnimatingId, setTaskCheckAnimatingId] = useState<
+    number | null
+  >(null);
+  const [taskRowExitingId, setTaskRowExitingId] = useState<number | null>(
+    null,
+  );
+  const [taskReappearId, setTaskReappearId] = useState<number | null>(null);
+  const [taskDoneToast, setTaskDoneToast] = useState<null | {
+    taskId: number;
+    taskText: string;
+    listId: string;
+  }>(null);
+
+  const [focusFinaleOpen, setFocusFinaleOpen] = useState(false);
+  const [focusFinalePhase, setFocusFinalePhase] = useState<1 | 2 | 3>(1);
+  const [focusFinaleSnapshot, setFocusFinaleSnapshot] = useState<{
+    integrity: number;
+    elapsedSecs: number;
+    tasksDone: number;
+  } | null>(null);
 
   /* --- HERO PREVIEW SIMULATION STATE --- */
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
@@ -1584,12 +1625,6 @@ export default function App() {
     "Progress compounds.",
     "Let’s build momentum.",
     "Discipline over motivation.",
-  ];
-
-  const prompts = [
-    "What worked well today?",
-    "Anything distract you? How can you avoid it later?",
-    "What grade would you give yourself?",
   ];
 
   type AppView =
@@ -1754,6 +1789,28 @@ export default function App() {
       ),
     [selectedListId, todayLists],
   );
+
+  const listUsesElasticComplete = useMemo(() => {
+    if (!selectedListId || selectedListId === SYS_LIST_OVERDUE) return false;
+    if (ELASTIC_COMPLETE_SYS_LIST_IDS.has(selectedListId)) return true;
+    return isUserListSelected;
+  }, [selectedListId, isUserListSelected]);
+
+  const tasksActiveNoRemoving = useMemo(
+    () => tasks.filter((t) => !t.removing),
+    [tasks],
+  );
+  const visibleTasksForList = useMemo(
+    () =>
+      tasksActiveNoRemoving.filter(
+        (t) => !(listUsesElasticComplete && t.completed),
+      ),
+    [tasksActiveNoRemoving, listUsesElasticComplete],
+  );
+  const allElasticListTasksComplete =
+    listUsesElasticComplete &&
+    tasksActiveNoRemoving.length > 0 &&
+    visibleTasksForList.length === 0;
 
   const selectedTask = useMemo(() => {
     if (selectedTaskId == null) return null;
@@ -2139,6 +2196,119 @@ export default function App() {
       return prev;
     });
   };
+
+  const clearTaskCompletionAnimTimers = useCallback(() => {
+    completionAnimTimersRef.current.forEach((tid) =>
+      window.clearTimeout(tid),
+    );
+    completionAnimTimersRef.current = [];
+  }, []);
+
+  useEffect(() => {
+    clearTaskCompletionAnimTimers();
+    setTaskCheckAnimatingId(null);
+    setTaskRowExitingId(null);
+  }, [selectedListId, clearTaskCompletionAnimTimers]);
+
+  function scheduleElasticListTaskComplete(
+    task: Task,
+    listId: string,
+    listLabel: string,
+  ) {
+    clearTaskCompletionAnimTimers();
+    const pushTimer = (fn: () => void, ms: number) => {
+      const tid = window.setTimeout(() => {
+        fn();
+      }, ms);
+      completionAnimTimersRef.current.push(tid);
+    };
+
+    setTaskCheckAnimatingId(task.id);
+    pushTimer(() => setTaskRowExitingId(task.id), 420);
+    pushTimer(() => {
+      appendCompletedActivity(task.text, 0, listId, listLabel);
+      if (selectedListIdRef.current === listId) {
+        setTasks((prev) =>
+          prev.map((x) =>
+            x.id === task.id ? { ...x, completed: true } : x,
+          ),
+        );
+      } else {
+        setTasksByListId((prev) => {
+          const arr = prev[listId] ?? [];
+          return {
+            ...prev,
+            [listId]: arr.map((x) =>
+              x.id === task.id ? { ...x, completed: true } : x,
+            ),
+          };
+        });
+      }
+      setTaskCheckAnimatingId(null);
+      setTaskRowExitingId(null);
+      if (selectedTaskIdRef.current === task.id) {
+        setSelectedTaskId(null);
+      }
+      setTaskDoneToast({
+        taskId: task.id,
+        taskText: task.text,
+        listId,
+      });
+      if (taskDoneToastTimerRef.current) {
+        clearTimeout(taskDoneToastTimerRef.current);
+      }
+      taskDoneToastTimerRef.current = setTimeout(() => {
+        setTaskDoneToast(null);
+        taskDoneToastTimerRef.current = null;
+      }, 8000);
+    }, 420 + 300);
+  }
+
+  function undoTaskCompletionToast() {
+    if (!taskDoneToast) return;
+    const { taskId, taskText, listId } = taskDoneToast;
+    removeLastCompletedForTaskOnList(taskText, listId);
+    if (taskDoneToastTimerRef.current) {
+      clearTimeout(taskDoneToastTimerRef.current);
+      taskDoneToastTimerRef.current = null;
+    }
+    setTaskDoneToast(null);
+    setTasksByListId((prev) => {
+      const arr = [...(prev[listId] ?? [])];
+      const i = arr.findIndex((x) => x.id === taskId);
+      if (i === -1) return prev;
+      arr[i] = { ...arr[i], completed: false };
+      return { ...prev, [listId]: arr };
+    });
+    if (selectedListIdRef.current === listId) {
+      setTasks((prev) =>
+        prev.map((x) =>
+          x.id === taskId ? { ...x, completed: false } : x,
+        ),
+      );
+    }
+    setTaskReappearId(taskId);
+    window.setTimeout(() => setTaskReappearId(null), 650);
+  }
+
+  useEffect(() => {
+    if (!focusFinaleOpen || !focusFinaleSnapshot) return;
+    setFocusFinalePhase(1);
+    const t1 = window.setTimeout(() => setFocusFinalePhase(2), 500);
+    const t2 = window.setTimeout(() => setFocusFinalePhase(3), 1000);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
+  }, [focusFinaleOpen, focusFinaleSnapshot]);
+
+  useEffect(() => {
+    return () => {
+      if (taskDoneToastTimerRef.current) {
+        clearTimeout(taskDoneToastTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedListId) return;
@@ -2587,6 +2757,10 @@ export default function App() {
   };
 
   const cleanupFocusSessionAfterQuit = () => {
+    setFocusFinaleOpen(false);
+    setFocusFinaleSnapshot(null);
+    focusFinaleSnapshotRef.current = null;
+    setFocusFinalePhase(1);
     setTimerAccumulator(0);
     setRunning(false);
     setIsFocusSessionActive(false);
@@ -2689,7 +2863,6 @@ export default function App() {
     setIntegrityPenalty(0);
     setTimerAccumulator(0);
     setTimerSessionStart(null);
-    setShowReflection(false);
     setReflectionPrompt(null);
     setReflectionText("");
     setWarning(null);
@@ -2903,7 +3076,6 @@ export default function App() {
     setSeconds(0);
     setRunning(false);
     setIsVictory(false);
-    setShowReflection(false);
     setIntegrityPenalty(0);
     setFocusSessionEntries([]);
     workModePromptQueueRef.current = [];
@@ -2914,10 +3086,10 @@ export default function App() {
     setTimeout(() => setWarning(null), 3000);
   };
 
-  const handleReflectionSubmit = () => {
+  const handleReflectionSubmit = (options?: { tasksCompleted?: number }) => {
     const todayStr = getTodayStr();
     const sessionSecs = todayTotalFocusMinutes * 60;
-    const tasksDone = tasks.length;
+    const tasksDone = options?.tasksCompleted ?? tasks.length;
 
     setHeatmapData((prev) => {
       const newData = [...prev];
@@ -2956,7 +3128,6 @@ export default function App() {
     }));
 
     setTodayTotalFocusMinutes(0);
-    setShowReflection(false);
     setReflectionPrompt(null);
     setReflectionText("");
     setWarning("Focus Synced");
@@ -3204,8 +3375,12 @@ export default function App() {
     setTimerSessionStart(Date.now());
     setLastTaskCompletionTime(Date.now());
     setTimerAccumulator(0);
+    focusSessionTasksCompletedRef.current = 0;
     setIsVictory(false);
-    setShowReflection(false);
+    setFocusFinaleOpen(false);
+    setFocusFinaleSnapshot(null);
+    focusFinaleSnapshotRef.current = null;
+    setFocusFinalePhase(1);
   }
 
   function addTaskToFocusSession(
@@ -3288,6 +3463,7 @@ export default function App() {
       allListsForSelection.find((l) => l.id === listId)?.label ?? "Focus";
 
     if (running) {
+      focusSessionTasksCompletedRef.current += 1;
       const refPoint = lastTaskCompletionTime || timerSessionStart || now;
       const durationSecs = Math.max(1, Math.floor((now - refPoint) / 1000));
       setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
@@ -3370,13 +3546,35 @@ export default function App() {
 
   function finishSessionManual() {
     const partialMins = Math.floor(timerAccumulator / 60);
+    const elapsedSecs = Math.max(0, initialSeconds - seconds);
+    const integrity = Math.round(
+      Math.max(0, Math.min(100, integrityScoreNum)),
+    );
+    const tasksDone = Math.max(1, focusSessionTasksCompletedRef.current);
+
     setTodayTotalFocusMinutes((prev) => prev + partialMins);
     setTimerAccumulator(0);
     setRunning(false);
     setSeconds(0);
     setIsVictory(true);
-    if (initialSeconds >= 3600) {
-      setTimeout(() => setShowReflection(true), 1200);
+    setReflectionPrompt(null);
+    setReflectionText("");
+
+    const snap = { integrity, elapsedSecs, tasksDone };
+    focusFinaleSnapshotRef.current = snap;
+    setFocusFinaleSnapshot(snap);
+    setFocusFinalePhase(1);
+    setFocusFinaleOpen(true);
+  }
+
+  function dismissFocusFinale() {
+    const snap = focusFinaleSnapshotRef.current;
+    setFocusFinaleOpen(false);
+    setFocusFinaleSnapshot(null);
+    focusFinaleSnapshotRef.current = null;
+    setFocusFinalePhase(1);
+    if (snap) {
+      handleReflectionSubmit({ tasksCompleted: snap.tasksDone });
     } else {
       handleReflectionSubmit();
     }
@@ -5203,8 +5401,19 @@ export default function App() {
                                 Choose a list from the sidebar to add and view tasks.
                               </p>
                             </div>
-                          ) : tasks.filter((t) => !t.removing).length === 0 ? (
-                            selectedListId === SYS_LIST_OVERDUE ? (
+                          ) : visibleTasksForList.length === 0 ? (
+                            allElasticListTasksComplete ? (
+                              <div className="flex flex-col items-center justify-center min-h-[min(320px,50vh)] px-6 py-12 text-center">
+                                <p className="text-[15px] font-semibold text-zinc-200">
+                                  All tasks complete
+                                </p>
+                                <p className="mt-1.5 text-sm text-zinc-500 max-w-xs">
+                                  Open{" "}
+                                  <span className="text-zinc-400">Completed</span>{" "}
+                                  in the sidebar to review or undo from the toast.
+                                </p>
+                              </div>
+                            ) : selectedListId === SYS_LIST_OVERDUE ? (
                               <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-6 py-12">
                                 <DogHomeworkOverdueIllustration />
                                 <p className="text-[15px] font-medium text-zinc-300 text-center max-w-[280px] leading-relaxed">
@@ -5227,9 +5436,7 @@ export default function App() {
                             )
                           ) : (
                             <div className="space-y-0.5 pt-1">
-                              {tasks
-                                .filter((t) => !t.removing)
-                                .map((t) => {
+                              {visibleTasksForList.map((t) => {
                                   const isSelected = selectedTaskId === t.id;
                                   return (
                                     <div
@@ -5243,7 +5450,15 @@ export default function App() {
                                         if (e.key !== "Enter") return;
                                         setSelectedTaskId(t.id);
                                       }}
-                                      className={`group mx-1 rounded-xl px-2 py-1.5 flex items-center gap-2.5 transition-colors cursor-pointer ${
+                                      className={`group mx-1 rounded-xl px-2 py-1.5 flex items-center gap-2.5 transition-all duration-300 ease-out cursor-pointer ${
+                                        taskRowExitingId === t.id
+                                          ? "opacity-0 -translate-y-1 scale-[0.98] pointer-events-none"
+                                          : ""
+                                      } ${
+                                        taskReappearId === t.id
+                                          ? "animate-task-reappear"
+                                          : ""
+                                      } ${
                                         isSelected
                                           ? "bg-[#333333] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
                                           : "hover:bg-[#1c1c1c]"
@@ -5251,23 +5466,31 @@ export default function App() {
                                     >
                                       <button
                                         type="button"
+                                        disabled={taskCheckAnimatingId === t.id}
                                         onClick={(e) => {
                                           e.stopPropagation();
                                           const next = !t.completed;
-                                          if (selectedListId) {
-                                            if (next) {
-                                              appendCompletedActivity(
-                                                t.text,
-                                                0,
-                                                selectedListId,
-                                                selectedList?.label ?? "",
-                                              );
-                                            } else {
-                                              removeLastCompletedForTaskOnList(
-                                                t.text,
-                                                selectedListId,
-                                              );
-                                            }
+                                          if (!selectedListId) return;
+                                          if (next && listUsesElasticComplete) {
+                                            scheduleElasticListTaskComplete(
+                                              t,
+                                              selectedListId,
+                                              selectedList?.label ?? "",
+                                            );
+                                            return;
+                                          }
+                                          if (next) {
+                                            appendCompletedActivity(
+                                              t.text,
+                                              0,
+                                              selectedListId,
+                                              selectedList?.label ?? "",
+                                            );
+                                          } else {
+                                            removeLastCompletedForTaskOnList(
+                                              t.text,
+                                              selectedListId,
+                                            );
                                           }
                                           setTasks((prev) =>
                                             prev.map((x) =>
@@ -5277,17 +5500,43 @@ export default function App() {
                                             ),
                                           );
                                         }}
-                                        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
-                                          t.completed
+                                        className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors disabled:opacity-100 ${
+                                          t.completed ||
+                                          taskCheckAnimatingId === t.id
                                             ? "border-blue-500 bg-blue-500"
                                             : "border-zinc-500 hover:border-zinc-400"
+                                        } ${
+                                          taskCheckAnimatingId === t.id
+                                            ? "elastic-cb-pulse"
+                                            : ""
                                         }`}
                                         aria-label={
-                                          t.completed ? "Mark incomplete" : "Complete task"
+                                          t.completed
+                                            ? "Mark incomplete"
+                                            : "Complete task"
                                         }
                                       >
-                                        {t.completed ? (
-                                          <span className="text-white text-[10px] leading-none">✓</span>
+                                        {listUsesElasticComplete &&
+                                        taskCheckAnimatingId === t.id ? (
+                                          <svg
+                                            className="w-[11px] h-[11px]"
+                                            viewBox="0 0 12 12"
+                                            fill="none"
+                                            aria-hidden
+                                          >
+                                            <path
+                                              className="elastic-check-path-draw"
+                                              d="M2.5 6.2 L5 8.8 L9.5 3.5"
+                                              stroke="white"
+                                              strokeWidth="2"
+                                              strokeLinecap="round"
+                                              strokeLinejoin="round"
+                                            />
+                                          </svg>
+                                        ) : t.completed ? (
+                                          <span className="text-white text-[10px] leading-none">
+                                            ✓
+                                          </span>
                                         ) : null}
                                       </button>
                                       <span
@@ -5370,22 +5619,32 @@ export default function App() {
                             <div className="flex items-center gap-3 px-4 py-2.5 shrink-0">
                               <button
                                 type="button"
+                                disabled={
+                                  taskCheckAnimatingId === selectedTask.id
+                                }
                                 onClick={() => {
                                   const next = !selectedTask.completed;
-                                  if (selectedListId) {
-                                    if (next) {
-                                      appendCompletedActivity(
-                                        selectedTask.text,
-                                        0,
-                                        selectedListId,
-                                        selectedList?.label ?? "",
-                                      );
-                                    } else {
-                                      removeLastCompletedForTaskOnList(
-                                        selectedTask.text,
-                                        selectedListId,
-                                      );
-                                    }
+                                  if (!selectedListId) return;
+                                  if (next && listUsesElasticComplete) {
+                                    scheduleElasticListTaskComplete(
+                                      selectedTask,
+                                      selectedListId,
+                                      selectedList?.label ?? "",
+                                    );
+                                    return;
+                                  }
+                                  if (next) {
+                                    appendCompletedActivity(
+                                      selectedTask.text,
+                                      0,
+                                      selectedListId,
+                                      selectedList?.label ?? "",
+                                    );
+                                  } else {
+                                    removeLastCompletedForTaskOnList(
+                                      selectedTask.text,
+                                      selectedListId,
+                                    );
                                   }
                                   setTasks((prev) =>
                                     prev.map((x) =>
@@ -5395,15 +5654,39 @@ export default function App() {
                                     ),
                                   );
                                 }}
-                                className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center ${
-                                  selectedTask.completed
+                                className={`shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
+                                  selectedTask.completed ||
+                                  taskCheckAnimatingId === selectedTask.id
                                     ? "border-blue-500 bg-blue-500"
                                     : "border-zinc-500 hover:border-zinc-400"
+                                } ${
+                                  taskCheckAnimatingId === selectedTask.id
+                                    ? "elastic-cb-pulse"
+                                    : ""
                                 }`}
                                 aria-label="Toggle complete"
                               >
-                                {selectedTask.completed ? (
-                                  <span className="text-white text-[10px]">✓</span>
+                                {listUsesElasticComplete &&
+                                taskCheckAnimatingId === selectedTask.id ? (
+                                  <svg
+                                    className="w-[11px] h-[11px]"
+                                    viewBox="0 0 12 12"
+                                    fill="none"
+                                    aria-hidden
+                                  >
+                                    <path
+                                      className="elastic-check-path-draw"
+                                      d="M2.5 6.2 L5 8.8 L9.5 3.5"
+                                      stroke="white"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                    />
+                                  </svg>
+                                ) : selectedTask.completed ? (
+                                  <span className="text-white text-[10px]">
+                                    ✓
+                                  </span>
                                 ) : null}
                               </button>
                             </div>
@@ -6167,6 +6450,12 @@ export default function App() {
                       "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
                   }}
                 />
+                {focusFinaleOpen && (
+                  <div
+                    className="pointer-events-none absolute inset-0 z-[340] overflow-hidden focus-finale-streamers"
+                    aria-hidden
+                  />
+                )}
                 <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
@@ -6186,7 +6475,7 @@ export default function App() {
             )}
 
             <div
-              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || showReflection ? "blur-lg opacity-0" : "opacity-100"}`}
+              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || focusFinaleOpen ? "blur-lg opacity-0" : "opacity-100"}`}
             >
               <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
                 Hello <span className="text-blue-600">{name}</span>.
@@ -6237,7 +6526,9 @@ export default function App() {
             </div>
 
             {/* TIMER CARD */}
-            <div className="relative flex items-center justify-center z-[200]">
+            <div
+              className={`relative flex items-center justify-center z-[200] transition-all duration-500 ${focusFinaleOpen ? "focus-finale-timer-wrap" : ""}`}
+            >
               <svg className="absolute w-[360px] h-[360px] -rotate-90">
                 <circle
                   cx="180"
@@ -6269,104 +6560,50 @@ export default function App() {
                 />
               </svg>
               <div
-                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden`}
+                className={`w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
               >
-                {!showReflection ? (
-                  <>
-                    <div
-                      className={`text-7xl font-mono tracking-tighter text-gray-900`}
-                    >
-                      {String(Math.floor(Math.abs(seconds) / 60)).padStart(
-                        2,
-                        "0",
-                      )}
-                      :{String(Math.abs(seconds) % 60).padStart(2, "0")}
-                    </div>
-
-                    {running && (
-                      <div
-                        className={`mt-2 text-[10px] tracking-[0.2em] font-black uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-125 animate-glitch" : "text-blue-400/60 opacity-100"}`}
-                      >
-                        Focus Integrity: {integrityScore}%
-                      </div>
+                <>
+                  <div
+                    className={`text-7xl font-mono tracking-tighter text-gray-900`}
+                  >
+                    {String(Math.floor(Math.abs(seconds) / 60)).padStart(
+                      2,
+                      "0",
                     )}
-
-                    {!running && (
-                      <div className="flex flex-col gap-3 mt-8">
-                        <button
-                          disabled={isSimulation}
-                          onClick={() => {
-                            setSeconds((s) => s + 900);
-                            setInitialSeconds((s) => s + 900);
-                          }}
-                          className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
-                        >
-                          +15 MIN
-                        </button>
-                        {seconds > 0 && (
-                          <button
-                            onClick={startTimer}
-                            className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
-                          >
-                            START
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center px-6 text-center w-full animate-reflection-in">
-                    {!reflectionPrompt ? (
-                      <div className="space-y-2 w-full">
-                        <div className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-500 mb-4">
-                          Reflect
-                        </div>
-                        {prompts.map((p, i) => (
-                          <button
-                            key={i}
-                            onClick={() => setReflectionPrompt(p)}
-                            className="w-full text-left p-3 rounded-2xl bg-gray-50 border border-gray-200 hover:border-blue-400 hover:bg-blue-50/50 transition-all text-[10px] group"
-                          >
-                            <span className="text-gray-500 group-hover:text-gray-900 transition-colors font-medium line-clamp-1">
-                              {p}
-                            </span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-4 w-full flex flex-col items-center">
-                        <div className="text-[8px] font-black uppercase tracking-widest text-blue-600 px-3 py-1 bg-blue-50 rounded-full border border-blue-200">
-                          {reflectionPrompt}
-                        </div>
-                        <textarea
-                          autoFocus
-                          value={reflectionText}
-                          onChange={(e) => setReflectionText(e.target.value)}
-                          placeholder="..."
-                          className="w-full h-24 bg-gray-50 border border-gray-200 rounded-2xl p-4 outline-none text-[10px] text-gray-900 focus:border-blue-400 transition-all resize-none"
-                        />
-                        <div className="flex gap-2 w-full">
-                          <button
-                            onClick={() => {
-                              setReflectionPrompt(null);
-                              setReflectionText("");
-                            }}
-                            className="px-4 py-2 bg-gray-100 border border-gray-200 rounded-xl font-bold text-[8px] tracking-widest uppercase text-gray-700"
-                          >
-                            BACK
-                          </button>
-                          <button
-                            onClick={handleReflectionSubmit}
-                            disabled={!reflectionText.trim()}
-                            className="flex-1 py-2 bg-gray-900 text-white rounded-xl font-black text-[8px] uppercase tracking-widest"
-                          >
-                            SYNC
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    :{String(Math.abs(seconds) % 60).padStart(2, "0")}
                   </div>
-                )}
+
+                  {running && (
+                    <div
+                      className={`mt-2 text-[10px] tracking-[0.2em] font-black uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-125 animate-glitch" : "text-blue-400/60 opacity-100"}`}
+                    >
+                      Focus Integrity: {integrityScore}%
+                    </div>
+                  )}
+
+                  {!running && (
+                    <div className="flex flex-col gap-3 mt-8">
+                      <button
+                        disabled={isSimulation}
+                        onClick={() => {
+                          setSeconds((s) => s + 900);
+                          setInitialSeconds((s) => s + 900);
+                        }}
+                        className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
+                      >
+                        +15 MIN
+                      </button>
+                      {seconds > 0 && (
+                        <button
+                          onClick={startTimer}
+                          className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
+                        >
+                          START
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </>
               </div>
             </div>
                       </div>
@@ -6374,7 +6611,7 @@ export default function App() {
                       <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-4xl space-y-12 px-4 pb-24 pt-2">
               <div
-                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || showReflection ? "opacity-40" : "opacity-100"}`}
+                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || focusFinaleOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="flex gap-3">
                   <input
@@ -6675,6 +6912,106 @@ export default function App() {
                     </div>
                   </div>
                 </div>
+                {focusFinaleOpen && focusFinaleSnapshot && (
+                  <div
+                    className="absolute inset-0 z-[450] flex items-center justify-center p-6"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="focus-finale-title"
+                  >
+                    <button
+                      type="button"
+                      className="absolute inset-0 bg-white/55 backdrop-blur-md cursor-pointer border-0 p-0"
+                      aria-label="Dismiss celebration"
+                      onClick={dismissFocusFinale}
+                    />
+                    <div
+                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-gray-200/80 bg-white/95 px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.12)] pointer-events-auto text-center font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+                      onClick={(e) => e.stopPropagation()}
+                      role="presentation"
+                    >
+                      <h2
+                        id="focus-finale-title"
+                        className={`text-[1.65rem] font-semibold tracking-tight text-gray-900 transition-all duration-500 ease-out ${
+                          focusFinalePhase >= 2
+                            ? "opacity-100 translate-y-0"
+                            : "opacity-0 translate-y-3"
+                        }`}
+                      >
+                        You&apos;re Finished!
+                      </h2>
+                      <div
+                        className={`mt-8 space-y-5 text-left transition-opacity duration-500 ${
+                          focusFinalePhase >= 3 ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-baseline justify-between gap-3 border-b border-gray-100 pb-4 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "opacity-100 translate-y-0"
+                              : "opacity-0 translate-y-4"
+                          }`}
+                          style={{
+                            transitionDelay:
+                              focusFinalePhase >= 3 ? "0ms" : "0ms",
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-gray-500">
+                            🎯 Focus integrity
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                            {focusFinaleSnapshot.integrity}%
+                          </span>
+                        </div>
+                        <div
+                          className={`flex items-baseline justify-between gap-3 border-b border-gray-100 pb-4 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "opacity-100 translate-y-0"
+                              : "opacity-0 translate-y-4"
+                          }`}
+                          style={{
+                            transitionDelay:
+                              focusFinalePhase >= 3 ? "120ms" : "0ms",
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-gray-500">
+                            ⏱ Time in focus
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                            {(() => {
+                              const s = focusFinaleSnapshot.elapsedSecs;
+                              const m = Math.floor(s / 60);
+                              const r = s % 60;
+                              if (m <= 0) return `${r}s`;
+                              return `${m}m ${String(r).padStart(2, "0")}s`;
+                            })()}
+                          </span>
+                        </div>
+                        <div
+                          className={`flex items-baseline justify-between gap-3 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "opacity-100 translate-y-0"
+                              : "opacity-0 translate-y-4"
+                          }`}
+                          style={{
+                            transitionDelay:
+                              focusFinalePhase >= 3 ? "240ms" : "0ms",
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-gray-500">
+                            ✓ Tasks completed
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                            {focusFinaleSnapshot.tasksDone}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-8 text-[11px] text-gray-400">
+                        Tap outside to continue
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -7756,6 +8093,38 @@ export default function App() {
           </section>
         )}
 
+        {taskDoneToast && (
+          <div
+            className="fixed bottom-6 left-1/2 z-[620] flex -translate-x-1/2 items-center gap-3 rounded-full border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)] font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+            role="status"
+          >
+            <span className="text-[13px] font-medium text-zinc-100 whitespace-nowrap">
+              Task completed
+            </span>
+            <button
+              type="button"
+              onClick={undoTaskCompletionToast}
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-500 transition hover:bg-white/[0.06] hover:text-amber-400"
+              aria-label="Undo complete task"
+              title="Undo"
+            >
+              <svg
+                className="h-[18px] w-[18px]"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M3 7v6h6" />
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+              </svg>
+            </button>
+          </div>
+        )}
+
         <style>{`
 html { scroll-behavior: smooth; }
 @keyframes glitch { 0% { transform: translate(0); } }
@@ -7764,6 +8133,58 @@ html { scroll-behavior: smooth; }
 .animate-reflection-in { animation: reflection-in 0.5s ease-out forwards; }
 .animate-glitch { animation: glitch 0.6s infinite; }
 .animate-breathing { animation: breathing 3s ease-in-out infinite; }
+@keyframes elastic-cb-squash {
+  0% { transform: scale(1); }
+  22% { transform: scale(0.9); }
+  55% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+.elastic-cb-pulse {
+  animation: elastic-cb-squash 0.45s cubic-bezier(0.34, 1.45, 0.64, 1) forwards;
+}
+@keyframes elastic-check-draw {
+  from { stroke-dashoffset: 16; }
+  to { stroke-dashoffset: 0; }
+}
+.elastic-check-path-draw {
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16;
+  animation: elastic-check-draw 0.36s ease forwards 0.05s;
+}
+@keyframes task-reappear {
+  from { opacity: 0; transform: translateY(6px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.animate-task-reappear {
+  animation: task-reappear 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.focus-finale-timer-wrap {
+  filter: drop-shadow(0 0 22px rgba(234, 179, 8, 0.42))
+    drop-shadow(0 0 48px rgba(250, 204, 21, 0.22));
+}
+.focus-finale-timer-card {
+  box-shadow:
+    0 0 0 1px rgba(234, 179, 8, 0.18),
+    0 20px 50px rgba(234, 179, 8, 0.12),
+    0 0 36px rgba(250, 204, 21, 0.18);
+}
+.focus-finale-streamers {
+  opacity: 0.85;
+  background-image:
+    linear-gradient(125deg, transparent 40%, rgba(234, 179, 8, 0.12) 50%, transparent 60%),
+    linear-gradient(210deg, transparent 35%, rgba(250, 204, 21, 0.1) 48%, transparent 58%),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 32px,
+      rgba(234, 179, 8, 0.07) 32px 33px
+    );
+  background-size: 200% 200%, 180% 180%, 120px 100%;
+  animation: focus-finale-streamer-move 2.8s linear infinite;
+}
+@keyframes focus-finale-streamer-move {
+  0% { background-position: 0% 0%, 100% 0%, 0 0; }
+  100% { background-position: 100% 80%, 0% 100%, 120px 40px; }
+}
 ::-webkit-scrollbar { width: 6px; }
 `}</style>
       </div>
