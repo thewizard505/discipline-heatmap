@@ -833,23 +833,23 @@ type CalendarPlacedTask = {
 
 const CALENDAR_TASKS_VISIBLE_CAP = 4;
 
-/** Muted category-colored blocks (month view) — flat, no neon glow. */
+/** Solid category fills (month view) — opaque hex so nothing reads as a gradient over the grid. */
 function calendarTaskChipClassForList(listId: string): string {
   const base =
-    "group w-full text-left rounded-[3px] px-2 py-1.5 text-left min-w-0 border transition-[background-color,border-color] duration-150 active:scale-[0.99] shadow-[0_1px_0_rgba(0,0,0,0.45)]";
+    "w-full text-left rounded-[3px] px-2 py-1.5 min-w-0 border transition-colors duration-150 active:scale-[0.99]";
   const byList: Record<string, string> = {
     [SYS_LIST_OVERDUE]:
-      "border-rose-900/45 bg-rose-950/70 hover:bg-rose-950/85",
+      "border-[#7a3040] bg-[#4a1c26] hover:bg-[#5c2430]",
     [SYS_LIST_TODAY]:
-      "border-slate-600/40 bg-slate-800/60 hover:bg-slate-700/70",
+      "border-[#556987] bg-[#3d4a63] hover:bg-[#465673]",
     [SYS_LIST_PROJECTS]:
-      "border-amber-900/40 bg-amber-950/55 hover:bg-amber-950/70",
+      "border-[#8b6a35] bg-[#5c4320] hover:bg-[#6d4f28]",
     [SYS_LIST_TESTS]:
-      "border-cyan-900/35 bg-teal-950/55 hover:bg-teal-950/68",
+      "border-[#3d7a7a] bg-[#1f4d4d] hover:bg-[#265c5c]",
     [SYS_LIST_LONGTERM]:
-      "border-violet-900/40 bg-violet-950/50 hover:bg-violet-950/65",
+      "border-[#6b5a8a] bg-[#3f3658] hover:bg-[#4a4065]",
   };
-  return `${base} ${byList[listId] ?? "border-zinc-700/55 bg-zinc-800/75 hover:bg-zinc-700/85"}`;
+  return `${base} ${byList[listId] ?? "border-[#5c5c66] bg-[#3f3f46] hover:bg-[#52525b]"}`;
 }
 
 type CalendarGridCell =
@@ -1027,16 +1027,16 @@ function TasksDueCalendarMonth({
                       title={`${t.categoryLabel} — ${t.text}`}
                     >
                       <span className="flex items-baseline gap-1 min-w-0 w-full">
-                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-white/75 leading-tight">
+                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-zinc-200 leading-tight">
                           {t.categoryLabel}
                         </span>
                         <span
-                          className="shrink-0 text-[11px] text-white/35 font-light select-none"
+                          className="shrink-0 text-[11px] text-zinc-500 font-light select-none"
                           aria-hidden
                         >
                           ·
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-white leading-snug">
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-zinc-50 leading-snug">
                           {t.text}
                         </span>
                       </span>
