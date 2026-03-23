@@ -3435,27 +3435,6 @@ export default function App() {
           animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both,
             app-notif-urgency 3.2s ease-in-out 0.4s 2;
         }
-        @keyframes focus-today-particle-drift {
-          0%{ transform:translate3d(0,-8%,0); opacity:0 }
-          12%{ opacity:0.055 }
-          88%{ opacity:0.04 }
-          100%{ transform:translate3d(var(--ft-dx,0),108%,0); opacity:0 }
-        }
-        .focus-today-particle-shell{
-          position:absolute; inset:0; overflow:hidden; border-radius:inherit;
-          pointer-events:none; z-index:0;
-        }
-        .focus-today-particle{
-          position:absolute; top:-4%;
-          width:2px; height:2px; border-radius:9999px;
-          background:rgba(250,250,250,0.35);
-          animation:focus-today-particle-drift linear infinite;
-          opacity:0.5;
-          will-change:transform,opacity;
-        }
-        @media (prefers-reduced-motion:reduce){
-          .focus-today-particle{ animation:none !important; opacity:0 !important; }
-        }
       `}</style>
 
       <div
@@ -4655,59 +4634,92 @@ export default function App() {
                         {selectedListId === SYS_LIST_TODAY &&
                           focusForTodayItems.length > 0 && (
                             <>
-                              <div className="relative shrink-0 mb-5 overflow-hidden rounded-lg border border-zinc-800/90 bg-[#121214] shadow-[0_1px_0_rgba(255,255,255,0.04)]">
-                                <div
-                                  className="focus-today-particle-shell"
-                                  aria-hidden
-                                >
-                                  {[
-                                    { left: "7%", dx: "2px", dur: 22, delay: -4 },
-                                    { left: "23%", dx: "-3px", dur: 19, delay: -12 },
-                                    { left: "41%", dx: "4px", dur: 24, delay: -2 },
-                                    { left: "58%", dx: "-2px", dur: 21, delay: -18 },
-                                    { left: "74%", dx: "3px", dur: 26, delay: -8 },
-                                    { left: "89%", dx: "-4px", dur: 23, delay: -14 },
-                                  ].map((p, i) => (
-                                    <span
-                                      key={i}
-                                      className="focus-today-particle"
-                                      style={
-                                        {
-                                          left: p.left,
-                                          animationDuration: `${p.dur}s`,
-                                          animationDelay: `${p.delay}s`,
-                                          ["--ft-dx" as string]: p.dx,
-                                        } as React.CSSProperties
-                                      }
-                                    />
-                                  ))}
-                                </div>
-                                <div className="relative z-[1] px-3.5 py-3.5">
-                                  <div className="mb-3 flex items-start justify-between gap-4">
-                                    <div className="min-w-0">
-                                      <h3 className="text-[15px] font-semibold leading-snug tracking-tight text-zinc-200">
-                                        Focus for today
-                                      </h3>
-                                      <p className="mt-1 max-w-[18rem] text-[11px] leading-snug text-zinc-500">
-                                        Prioritized based on urgency and due
-                                        dates
-                                      </p>
+                              <div className="mb-5 shrink-0 overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b]">
+                                <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex min-w-0 flex-1 items-start gap-2">
+                                      <span
+                                        className="mt-0.5 inline-flex shrink-0 text-zinc-400"
+                                        aria-hidden
+                                      >
+                                        <svg
+                                          className="h-5 w-5"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="1.65"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="3"
+                                            strokeWidth="1.65"
+                                          />
+                                          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+                                        </svg>
+                                      </span>
+                                      <div className="min-w-0">
+                                        <h3 className="font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-zinc-100">
+                                          Focus for today
+                                        </h3>
+                                        <p className="mt-0.5 max-w-[20rem] text-[11px] leading-snug text-zinc-500">
+                                          Prioritized based on urgency and due
+                                          dates
+                                        </p>
+                                      </div>
                                     </div>
-                                    <button
-                                      type="button"
-                                      onClick={handleFocusForTodayStartSession}
-                                      className="shrink-0 rounded border border-zinc-700/90 bg-zinc-900/70 px-2.5 py-1.5 text-[11px] font-medium leading-none text-zinc-300 transition-colors hover:border-zinc-600 hover:bg-zinc-800/90 hover:text-zinc-100 active:bg-zinc-800"
-                                    >
-                                      Start Focus Session
-                                    </button>
+                                    <div className="flex shrink-0 items-center gap-1">
+                                      <button
+                                        type="button"
+                                        onClick={handleFocusForTodayStartSession}
+                                        className="rounded-md border border-[#2a2a2a] bg-[#0a0a0b] px-2.5 py-1.5 text-[11px] font-medium leading-none text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-white/[0.04] hover:text-zinc-100"
+                                      >
+                                        Start Focus Session
+                                      </button>
+                                      <div
+                                        className="p-1.5 text-zinc-500"
+                                        aria-hidden
+                                      >
+                                        <svg
+                                          className="h-[18px] w-[18px]"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="2"
+                                        >
+                                          <circle
+                                            cx="5"
+                                            cy="12"
+                                            r="1.5"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="1.5"
+                                            fill="currentColor"
+                                          />
+                                          <circle
+                                            cx="19"
+                                            cy="12"
+                                            r="1.5"
+                                            fill="currentColor"
+                                          />
+                                        </svg>
+                                      </div>
+                                    </div>
                                   </div>
+                                </div>
+                                <div className="bg-[#0a0a0b] px-2 py-1 sm:px-2.5">
                                   <ul
-                                    className="divide-y divide-zinc-800/80"
+                                    className="flex flex-col"
                                     key={focusForTodayItems
                                       .map((x) => `${x.listId}:${x.taskId}`)
                                       .join("|")}
                                   >
-                                    {focusForTodayItems.map((pick) => {
+                                    {focusForTodayItems.map((pick, rowIdx) => {
                                       const visuals = focusForTodayRowVisuals(
                                         pick.urgency,
                                       );
@@ -4715,8 +4727,14 @@ export default function App() {
                                         FOCUS_FOR_TODAY_TAG_LABELS[
                                           pick.listId
                                         ] ?? "Task";
+                                      const dayNum = parseISODate(
+                                        notificationDay,
+                                      ).getDate();
                                       return (
-                                        <li key={`${pick.listId}:${pick.taskId}`}>
+                                        <li
+                                          key={`${pick.listId}:${pick.taskId}`}
+                                          className={`border-b border-[#2a2a2a] last:border-b-0 ${rowIdx === 0 ? "pt-0.5" : ""}`}
+                                        >
                                           <button
                                             type="button"
                                             onClick={() =>
@@ -4725,23 +4743,42 @@ export default function App() {
                                                 pick.taskId,
                                               )
                                             }
-                                            className="flex w-full items-center gap-3 rounded-md py-2.5 pl-1 pr-1 text-left transition-colors hover:bg-white/[0.03]"
+                                            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
                                           >
                                             <span
                                               className={`h-9 w-px shrink-0 rounded-full ${visuals.bar}`}
                                               aria-hidden
                                             />
+                                            <TaskSystemNavIcon
+                                              listId={pick.listId}
+                                              dayOfMonth={dayNum}
+                                              className="h-5 w-5 shrink-0 text-zinc-400"
+                                            />
                                             <div className="min-w-0 flex-1">
-                                              <div className="text-[13px] font-medium leading-snug text-zinc-200">
+                                              <div className="truncate text-[13px] font-semibold leading-snug text-zinc-100">
                                                 {pick.displayTitle}
                                               </div>
-                                              <div className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+                                              <div className="mt-0.5 text-[12px] leading-snug text-zinc-500">
                                                 {pick.timeLabel}
                                               </div>
                                             </div>
-                                            <span className="shrink-0 rounded border border-zinc-700/70 bg-zinc-900/50 px-2 py-0.5 text-[10px] font-medium text-zinc-500">
+                                            <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-500">
                                               {tagLabel}
                                             </span>
+                                            <svg
+                                              className="h-4 w-4 shrink-0 text-zinc-500"
+                                              viewBox="0 0 24 24"
+                                              fill="none"
+                                              stroke="currentColor"
+                                              strokeWidth="2"
+                                              aria-hidden
+                                            >
+                                              <path
+                                                d="M9 18l6-6-6-6"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                            </svg>
                                           </button>
                                         </li>
                                       );
