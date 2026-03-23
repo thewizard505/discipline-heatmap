@@ -63,9 +63,6 @@ const OVERDUE_SOURCE_LIST_IDS: readonly string[] = [
   SYS_LIST_LONGTERM,
 ];
 
-/** Sidebar “Lists” badge — matches default capacity for custom lists. */
-const MAX_USER_LISTS = 9;
-
 const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
   SYS_LIST_TESTS,
   SYS_LIST_PROJECTS,
@@ -3658,14 +3655,14 @@ export default function App() {
           100%{ opacity:0 }
         }
         @keyframes focus-zen-ripple-long {
-          0%{ transform:scale(0.015); opacity:0 }
-          8%{ opacity:0.62 }
-          22%{ opacity:0.38 }
+          0%{ transform:scale(0.02); opacity:0 }
+          18%{ opacity:0.22 }
+          42%{ opacity:0.12 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes focus-zen-bloom {
-          0%{ transform:scale(0.12); opacity:0.45 }
-          30%{ opacity:0.22 }
+          0%{ transform:scale(0.1); opacity:0.28 }
+          40%{ opacity:0.12 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes app-notif-enter {
@@ -3681,31 +3678,30 @@ export default function App() {
         }
         .focus-zen-ripple-ring{
           position:absolute; left:50%; top:50%;
-          width:min(155vmax,2600px); height:min(155vmax,2600px);
-          margin-left:calc(min(155vmax,2600px)/-2); margin-top:calc(min(155vmax,2600px)/-2);
+          width:min(150vmax,2500px); height:min(150vmax,2500px);
+          margin-left:calc(min(150vmax,2500px)/-2); margin-top:calc(min(150vmax,2500px)/-2);
           border-radius:50%;
-          border:1.5px solid rgba(186,230,253,0.42);
+          border:1px solid rgba(226,240,255,0.14);
           box-shadow:
-            0 0 140px rgba(59,130,246,0.28),
-            0 0 260px rgba(147,197,253,0.14),
-            0 0 420px rgba(59,130,246,0.08),
-            inset 0 0 100px rgba(255,255,255,0.07);
-          animation:focus-zen-ripple-long 3.4s cubic-bezier(0.08,0.55,0.12,1) forwards;
+            0 0 0 1px rgba(255,255,255,0.04),
+            0 0 48px rgba(180,210,240,0.07),
+            0 0 120px rgba(120,170,220,0.04);
+          animation:focus-zen-ripple-long 4.6s cubic-bezier(0.22,0.55,0.12,0.98) forwards;
         }
         .focus-zen-ripple-ring-slow{
-          animation:focus-zen-ripple-long 3.85s cubic-bezier(0.1,0.52,0.15,1) forwards;
-          border-color:rgba(186,230,253,0.32);
+          animation:focus-zen-ripple-long 5.2s cubic-bezier(0.2,0.52,0.14,1) forwards;
+          border-color:rgba(210,230,248,0.1);
           box-shadow:
-            0 0 200px rgba(59,130,246,0.2),
-            0 0 360px rgba(125,211,252,0.1);
+            0 0 0 1px rgba(255,255,255,0.03),
+            0 0 64px rgba(160,200,230,0.06);
         }
         .focus-zen-bloom-core{
           position:absolute; left:50%; top:50%;
-          width:min(92vmax,1500px); height:min(92vmax,1500px);
-          margin-left:calc(min(92vmax,1500px)/-2); margin-top:calc(min(92vmax,1500px)/-2);
+          width:min(88vmax,1400px); height:min(88vmax,1400px);
+          margin-left:calc(min(88vmax,1400px)/-2); margin-top:calc(min(88vmax,1400px)/-2);
           border-radius:50%;
-          background:radial-gradient(circle, rgba(186,230,253,0.22) 0%, rgba(59,130,246,0.06) 42%, transparent 72%);
-          animation:focus-zen-bloom 3.6s cubic-bezier(0.12,0.75,0.18,1) forwards;
+          background:radial-gradient(circle, rgba(220,235,255,0.1) 0%, rgba(140,180,220,0.04) 48%, transparent 70%);
+          animation:focus-zen-bloom 4.8s cubic-bezier(0.18,0.62,0.16,1) forwards;
         }
         .app-notif-item{
           animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both;
@@ -4026,11 +4022,11 @@ export default function App() {
                 }}
               >
                 <div className="focus-zen-bloom-core" />
-                {Array.from({ length: 8 }).map((_, i) => (
+                {Array.from({ length: 6 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`focus-zen-ripple-ring ${i === 7 ? "focus-zen-ripple-ring-slow" : ""}`}
-                    style={{ animationDelay: `${i * 165}ms` }}
+                    className={`focus-zen-ripple-ring ${i === 5 ? "focus-zen-ripple-ring-slow" : ""}`}
+                    style={{ animationDelay: `${i * 380}ms` }}
                   />
                 ))}
               </div>
@@ -4362,7 +4358,7 @@ export default function App() {
                     />
 
                     <div className="shrink-0 mb-2 space-y-1.5">
-                      <div className="flex items-stretch gap-1.5 rounded-lg bg-[#1a1a1c] border border-white/[0.06] px-1 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                      <div className="flex items-stretch gap-1.5 rounded-lg bg-[#1a1a1c] border border-white/[0.06] px-1 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-shadow duration-200 ease-out hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_28px_-6px_rgba(0,0,0,0.65),0_0_0_1px_rgba(255,255,255,0.04)]">
                         <button
                           type="button"
                           onClick={() =>
@@ -4387,9 +4383,6 @@ export default function App() {
                           </svg>
                           <span className="text-[12px] font-medium text-zinc-400 tracking-tight">
                             Lists
-                          </span>
-                          <span className="rounded-md bg-zinc-800/90 border border-white/[0.06] px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-400">
-                            Used: {todayLists.length}/{MAX_USER_LISTS}
                           </span>
                         </button>
                         <button
@@ -4917,7 +4910,7 @@ export default function App() {
                         {selectedListId === SYS_LIST_TODAY &&
                           focusForTodayItems.length > 0 && (
                             <>
-                              <div className="mb-5 shrink-0 overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
+                              <div className="mb-5 shrink-0 overflow-visible rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
                                 <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="flex min-w-0 flex-1 items-start gap-2">
@@ -4957,9 +4950,19 @@ export default function App() {
                                       <button
                                         type="button"
                                         onClick={handleFocusForTodayStartSession}
-                                        className="rounded-md border border-zinc-600/70 bg-zinc-800/90 px-3 py-1.5 text-[11px] font-semibold leading-none text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-500 hover:bg-zinc-700/95 active:scale-[0.98]"
+                                        className="relative z-0 overflow-visible rounded-md border border-zinc-600/70 bg-zinc-800/90 px-3 py-1.5 text-[11px] font-semibold leading-none text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-500 hover:bg-zinc-700/95 active:scale-[0.98]"
                                       >
-                                        Start Focus Session
+                                        <span
+                                          className="focus-session-start-aura-soft"
+                                          aria-hidden
+                                        />
+                                        <span
+                                          className="focus-session-start-aura"
+                                          aria-hidden
+                                        />
+                                        <span className="relative z-[1]">
+                                          Start Focus Session
+                                        </span>
                                       </button>
                                       <div
                                         className="p-1.5 text-zinc-500"

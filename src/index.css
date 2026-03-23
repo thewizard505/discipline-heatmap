@@ -71,6 +71,52 @@
   animation: focus-nav-aura-drift 4.8s ease-in-out infinite;
 }
 
+/* Soft smoke / mist behind “Start Focus Session” (matches Focus nav vibe) */
+@keyframes focus-session-start-aura-breathe {
+  0%,
+  100% {
+    opacity: 0.32;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 0.52;
+    transform: scale(1.03);
+  }
+}
+
+.focus-session-start-aura {
+  position: absolute;
+  inset: -5px -8px;
+  border-radius: 0.4rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 95% 130% at 50% 42%,
+    rgba(96, 165, 250, 0.38) 0%,
+    rgba(37, 99, 235, 0.14) 48%,
+    transparent 72%
+  );
+  filter: blur(11px);
+  animation: focus-session-start-aura-breathe 3.6s ease-in-out infinite;
+}
+
+.focus-session-start-aura-soft {
+  position: absolute;
+  inset: -10px -14px;
+  border-radius: 0.5rem;
+  pointer-events: none;
+  z-index: 0;
+  background: radial-gradient(
+    ellipse 100% 150% at 46% 58%,
+    rgba(59, 130, 246, 0.12) 0%,
+    rgba(148, 163, 184, 0.08) 35%,
+    transparent 62%
+  );
+  filter: blur(16px);
+  opacity: 0.88;
+  animation: focus-nav-aura-drift 5.2s ease-in-out infinite;
+}
+
 /* Subtle red mist around Overdue nav icon (matches Focus aura style) */
 @keyframes overdue-nav-aura-breathe {
   0%,
