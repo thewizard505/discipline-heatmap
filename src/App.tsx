@@ -1568,6 +1568,27 @@ export default function App() {
     tasksDone: number;
   } | null>(null);
 
+  /* --- Micro-interactions (Parts 1–4): task input, focus immersion, progress, nav --- */
+  const taskListInputRef = useRef<HTMLInputElement | null>(null);
+  const focusSessionTaskInputRef = useRef<HTMLInputElement | null>(null);
+  const [taskInputShellPress, setTaskInputShellPress] = useState(false);
+  const [taskInputClearFlash, setTaskInputClearFlash] = useState(false);
+  const [newListTaskAnimId, setNewListTaskAnimId] = useState<number | null>(
+    null,
+  );
+  const [listEmptyExit, setListEmptyExit] = useState(false);
+  const [listFirstTaskEnter, setListFirstTaskEnter] = useState(false);
+  const [mainViewEnterAnim, setMainViewEnterAnim] = useState(false);
+  const [focusImmerseIntro, setFocusImmerseIntro] = useState(false);
+  const [focusRootShake, setFocusRootShake] = useState(false);
+  const [stayLockedHint, setStayLockedHint] = useState(false);
+  const [focusTimerNudge, setFocusTimerNudge] = useState(false);
+  const [streakMicro, setStreakMicro] = useState<null | "up" | "down">(null);
+  const streakPrevRef = useRef(streak);
+  const [focusSessionNewRowId, setFocusSessionNewRowId] = useState<
+    number | null
+  >(null);
+
   /* --- HERO PREVIEW SIMULATION STATE --- */
   const previewScrollRef = useRef<HTMLDivElement | null>(null);
   const feature1Ref = useRef<HTMLDivElement | null>(null);
@@ -1818,6 +1839,43 @@ export default function App() {
     listUsesElasticComplete &&
     tasksActiveNoRemoving.length > 0 &&
     visibleTasksForList.length === 0;
+
+  const taskInputLiveHints = useMemo(() => {
+    const raw = taskInput.trim();
+    if (raw.length < 2) return [];
+    const s = raw.toLowerCase();
+    const out: string[] = [];
+    if (/\b(tomorrow|tmrw|tmr|next day)\b/.test(s)) {
+      out.push("Mentioned a future day — set a due date in task details when available.");
+    }
+    if (/\b(test|exam|quiz|midterm)\b/.test(s)) {
+      out.push("Tests list works well for exam prep.");
+    }
+    if (/\b(project|essay|paper|report)\b/.test(s)) {
+      out.push("Projects list — good for bigger deliverables.");
+    }
+    if (/\b(long[-\s]?term|semester)\b/.test(s)) {
+      out.push("Long-Term Assignments for deadlines further out.");
+    }
+    return out.slice(0, 2);
+  }, [taskInput]);
+
+  const dailyTaskProgress = useMemo(() => {
+    const todayStr = getTodayStr();
+    const done = completedActivityLog.filter(
+      (e) => e.dateStr === todayStr,
+    ).length;
+    let open = 0;
+    for (const arr of Object.values(tasksByListId)) {
+      if (!Array.isArray(arr)) continue;
+      for (const t of arr) {
+        if (!t.removing && !t.completed) open += 1;
+      }
+    }
+    const denom = Math.max(done + open, 1);
+    const pct = Math.min(100, Math.round((100 * done) / denom));
+    return { pct, done, open };
+  }, [completedActivityLog, tasksByListId]);
 
   const selectedTask = useMemo(() => {
     if (selectedTaskId == null) return null;
@@ -2312,6 +2370,58 @@ export default function App() {
       window.clearTimeout(tStats);
     };
   }, [focusFinaleOpen, focusFinaleSnapshot]);
+
+  useEffect(() => {
+    const prev = streakPrevRef.current;
+    if (prev !== streak) {
+      if (streak > prev) setStreakMicro("up");
+      else if (streak < prev) setStreakMicro("down");
+      streakPrevRef.current = streak;
+      const t = window.setTimeout(() => setStreakMicro(null), 420);
+      return () => window.clearTimeout(t);
+    }
+    return undefined;
+  }, [streak]);
+
+  useEffect(() => {
+    setMainViewEnterAnim(true);
+    const t = window.setTimeout(() => setMainViewEnterAnim(false), 240);
+    return () => window.clearTimeout(t);
+  }, [activeView]);
+
+  useEffect(() => {
+    if (!isFocusSessionActive) {
+      setFocusImmerseIntro(false);
+      return;
+    }
+    setFocusImmerseIntro(true);
+    const t = window.setTimeout(() => setFocusImmerseIntro(false), 300);
+    return () => window.clearTimeout(t);
+  }, [isFocusSessionActive]);
+
+  useEffect(() => {
+    if (!isFocusSessionActive || !running) return;
+    const onVis = () => {
+      if (document.visibilityState !== "hidden") return;
+      setStayLockedHint(true);
+      setFocusRootShake(true);
+      window.setTimeout(() => {
+        setStayLockedHint(false);
+        setFocusRootShake(false);
+      }, 2200);
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, [isFocusSessionActive, running]);
+
+  useEffect(() => {
+    if (!running || !isFocusSessionActive) return;
+    const id = window.setInterval(() => {
+      setFocusTimerNudge(true);
+      window.setTimeout(() => setFocusTimerNudge(false), 720);
+    }, 150_000);
+    return () => clearInterval(id);
+  }, [running, isFocusSessionActive]);
 
   useEffect(() => {
     return () => {
@@ -3045,8 +3155,13 @@ export default function App() {
     applyListSelection(listId);
   };
 
+  const triggerTaskInputPress = () => {
+    setTaskInputShellPress(true);
+    window.setTimeout(() => setTaskInputShellPress(false), 230);
+  };
+
   /** Add task from the list input bar (Enter only); selects the new task for the detail pane. */
-  const addTaskFromListInput = () => {
+  const addTaskFromListInput = (opts?: { fromEnter?: boolean }) => {
     if (!selectedListId) return;
     if (selectedListId === SYS_LIST_OVERDUE) return;
     const trimmed = taskInput.trim();
@@ -3068,9 +3183,30 @@ export default function App() {
       completed: false,
       dueDate,
     };
-    setTasks((prev) => [...prev, newTask]);
-    setSelectedTaskId(id);
-    setTaskInput("");
+    const flushAdd = () => {
+      setTasks((prev) => [...prev, newTask]);
+      setSelectedTaskId(id);
+      setNewListTaskAnimId(id);
+      window.setTimeout(() => setNewListTaskAnimId(null), 280);
+      setTaskInputClearFlash(true);
+      setTaskInput("");
+      window.setTimeout(() => setTaskInputClearFlash(false), 200);
+      queueMicrotask(() => taskListInputRef.current?.focus());
+    };
+    const wasEmptyFirst =
+      visibleTasksForList.length === 0 && !allElasticListTasksComplete;
+    if (opts?.fromEnter) triggerTaskInputPress();
+    if (wasEmptyFirst) {
+      setListEmptyExit(true);
+      window.setTimeout(() => {
+        flushAdd();
+        setListEmptyExit(false);
+        setListFirstTaskEnter(true);
+        window.setTimeout(() => setListFirstTaskEnter(false), 300);
+      }, 170);
+      return;
+    }
+    flushAdd();
   };
 
   const resetAllData = () => {
@@ -3416,6 +3552,46 @@ export default function App() {
       }
       return [...prev, { listId, taskId }];
     });
+  }
+
+  function addTaskFromFocusBar(_opts?: { fromEnter?: boolean }) {
+    if (isSimulation) return;
+    const trimmed = taskInput.trim();
+    if (!trimmed) return;
+    const targetListId = selectedListId ?? SYS_LIST_TODAY;
+    if (targetListId === SYS_LIST_OVERDUE) return;
+    triggerTaskInputPress();
+    const id = Date.now();
+    let dueDate: string | null = null;
+    if (targetListId === SYS_LIST_TODAY) {
+      dueDate = toISODate(new Date());
+    } else if (DUE_DATE_PICKER_LIST_IDS.has(targetListId)) {
+      dueDate = null;
+    }
+    const newTask: Task = {
+      id,
+      text: trimmed,
+      description: "",
+      removing: false,
+      createdAt: Date.now(),
+      workMode: "inside",
+      completed: false,
+      dueDate,
+    };
+    setTasksByListId((prev) => ({
+      ...prev,
+      [targetListId]: [...(prev[targetListId] ?? []), newTask],
+    }));
+    if (selectedListId === targetListId) {
+      setTasks((prev) => [...prev, newTask]);
+    }
+    addTaskToFocusSession(targetListId, id);
+    setFocusSessionNewRowId(id);
+    window.setTimeout(() => setFocusSessionNewRowId(null), 280);
+    setTaskInputClearFlash(true);
+    setTaskInput("");
+    window.setTimeout(() => setTaskInputClearFlash(false), 200);
+    queueMicrotask(() => focusSessionTaskInputRef.current?.focus());
   }
 
   function advanceWorkModePromptQueue() {
@@ -4281,9 +4457,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("tasks")}
-                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
+                    className={`app-nav-icon-btn group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "tasks"
-                        ? "bg-white/10 text-zinc-100"
+                        ? "app-nav-icon-btn--active bg-white/10 text-zinc-100"
                         : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
@@ -4312,9 +4488,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("calendar")}
-                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
+                    className={`app-nav-icon-btn group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "calendar"
-                        ? "bg-white/10 text-zinc-100"
+                        ? "app-nav-icon-btn--active bg-white/10 text-zinc-100"
                         : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
@@ -4343,7 +4519,7 @@ export default function App() {
                     ref={focusNavButtonRef}
                     type="button"
                     onClick={handleStartFocusSession}
-                    className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-100 hover:bg-white/5 transition-colors duration-150 overflow-visible"
+                    className="app-nav-icon-btn group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-100 hover:bg-white/5 transition-colors duration-150 overflow-visible"
                   >
                     <span className="focus-nav-aura-soft" aria-hidden />
                     <span className="focus-nav-aura" aria-hidden />
@@ -4361,9 +4537,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => handleSidebarNavClick("analytics")}
-                    className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
+                    className={`app-nav-icon-btn group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 ${
                       activeView === "analytics"
-                        ? "bg-white/10 text-zinc-100"
+                        ? "app-nav-icon-btn--active bg-white/10 text-zinc-100"
                         : "text-zinc-500 hover:bg-white/5 hover:text-zinc-200"
                     }`}
                   >
@@ -4544,10 +4720,10 @@ export default function App() {
                               handleSelectList(list.id);
                             }
                           }}
-                          className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 min-h-[44px] text-[13px] font-medium leading-snug transition-colors duration-150 cursor-pointer overflow-visible ${
+                          className={`flex items-center gap-3 rounded-lg px-2.5 py-2.5 min-h-[44px] text-[13px] font-medium leading-snug transition-all duration-150 ease-out cursor-pointer overflow-visible ${
                             selectedListId === list.id
                               ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.05)]"
-                              : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
+                              : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200 hover:scale-[1.01] active:scale-[0.99]"
                           }`}
                         >
                           {list.id === SYS_LIST_OVERDUE ? (
@@ -4565,6 +4741,36 @@ export default function App() {
                         </div>
                       ))}
                     </nav>
+
+                    <div className="shrink-0 px-0.5 mt-3 space-y-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
+                          Today
+                        </span>
+                        <span
+                          className={`text-[11px] font-semibold tabular-nums text-zinc-400 inline-flex items-center gap-0.5 ${
+                            streakMicro === "up"
+                              ? "micro-streak-up"
+                              : streakMicro === "down"
+                                ? "micro-streak-down"
+                                : ""
+                          }`}
+                        >
+                          <span aria-hidden>🔥</span>
+                          {streak}
+                        </span>
+                      </div>
+                      <div className="h-1 rounded-full bg-zinc-800/90 overflow-hidden border border-white/[0.04]">
+                        <div
+                          className="h-full rounded-full bg-emerald-500/85 micro-progress-fill shadow-[0_0_6px_rgba(16,185,129,0.3)]"
+                          style={{ width: `${dailyTaskProgress.pct}%` }}
+                        />
+                      </div>
+                      <p className="text-[9px] text-zinc-600 tabular-nums leading-tight">
+                        {dailyTaskProgress.done} done · {dailyTaskProgress.open}{" "}
+                        open
+                      </p>
+                    </div>
 
                     <div
                       className="shrink-0 h-px bg-white/[0.07] my-4 mx-0.5"
@@ -4809,6 +5015,8 @@ export default function App() {
             >
               <div
                 className={`w-full h-full min-h-0 flex flex-col ${
+                  mainViewEnterAnim ? "micro-view-enter" : ""
+                } ${
                   activeView === "tasks" &&
                   (todayMainMode === "tasks" || todayMainMode === "completed")
                     ? "px-0 pt-0 pb-0"
@@ -5379,26 +5587,52 @@ export default function App() {
 
                         {/* Task input bar — hidden for Overdue (system-fed only) */}
                         {selectedListId !== SYS_LIST_OVERDUE && (
-                          <div
-                            className="border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0"
-                            style={{ backgroundColor: TT_INPUT_ROW }}
-                          >
-                            <span className="text-zinc-500 text-base leading-none pl-0.5">
-                              +
-                            </span>
-                            <input
-                              value={taskInput}
-                              onChange={(e) => setTaskInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  addTaskFromListInput();
-                                }
-                              }}
-                              placeholder={taskInputPlaceholder(selectedListId)}
-                              disabled={!selectedListId}
-                              className="flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed"
-                            />
+                          <div className="shrink-0 space-y-1">
+                            <div
+                              className={`border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0 ${
+                                taskInputShellPress ? "micro-input-press" : ""
+                              }`}
+                              style={{ backgroundColor: TT_INPUT_ROW }}
+                            >
+                              <span className="text-zinc-500 text-base leading-none pl-0.5">
+                                +
+                              </span>
+                              <input
+                                ref={taskListInputRef}
+                                value={taskInput}
+                                onChange={(e) => setTaskInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addTaskFromListInput({ fromEnter: true });
+                                  }
+                                }}
+                                placeholder={taskInputPlaceholder(
+                                  selectedListId,
+                                )}
+                                disabled={!selectedListId}
+                                className={`flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 placeholder:transition-opacity placeholder:duration-200 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-200 ease-out ${
+                                  taskInputClearFlash ? "opacity-40" : ""
+                                }`}
+                              />
+                            </div>
+                            {taskInputLiveHints.length > 0 && (
+                              <div
+                                className="pl-1 space-y-0.5"
+                                role="status"
+                                aria-live="polite"
+                              >
+                                {taskInputLiveHints.map((hint, hi) => (
+                                  <p
+                                    key={hi}
+                                    className="text-[11px] leading-snug text-zinc-500 micro-hint-in"
+                                    style={{ animationDelay: `${hi * 40}ms` }}
+                                  >
+                                    {hint}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
                           </div>
                         )}
 
@@ -5437,7 +5671,11 @@ export default function App() {
                                 </p>
                               </div>
                             ) : (
-                              <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10">
+                              <div
+                                className={`flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10 ${
+                                  listEmptyExit ? "micro-empty-out" : ""
+                                }`}
+                              >
                                 <DefaultTasksEmptyIllustration />
                                 <p className="text-lg font-semibold text-zinc-100 tracking-tight">
                                   {listEmptyHeadline(
@@ -5451,7 +5689,11 @@ export default function App() {
                               </div>
                             )
                           ) : (
-                            <div className="space-y-0.5 pt-1">
+                            <div
+                              className={`space-y-0.5 pt-1 ${
+                                listFirstTaskEnter ? "micro-list-shell-in" : ""
+                              }`}
+                            >
                               {visibleTasksForList.map((t) => {
                                   const isSelected = selectedTaskId === t.id;
                                   return (
@@ -5473,6 +5715,14 @@ export default function App() {
                                       } ${
                                         taskReappearId === t.id
                                           ? "animate-task-reappear"
+                                          : ""
+                                      } ${
+                                        visibleTasksForList.length === 1
+                                          ? "micro-last-task-row"
+                                          : ""
+                                      } ${
+                                        newListTaskAnimId === t.id
+                                          ? "micro-row-enter"
                                           : ""
                                       } ${
                                         isSelected
@@ -6458,7 +6708,15 @@ export default function App() {
             )}
 
             {isFocusSessionActive && (
-              <div className="flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900">
+              <div
+                className={`flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900 transition-[filter] duration-300 ease-out ${
+                  focusRootShake ? "micro-focus-shake" : ""
+                }`}
+              >
+                <div
+                  className="pointer-events-none absolute inset-0 z-[15] micro-focus-vignette"
+                  aria-hidden
+                />
                 <div
                   className="pointer-events-none absolute inset-0 z-0"
                   style={{
@@ -6467,7 +6725,11 @@ export default function App() {
                   }}
                 />
                 <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+                  <div
+                    className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+                      focusImmerseIntro ? "micro-focus-main-in" : ""
+                    }`}
+                  >
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                       <div className="flex w-full flex-shrink-0 flex-col items-center gap-6 px-4 pb-4 pt-16 sm:gap-8">
                   {warning && (
@@ -6483,9 +6745,20 @@ export default function App() {
                 {floatingTime.text}
               </div>
             )}
+            {stayLockedHint && (
+              <div className="fixed bottom-28 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-gray-200/80 bg-white/90 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600 shadow-lg backdrop-blur-sm transition-opacity duration-200 ease-out">
+                Stay locked in.
+              </div>
+            )}
 
             <div
-              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-1000 ${running || focusFinaleModalOpen ? "blur-lg opacity-0" : "opacity-100"}`}
+              className={`w-full max-w-3xl text-center space-y-3 transition-all duration-300 ease-out ${
+                running || focusFinaleModalOpen
+                  ? "blur-lg opacity-0"
+                  : focusImmerseIntro
+                    ? "opacity-45"
+                    : "opacity-100"
+              }`}
             >
               <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
                 Hello <span className="text-blue-600">User</span>.
@@ -6493,7 +6766,15 @@ export default function App() {
               <p className="text-lg text-gray-500 font-light italic">
                 {randomGreeting}
               </p>
-              <div className="text-[10px] tracking-[0.3em] uppercase text-gray-500">
+              <div
+                className={`text-[10px] tracking-[0.3em] uppercase text-gray-500 inline-flex items-center justify-center gap-1 ${
+                  streakMicro === "up"
+                    ? "micro-streak-up"
+                    : streakMicro === "down"
+                      ? "micro-streak-down"
+                      : ""
+                }`}
+              >
                 🔥 {streak} day streak
               </div>
 
@@ -6537,7 +6818,7 @@ export default function App() {
 
             {/* TIMER CARD */}
             <div
-              className={`relative flex items-center justify-center z-[200] transition-all duration-500 ${focusFinaleOpen ? "focus-finale-timer-wrap" : ""}`}
+              className={`relative flex items-center justify-center z-[200] transition-all duration-500 ${focusFinaleOpen ? "focus-finale-timer-wrap" : ""} ${focusTimerNudge ? "micro-timer-nudge" : ""}`}
             >
               {focusFinaleOpen && (
                 <div
@@ -6627,55 +6908,52 @@ export default function App() {
                       <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden">
             <div className="mx-auto w-full max-w-4xl space-y-12 px-4 pb-24 pt-2">
               <div
-                className={`space-y-4 max-w-xl mx-auto transition-all duration-1000 ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
+                className={`space-y-4 max-w-xl mx-auto transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
-                <div className="flex gap-3">
-                  <input
-                    disabled={isSimulation}
-                    value={taskInput}
-                    onChange={(e) => setTaskInput(e.target.value)}
-                    placeholder={
-                      isSimulation ? "Simulating input..." : "Next objective..."
-                    }
-                    className="flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all placeholder-gray-400"
-                  />
-                  <button
-                    disabled={isSimulation}
-                    onClick={() => {
-                      if (!taskInput.trim()) return;
-                      const targetListId = selectedListId ?? SYS_LIST_TODAY;
-                      if (targetListId === SYS_LIST_OVERDUE) return;
-                      const id = Date.now();
-                      let dueDate: string | null = null;
-                      if (targetListId === SYS_LIST_TODAY) {
-                        dueDate = toISODate(new Date());
-                      } else if (DUE_DATE_PICKER_LIST_IDS.has(targetListId)) {
-                        dueDate = null;
-                      }
-                      const newTask: Task = {
-                        id,
-                        text: taskInput.trim(),
-                        description: "",
-                        removing: false,
-                        createdAt: Date.now(),
-                        workMode: "inside",
-                        completed: false,
-                        dueDate,
-                      };
-                      setTasksByListId((prev) => ({
-                        ...prev,
-                        [targetListId]: [...(prev[targetListId] ?? []), newTask],
-                      }));
-                      if (selectedListId === targetListId) {
-                        setTasks((prev) => [...prev, newTask]);
-                      }
-                      addTaskToFocusSession(targetListId, id);
-                      setTaskInput("");
-                    }}
-                    className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase"
+                <div className="space-y-1.5">
+                  <div
+                    className={`flex gap-3 ${taskInputShellPress ? "micro-input-press" : ""}`}
                   >
-                    ADD
-                  </button>
+                    <input
+                      ref={focusSessionTaskInputRef}
+                      disabled={isSimulation}
+                      value={taskInput}
+                      onChange={(e) => setTaskInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTaskFromFocusBar({ fromEnter: true });
+                        }
+                      }}
+                      placeholder={
+                        isSimulation ? "Simulating input..." : "Next objective..."
+                      }
+                      className={`flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all duration-200 ease-out placeholder-gray-400 ${
+                        taskInputClearFlash ? "opacity-50" : ""
+                      }`}
+                    />
+                    <button
+                      disabled={isSimulation}
+                      type="button"
+                      onClick={() => addTaskFromFocusBar()}
+                      className="px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase shrink-0"
+                    >
+                      ADD
+                    </button>
+                  </div>
+                  {taskInputLiveHints.length > 0 && (
+                    <div className="pl-1 space-y-0.5" aria-live="polite">
+                      {taskInputLiveHints.map((hint, hi) => (
+                        <p
+                          key={hi}
+                          className="text-[11px] leading-snug text-gray-500 micro-hint-in"
+                          style={{ animationDelay: `${hi * 40}ms` }}
+                        >
+                          {hint}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex flex-col gap-3 w-full max-w-xl mx-auto">
@@ -6707,6 +6985,10 @@ export default function App() {
                             t.removing
                               ? "opacity-0 translate-x-12"
                               : "opacity-100"
+                          } ${
+                            focusSessionNewRowId === t.id
+                              ? "micro-row-enter"
+                              : ""
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
@@ -6734,7 +7016,11 @@ export default function App() {
                     </div>
                   </div>
 
-                  <div className="flex w-[min(360px,32vw)] flex-shrink-0 flex-col self-stretch py-2 pr-2 pl-0 sm:w-[min(380px,34vw)] sm:py-3 sm:pr-3">
+                  <div
+                    className={`flex w-[min(360px,32vw)] flex-shrink-0 flex-col self-stretch py-2 pr-2 pl-0 sm:w-[min(380px,34vw)] sm:py-3 sm:pr-3 transition-opacity duration-300 ease-out ${
+                      focusImmerseIntro ? "opacity-[0.88]" : "opacity-100"
+                    }`}
+                  >
                     <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] shadow-[-10px_0_40px_-12px_rgba(0,0,0,0.85)] sm:rounded-[1.5rem]">
                       <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
                         <div className="flex items-start justify-between gap-2">
