@@ -59,6 +59,9 @@ const OVERDUE_SOURCE_LIST_IDS: readonly string[] = [
   SYS_LIST_LONGTERM,
 ];
 
+/** Sidebar “Lists” badge — matches default capacity for custom lists. */
+const MAX_USER_LISTS = 9;
+
 const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
   SYS_LIST_TESTS,
   SYS_LIST_PROJECTS,
@@ -141,6 +144,26 @@ function buildFocusForTodayPicks(
   tasksByListId: Record<string, Task[]>,
   todayIso: string,
 ): FocusForTodayPick[] {
+  const overduePicks: FocusForTodayPick[] = [];
+  for (const t of tasksByListId[SYS_LIST_OVERDUE] ?? []) {
+    if (t.completed || t.removing || !t.dueDate) continue;
+    const daysLeft = calendarDaysUntilDue(todayIso, t.dueDate);
+    if (daysLeft >= 0) continue;
+    const raw = (t.text || "").trim() || "Untitled";
+    overduePicks.push({
+      listId: SYS_LIST_OVERDUE,
+      taskId: t.id,
+      daysLeft,
+      displayTitle: raw,
+      timeLabel: formatFocusTimeRemaining(daysLeft),
+      urgency: "overdue",
+    });
+  }
+  overduePicks.sort((a, b) => {
+    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
+    return a.displayTitle.localeCompare(b.displayTitle);
+  });
+
   const todayListPicks: FocusForTodayPick[] = [];
   for (const t of tasksByListId[SYS_LIST_TODAY] ?? []) {
     if (t.completed || t.removing) continue;
@@ -204,7 +227,7 @@ function buildFocusForTodayPicks(
     bigPicks = otherBig.slice(0, 2);
   }
 
-  return [...todayListPicks, ...bigPicks];
+  return [...overduePicks, ...todayListPicks, ...bigPicks];
 }
 
 function focusForTodayUrgencyStyles(
@@ -234,14 +257,13 @@ function focusForTodayUrgencyStyles(
   }
 }
 
-/** Due-date reminders (Tests / Projects / Long-Term). */
+/** Due-date reminders (Tests / Projects / Long-Term) + overdue (Overdue list). */
 type AppNotificationItem = {
   id: string;
-  type: "test" | "project" | "longterm";
+  type: "test" | "project" | "longterm" | "overdue";
   title: string;
   dueDate: string;
-  messageLine1: string;
-  messageLine2: string;
+  message: string;
   daysRemaining: number;
   read: boolean;
 };
@@ -269,6 +291,39 @@ function loadNotificationReadIds(): Set<string> {
   }
 }
 
+function formatOverdueNotificationAgo(daysUntil: number): string {
+  const n = Math.abs(daysUntil);
+  if (n === 1) return "yesterday";
+  return `${n} days ago`;
+}
+
+function buildOverdueNotifications(
+  tasksByListId: Record<string, Task[]>,
+  todayIso: string,
+): Omit<AppNotificationItem, "read">[] {
+  const out: Omit<AppNotificationItem, "read">[] = [];
+  for (const t of tasksByListId[SYS_LIST_OVERDUE] ?? []) {
+    if (t.completed || t.removing || !t.dueDate) continue;
+    const days = calendarDaysUntilDue(todayIso, t.dueDate);
+    if (days >= 0) continue;
+    const title = (t.text || "").trim() || "Untitled";
+    const ago = formatOverdueNotificationAgo(days);
+    out.push({
+      id: `notif:overdue:${t.id}:${todayIso}`,
+      type: "overdue",
+      title,
+      dueDate: t.dueDate,
+      message: `URGENT❗${title} was due ${ago}.`,
+      daysRemaining: days,
+    });
+  }
+  out.sort(
+    (a, b) =>
+      a.dueDate.localeCompare(b.dueDate) || a.title.localeCompare(b.title),
+  );
+  return out;
+}
+
 function buildDueDateNotifications(
   tasksByListId: Record<string, Task[]>,
   todayIso: string,
@@ -276,7 +331,7 @@ function buildDueDateNotifications(
   const out: Omit<AppNotificationItem, "read">[] = [];
   const configs: {
     listId: string;
-    type: AppNotificationItem["type"];
+    type: "test" | "project" | "longterm";
     maxDays: number;
   }[] = [
     { listId: SYS_LIST_TESTS, type: "test", maxDays: 3 },
@@ -288,19 +343,19 @@ function buildDueDateNotifications(
     for (const t of tasks) {
       if (t.completed || t.removing || !t.dueDate) continue;
       const days = calendarDaysUntilDue(todayIso, t.dueDate);
-      if (days < 1 || days > maxDays) continue;
+      if (days < 0 || days > maxDays) continue;
+      if (type !== "longterm" && days === 3) continue;
       const title = (t.text || "").trim() || "Untitled";
-      const duePhrase =
-        days === 1 ? "in 24h" : days === 2 ? "in 48h" : `in ${days} days`;
-      const messageLine1 = `⏳ ACTION REQUIRED "${title}" is due ${duePhrase}.`;
-      const messageLine2 = `⚠️ Upcoming Deadline "${title}" is approaching. Plan your work today.`;
+      const message =
+        days === 0
+          ? `⏳ ACTION REQUIRED ${title} is due today.`
+          : `⚠️ Upcoming Deadline ${title} is approaching. Plan your work today.`;
       out.push({
         id: `notif:${listId}:${t.id}:${todayIso}`,
         type,
         title,
         dueDate: t.dueDate,
-        messageLine1,
-        messageLine2,
+        message,
         daysRemaining: days,
       });
     }
@@ -310,6 +365,16 @@ function buildDueDateNotifications(
       a.dueDate.localeCompare(b.dueDate) || a.title.localeCompare(b.title),
   );
   return out;
+}
+
+function buildAllNotificationPayloads(
+  tasksByListId: Record<string, Task[]>,
+  todayIso: string,
+): Omit<AppNotificationItem, "read">[] {
+  return [
+    ...buildOverdueNotifications(tasksByListId, todayIso),
+    ...buildDueDateNotifications(tasksByListId, todayIso),
+  ];
 }
 
 function toISODate(d: Date): string {
@@ -1450,6 +1515,8 @@ export default function App() {
     CompletedActivityEntry[]
   >([]);
   const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
+  const [userListsSectionExpanded, setUserListsSectionExpanded] =
+    useState(true);
   const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newListColor, setNewListColor] = useState<string | null>("#eab308");
@@ -1600,7 +1667,7 @@ export default function App() {
   }, []);
 
   const notificationItems = useMemo(() => {
-    const built = buildDueDateNotifications(tasksByListId, notificationDay);
+    const built = buildAllNotificationPayloads(tasksByListId, notificationDay);
     return built.map((n) => ({
       ...n,
       read: notificationReadIds.has(n.id),
@@ -1674,7 +1741,7 @@ export default function App() {
       if (!prev) {
         setNotificationReadIds((r) => {
           const s = new Set(r);
-          for (const n of buildDueDateNotifications(
+          for (const n of buildAllNotificationPayloads(
             tasksByListId,
             notificationDay,
           )) {
@@ -2407,24 +2474,15 @@ export default function App() {
     }
     clearFocusEnterTimers();
     allowFocusEnterRef.current = true;
-    const el = focusNavButtonRef.current;
-    if (el) {
-      const r = el.getBoundingClientRect();
-      setZenOverlayOrigin({
-        x: r.left + r.width / 2,
-        y: r.top + r.height / 2,
-      });
-    } else {
-      setZenOverlayOrigin({
-        x: window.innerWidth * 0.06,
-        y: window.innerHeight * 0.38,
-      });
-    }
+    setZenOverlayOrigin({
+      x: window.innerWidth / 2,
+      y: window.innerHeight / 2,
+    });
     setFocusEnterZenActive(true);
     setFocusEnterZenBlocking(true);
-    const ENTER_MS = 3000;
-    const UNBLOCK_MS = 3180;
-    const CLEAR_MS = 6400;
+    const ENTER_MS = 2400;
+    const UNBLOCK_MS = 2560;
+    const CLEAR_MS = 4600;
     const t0 = window.setTimeout(() => {
       if (!allowFocusEnterRef.current) return;
       finishEnterFocusSession();
@@ -2452,8 +2510,7 @@ export default function App() {
   };
 
   const handleFocusForTodayStartSession = () => {
-    const top = focusForTodayItems[0];
-    if (!top) return;
+    if (focusForTodayItems.length === 0) return;
     if (isFocusTimerRunning) {
       setWarning(
         "Pause or finish your timer before starting a new focus session.",
@@ -2467,12 +2524,29 @@ export default function App() {
     if (isFocusSessionActive) {
       cleanupFocusSessionAfterQuit();
     }
+    const entries: FocusSessionEntry[] = focusForTodayItems.map((p) => ({
+      listId: p.listId,
+      taskId: p.taskId,
+    }));
     workModePromptQueueRef.current = [];
     setPendingWorkModeTaskId(null);
     setPendingWorkModeListId(null);
     setIsWorkModeModalOpen(false);
-    setFocusSessionEntries([{ listId: top.listId, taskId: top.taskId }]);
-    performOpenTaskInList(top.listId, top.taskId);
+    setFocusSessionEntries(entries);
+    const first = focusForTodayItems[0];
+    performOpenTaskInList(first.listId, first.taskId);
+    if (!isSimulation && entries.length > 0) {
+      queueMicrotask(() => {
+        const queue = entries.map((e) => ({
+          taskId: e.taskId,
+          listId: e.listId,
+        }));
+        workModePromptQueueRef.current = queue;
+        setPendingWorkModeTaskId(queue[0].taskId);
+        setPendingWorkModeListId(queue[0].listId);
+        setIsWorkModeModalOpen(true);
+      });
+    }
     handleStartFocusSession();
   };
 
@@ -3312,40 +3386,56 @@ export default function App() {
           100%{ opacity:0 }
         }
         @keyframes focus-zen-ripple-long {
-          0%{ transform:scale(0.04); opacity:0.45 }
+          0%{ transform:scale(0.02); opacity:0.5 }
+          55%{ opacity:0.14 }
           100%{ transform:scale(1); opacity:0 }
         }
         @keyframes focus-zen-bloom {
-          0%{ transform:scale(0.3); opacity:0.28 }
+          0%{ transform:scale(0.22); opacity:0.32 }
           100%{ transform:scale(1); opacity:0 }
         }
+        @keyframes app-notif-enter {
+          0%{ opacity:0; transform:translateY(6px) scale(0.99) }
+          100%{ opacity:1; transform:translateY(0) scale(1) }
+        }
+        @keyframes app-notif-urgency {
+          0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0) }
+          50%{ box-shadow:0 0 0 1px rgba(239,68,68,0.12),0 8px 28px -12px rgba(239,68,68,0.18) }
+        }
         .focus-zen-mist-overlay{
-          animation:focus-zen-mist 6.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
+          animation:focus-zen-mist 4.8s cubic-bezier(0.22,0.61,0.36,1) forwards;
         }
         .focus-zen-ripple-ring{
           position:absolute; left:50%; top:50%;
-          width:min(160vmax,2600px); height:min(160vmax,2600px);
-          margin-left:calc(min(160vmax,2600px)/-2); margin-top:calc(min(160vmax,2600px)/-2);
+          width:min(150vmax,2400px); height:min(150vmax,2400px);
+          margin-left:calc(min(150vmax,2400px)/-2); margin-top:calc(min(150vmax,2400px)/-2);
           border-radius:50%;
-          border:1.5px solid rgba(186,230,253,0.32);
+          border:1.25px solid rgba(186,230,253,0.28);
           box-shadow:
-            0 0 120px rgba(59,130,246,0.18),
-            0 0 220px rgba(147,197,253,0.1),
-            inset 0 0 100px rgba(255,255,255,0.06);
-          animation:focus-zen-ripple-long 4.2s cubic-bezier(0.15,0.75,0.2,1) forwards;
+            0 0 100px rgba(59,130,246,0.16),
+            0 0 180px rgba(147,197,253,0.08),
+            inset 0 0 80px rgba(255,255,255,0.05);
+          animation:focus-zen-ripple-long 2.75s cubic-bezier(0.2,0.65,0.15,1) forwards;
         }
         .focus-zen-ripple-ring-slow{
-          animation:focus-zen-ripple-long 5s cubic-bezier(0.18,0.72,0.22,1) forwards;
-          border-color:rgba(147,197,253,0.2);
-          box-shadow:0 0 200px rgba(59,130,246,0.12);
+          animation:focus-zen-ripple-long 3.1s cubic-bezier(0.22,0.68,0.18,1) forwards;
+          border-color:rgba(147,197,253,0.18);
+          box-shadow:0 0 160px rgba(59,130,246,0.1);
         }
         .focus-zen-bloom-core{
           position:absolute; left:50%; top:50%;
-          width:min(90vmax,1400px); height:min(90vmax,1400px);
-          margin-left:calc(min(90vmax,1400px)/-2); margin-top:calc(min(90vmax,1400px)/-2);
+          width:min(85vmax,1300px); height:min(85vmax,1300px);
+          margin-left:calc(min(85vmax,1300px)/-2); margin-top:calc(min(85vmax,1300px)/-2);
           border-radius:50%;
-          background:radial-gradient(circle, rgba(147,197,253,0.2) 0%, transparent 68%);
-          animation:focus-zen-bloom 4.8s cubic-bezier(0.2,0.8,0.2,1) forwards;
+          background:radial-gradient(circle, rgba(147,197,253,0.18) 0%, transparent 70%);
+          animation:focus-zen-bloom 3.2s cubic-bezier(0.2,0.82,0.15,1) forwards;
+        }
+        .app-notif-item{
+          animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both;
+        }
+        .app-notif-item--unread{
+          animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both,
+            app-notif-urgency 3.2s ease-in-out 0.4s 2;
         }
       `}</style>
 
@@ -3655,11 +3745,11 @@ export default function App() {
                 }}
               >
                 <div className="focus-zen-bloom-core" />
-                {Array.from({ length: 7 }).map((_, i) => (
+                {Array.from({ length: 5 }).map((_, i) => (
                   <div
                     key={i}
-                    className={`focus-zen-ripple-ring ${i === 6 ? "focus-zen-ripple-ring-slow" : ""}`}
-                    style={{ animationDelay: `${i * 280}ms` }}
+                    className={`focus-zen-ripple-ring ${i === 4 ? "focus-zen-ripple-ring-slow" : ""}`}
+                    style={{ animationDelay: `${i * 200}ms` }}
                   />
                 ))}
               </div>
@@ -3902,25 +3992,25 @@ export default function App() {
                         No notifications
                       </p>
                       <p className="text-[11px] text-zinc-500 mt-1.5 max-w-[220px] leading-snug">
-                        Due date reminders for tests, projects, and long-term
-                        work will appear here.
+                        Overdue alerts and due-date reminders for tests,
+                        projects, and long-term work appear here.
                       </p>
                     </div>
                   ) : (
                     <ul className="py-1">
-                      {notificationItems.map((n) => (
+                      {notificationItems.map((n, idx) => (
                         <li
                           key={n.id}
                           className="border-b border-white/[0.05] last:border-b-0"
                         >
-                          <div className="px-3.5 py-2.5 hover:bg-white/[0.04] transition-colors">
-                            <p className="text-[12px] leading-snug text-zinc-100 font-semibold">
-                              {n.messageLine1}
+                          <div
+                            className={`px-3.5 py-3 hover:bg-white/[0.04] transition-colors rounded-xl mx-1.5 my-1 ${!n.read ? "app-notif-item--unread" : "app-notif-item"}`}
+                            style={{ animationDelay: `${idx * 45}ms` }}
+                          >
+                            <p className="text-[15px] leading-snug text-zinc-50 font-semibold tracking-tight">
+                              {n.message}
                             </p>
-                            <p className="text-[11px] leading-snug text-zinc-300 mt-1.5">
-                              {n.messageLine2}
-                            </p>
-                            <p className="text-[11px] text-zinc-500 mt-2 tabular-nums">
+                            <p className="text-[12px] text-zinc-500 mt-2.5 tabular-nums">
                               {formatDueButtonLabel(n.dueDate)}
                             </p>
                           </div>
@@ -3990,38 +4080,70 @@ export default function App() {
                       aria-hidden
                     />
 
-                    <div className="shrink-0 flex items-center justify-between group mb-2 px-0.5">
-                      <p className="text-[11px] font-medium text-zinc-500 tracking-wide">
-                        Lists
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isFocusTimerRunning) {
-                            setFocusSessionDialog({
-                              kind: "quit",
-                              pending: { action: "addList" },
-                            });
-                            return;
+                    <div className="shrink-0 mb-2 space-y-1.5">
+                      <div className="flex items-stretch gap-1.5 rounded-lg bg-[#1a1a1c] border border-white/[0.06] px-1 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setUserListsSectionExpanded((v) => !v)
                           }
-                          if (focusEnterZenActive) {
-                            cancelFocusEnterZen();
-                          }
-                          if (isFocusSessionActive) {
-                            cleanupFocusSessionAfterQuit();
-                          }
-                          setNewListName("");
-                          setNewListColor("#eab308");
-                          setIsAddListModalOpen(true);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 rounded-lg hover:bg-white/5 w-7 h-7 flex items-center justify-center text-zinc-400 hover:text-zinc-200 shrink-0"
-                        aria-label="Add List"
-                      >
-                        +
-                      </button>
+                          className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-1.5 py-1.5 text-left hover:bg-white/[0.05] transition-colors"
+                          aria-expanded={userListsSectionExpanded}
+                        >
+                          <svg
+                            className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${userListsSectionExpanded ? "rotate-90" : ""}`}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            aria-hidden
+                          >
+                            <path
+                              d="M9 18l6-6-6-6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          <span className="text-[12px] font-medium text-zinc-400 tracking-tight">
+                            Lists
+                          </span>
+                          <span className="rounded-md bg-zinc-800/90 border border-white/[0.06] px-2 py-0.5 text-[10px] font-medium tabular-nums text-zinc-400">
+                            Used: {todayLists.length}/{MAX_USER_LISTS}
+                          </span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isFocusTimerRunning) {
+                              setFocusSessionDialog({
+                                kind: "quit",
+                                pending: { action: "addList" },
+                              });
+                              return;
+                            }
+                            if (focusEnterZenActive) {
+                              cancelFocusEnterZen();
+                            }
+                            if (isFocusSessionActive) {
+                              cleanupFocusSessionAfterQuit();
+                            }
+                            setNewListName("");
+                            setNewListColor("#eab308");
+                            setIsAddListModalOpen(true);
+                          }}
+                          className="shrink-0 w-9 rounded-md hover:bg-white/[0.06] flex items-center justify-center text-zinc-400 hover:text-zinc-200 text-lg font-light leading-none transition-colors"
+                          aria-label="Add List"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 pb-1 -mx-0.5 px-0.5">
+                    <div
+                      className={`flex-1 min-h-0 grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+                    >
+                      <div className="min-h-0 overflow-hidden flex flex-col">
+                      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden flex flex-col gap-0.5 pb-1 -mx-0.5 px-0.5">
                       {todayLists.map((list) => (
                         <div
                           key={list.id}
@@ -4107,6 +4229,8 @@ export default function App() {
                           )}
                         </div>
                       ))}
+                      </div>
+                      </div>
                     </div>
                   </div>
 
@@ -4521,8 +4645,8 @@ export default function App() {
                                       Focus for today
                                     </h3>
                                     <p className="text-[12px] text-zinc-500 mt-2 leading-relaxed max-w-[20rem]">
-                                      Plan your day: everything on Today, plus
-                                      Tests, Projects, and Long-Term by urgency.
+                                      Plan your day: Overdue, Today, plus Tests,
+                                      Projects, and Long-Term by urgency.
                                     </p>
                                   </div>
                                   <button
