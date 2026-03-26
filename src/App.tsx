@@ -2604,7 +2604,7 @@ export default function App() {
       return;
     }
     setTasksListSkeletonVisible(true);
-    const t = window.setTimeout(() => setTasksListSkeletonVisible(false), 220);
+    const t = window.setTimeout(() => setTasksListSkeletonVisible(false), 450);
     return () => clearTimeout(t);
   }, [selectedListId, todayMainMode, activeView]);
 
@@ -5412,371 +5412,57 @@ export default function App() {
                     className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
                     style={{ backgroundColor: TT_MAIN_GREY }}
                   >
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] flex-1 min-h-0">
-                      {/* LEFT PANEL: tasks (TickTick middle column) */}
+                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] flex-1 min-h-0">
+                      {/* LEFT PANEL: continuous task workflow */}
                       <div
-                        className="pl-3 pr-2 pt-3 pb-2 flex flex-col h-full min-h-0"
+                        className="pl-3 pr-2 pt-2 pb-1 flex flex-col h-full min-h-0"
                         style={{ backgroundColor: TT_MAIN_GREY }}
                       >
-                        {/* Header + actions */}
-                        <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                        {/* Header row */}
+                        <div className="flex items-center justify-between gap-2 mb-1.5 shrink-0">
+                          <div className="flex items-center gap-2 min-w-0 flex-1">
                             <button
                               type="button"
                               onClick={handleToggleTodaySidebar}
                               disabled={isTodayPanelAnimatingOut}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-300 hover:bg-white/[0.06] transition-colors duration-150 disabled:opacity-50"
                               aria-label="Collapse Tasks sidebar"
                               title="Collapse Tasks sidebar"
                             >
-                              <svg
-                                className="w-[18px] h-[18px]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                aria-hidden
-                              >
+                              <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
                                 <line x1="4" y1="6" x2="20" y2="6" />
                                 <line x1="4" y1="12" x2="20" y2="12" />
                                 <line x1="4" y1="18" x2="20" y2="18" />
                               </svg>
                             </button>
                             {selectedList ? (
-                              <>
-                                {selectedList.system ? (
-                                  <TaskSystemNavIcon
-                                    listId={selectedList.id}
-                                    className="w-5 h-5 shrink-0 text-zinc-400"
-                                  />
-                                ) : (
-                                  <span className="text-lg leading-none shrink-0">
-                                    {selectedList.icon}
-                                  </span>
-                                )}
-                                <h2 className="text-xl font-semibold text-zinc-100 truncate tracking-normal leading-7">
-                                  {selectedList.label}
-                                </h2>
-                                {!selectedList.system && (
-                                  <span
-                                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${listAccentDotClass(selectedList.color)}`}
-                                    style={
-                                      selectedList.color
-                                        ? {
-                                            backgroundColor: selectedList.color,
-                                          }
-                                        : undefined
-                                    }
-                                    aria-hidden
-                                  />
-                                )}
-                              </>
+                              <h2 className="text-[17px] font-semibold text-zinc-100 truncate leading-6">
+                                {selectedList.label}
+                              </h2>
                             ) : (
-                              <h2 className="text-xl font-semibold text-zinc-300 truncate tracking-normal leading-7">
+                              <h2 className="text-[17px] font-semibold text-zinc-300 truncate leading-6">
                                 Tasks
                               </h2>
                             )}
                           </div>
-                          <div className="flex items-center gap-1 shrink-0 text-zinc-500">
+                          {selectedListId === SYS_LIST_TODAY && focusForTodayItems.length > 0 && (
                             <button
                               type="button"
-                              className="p-2 rounded-md hover:bg-white/[0.06] hover:text-zinc-300 transition-colors"
-                              aria-label="Sort"
+                              onClick={handleFocusForTodayStartSession}
+                              className="relative z-0 overflow-visible shrink-0 rounded-md border border-zinc-600/70 bg-zinc-800/90 px-2.5 py-1 text-[11px] font-semibold leading-none text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700/95 transition-colors"
                             >
-                              <svg
-                                className="w-[18px] h-[18px]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M8 9l4-4 4 4M8 15l4 4 4-4" />
-                              </svg>
+                              <span className="focus-session-start-aura-soft" aria-hidden />
+                              <span className="focus-session-start-aura" aria-hidden />
+                              <span className="relative z-[1]">Focus Session</span>
                             </button>
-                            <button
-                              type="button"
-                              className="p-2 rounded-md hover:bg-white/[0.06] hover:text-zinc-300 transition-colors"
-                              aria-label="More options"
-                            >
-                              <svg
-                                className="w-[18px] h-[18px]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                              >
-                                <circle cx="5" cy="12" r="1.5" fill="currentColor" />
-                                <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                                <circle cx="19" cy="12" r="1.5" fill="currentColor" />
-                              </svg>
-                            </button>
-                          </div>
+                          )}
                         </div>
 
-                        {selectedListId === SYS_LIST_TODAY &&
-                          focusForTodayItems.length > 0 && (
-                            <>
-                              <div className="mb-5 shrink-0 overflow-visible rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
-                                <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="flex min-w-0 flex-1 items-start gap-2">
-                                      <span
-                                        className="mt-0.5 inline-flex shrink-0 text-zinc-500"
-                                        aria-hidden
-                                      >
-                                        <svg
-                                          className="h-5 w-5"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="1.65"
-                                          strokeLinecap="round"
-                                          strokeLinejoin="round"
-                                        >
-                                          <circle
-                                            cx="12"
-                                            cy="12"
-                                            r="3"
-                                            strokeWidth="1.65"
-                                          />
-                                          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
-                                        </svg>
-                                      </span>
-                                      <div className="min-w-0">
-                                        <h3 className="text-[1.0625rem] font-semibold leading-7 tracking-normal text-zinc-50 sm:text-xl">
-                                          Focus for today
-                                        </h3>
-                                        <p className="mt-0.5 max-w-[20rem] text-[11px] leading-relaxed text-zinc-400">
-                                          Prioritized based on urgency and due
-                                          dates
-                                        </p>
-                                      </div>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-1">
-                                      <button
-                                        type="button"
-                                        onClick={handleFocusForTodayStartSession}
-                                        className="relative z-0 overflow-visible rounded-md border border-zinc-600/70 bg-zinc-800/90 px-3 py-1.5 text-[11px] font-semibold leading-none text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-500 hover:bg-zinc-700/95 active:scale-[0.98]"
-                                      >
-                                        <span
-                                          className="focus-session-start-aura-soft"
-                                          aria-hidden
-                                        />
-                                        <span
-                                          className="focus-session-start-aura"
-                                          aria-hidden
-                                        />
-                                        <span className="relative z-[1]">
-                                          Start Focus Session
-                                        </span>
-                                      </button>
-                                      <div
-                                        className="p-1.5 text-zinc-500"
-                                        aria-hidden
-                                      >
-                                        <svg
-                                          className="h-[18px] w-[18px]"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                        >
-                                          <circle
-                                            cx="5"
-                                            cy="12"
-                                            r="1.5"
-                                            fill="currentColor"
-                                          />
-                                          <circle
-                                            cx="12"
-                                            cy="12"
-                                            r="1.5"
-                                            fill="currentColor"
-                                          />
-                                          <circle
-                                            cx="19"
-                                            cy="12"
-                                            r="1.5"
-                                            fill="currentColor"
-                                          />
-                                        </svg>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="bg-[#0a0a0b] px-2 py-1 sm:px-2.5">
-                                  <ul
-                                    className="flex flex-col transition-all duration-300 ease-out"
-                                    key={focusForTodayItems
-                                      .map((x) => `${x.listId}:${x.taskId}`)
-                                      .join("|")}
-                                  >
-                                    {focusTodayFlatRows.map((item, rowIdx) => {
-                                      if (item.kind === "header") {
-                                        return (
-                                          <li
-                                            key={`hdr-${rowIdx}-${item.label}`}
-                                            className={`px-2 pb-1.5 ${rowIdx === 0 ? "pt-0.5" : "pt-3"}`}
-                                          >
-                                            <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
-                                              {item.label}
-                                            </span>
-                                            <div className="mt-1.5 h-px bg-[#2a2a2a]" />
-                                          </li>
-                                        );
-                                      }
-                                      const pick = item.pick;
-                                      const visuals = focusForTodayRowVisuals(
-                                        pick.urgency,
-                                      );
-                                      const tagLabel =
-                                        FOCUS_FOR_TODAY_TAG_LABELS[
-                                          pick.listId
-                                        ] ?? "Task";
-                                      const dayNum = parseISODate(
-                                        notificationDay,
-                                      ).getDate();
-                                      const task = getTaskForPick(
-                                        tasksByListId,
-                                        pick,
-                                      );
-                                      const timeLine = formatFocusTimeLine(
-                                        pick,
-                                        task,
-                                      );
-                                      const showEstimate =
-                                        focusEstimatePromptKeys.has(
-                                          `${pick.listId}:${pick.taskId}`,
-                                        );
-                                      return (
-                                        <li
-                                          key={`${pick.listId}:${pick.taskId}`}
-                                          className="border-b border-[#2a2a2a] transition-[opacity,transform] duration-300 ease-out last:border-b-0"
-                                        >
-                                          <button
-                                            type="button"
-                                            onClick={() =>
-                                              openTaskFromCalendar(
-                                                pick.listId,
-                                                pick.taskId,
-                                              )
-                                            }
-                                            className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
-                                          >
-                                            <span
-                                              className={`h-9 w-px shrink-0 rounded-full ${visuals.bar}`}
-                                              aria-hidden
-                                            />
-                                            <TaskSystemNavIcon
-                                              listId={pick.listId}
-                                              dayOfMonth={dayNum}
-                                              className="h-5 w-5 shrink-0 text-zinc-500"
-                                            />
-                                            <div className="min-w-0 flex-1">
-                                              <div className="truncate text-[13px] font-semibold leading-snug text-zinc-50">
-                                                {pick.displayTitle}
-                                              </div>
-                                              <div className="mt-0.5 text-[12px] leading-snug text-zinc-400">
-                                                {timeLine}
-                                              </div>
-                                            </div>
-                                            <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-400">
-                                              {tagLabel}
-                                            </span>
-                                            <svg
-                                              className="h-4 w-4 shrink-0 text-zinc-500"
-                                              viewBox="0 0 24 24"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth="2"
-                                              aria-hidden
-                                            >
-                                              <path
-                                                d="M9 18l6-6-6-6"
-                                                strokeLinecap="round"
-                                                strokeLinejoin="round"
-                                              />
-                                            </svg>
-                                          </button>
-                                          {showEstimate ? (
-                                            <div
-                                              className="pb-2.5 pl-[2.75rem] pr-2"
-                                              onClick={(e) =>
-                                                e.stopPropagation()
-                                              }
-                                            >
-                                              <p className="text-[10px] font-medium text-zinc-500 mb-1.5">
-                                                Quick estimate?
-                                              </p>
-                                              <div className="flex flex-wrap items-center gap-1.5">
-                                                {(
-                                                  [
-                                                    [15, "15m"],
-                                                    [30, "30m"],
-                                                    [60, "1h"],
-                                                    [120, "2h"],
-                                                  ] as const
-                                                ).map(([mins, lab]) => (
-                                                  <button
-                                                    key={mins}
-                                                    type="button"
-                                                    disabled={isSimulation}
-                                                    onClick={(e) => {
-                                                      e.preventDefault();
-                                                      e.stopPropagation();
-                                                      handleFocusEstimateInline(
-                                                        pick.listId,
-                                                        pick.taskId,
-                                                        mins,
-                                                      );
-                                                    }}
-                                                    className="rounded border border-zinc-700/80 bg-zinc-900/80 px-2 py-0.5 text-[10px] font-semibold text-zinc-300 hover:border-zinc-500 hover:bg-zinc-800 hover:text-zinc-100 transition-colors disabled:opacity-40"
-                                                  >
-                                                    {lab}
-                                                  </button>
-                                                ))}
-                                                <button
-                                                  type="button"
-                                                  disabled={isSimulation}
-                                                  onClick={(e) => {
-                                                    e.preventDefault();
-                                                    e.stopPropagation();
-                                                    handleFocusEstimateInline(
-                                                      pick.listId,
-                                                      pick.taskId,
-                                                      "skip",
-                                                    );
-                                                  }}
-                                                  className="ml-0.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40"
-                                                >
-                                                  Skip
-                                                </button>
-                                              </div>
-                                            </div>
-                                          ) : null}
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-3 mb-3 px-0.5 shrink-0">
-                                <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-500">
-                                  All tasks
-                                </span>
-                                <div className="flex-1 h-px bg-zinc-700/55" />
-                              </div>
-                            </>
-                          )}
-
-                        {/* Task input bar — hidden for Overdue (system-fed only) */}
+                        {/* Task input bar */}
                         {selectedListId !== SYS_LIST_OVERDUE && (
-                          <div className="shrink-0 space-y-1">
+                          <div className="shrink-0 mb-1">
                             <div
-                              className={`border border-[#2a2a2a] rounded-[10px] px-2.5 h-10 flex items-center gap-2 shrink-0 ${
+                              className={`border border-[#2a2a2a] rounded-lg px-2.5 h-9 flex items-center gap-2 ${
                                 invalidInputTarget === "list"
                                   ? "micro-input-invalid"
                                   : taskInputShellPress
@@ -5785,9 +5471,7 @@ export default function App() {
                               }`}
                               style={{ backgroundColor: TT_INPUT_ROW }}
                             >
-                              <span className="text-zinc-500 text-base leading-none pl-0.5">
-                                +
-                              </span>
+                              <span className="text-zinc-500 text-sm leading-none">+</span>
                               <input
                                 ref={taskListInputRef}
                                 value={taskInput}
@@ -5798,304 +5482,192 @@ export default function App() {
                                     addTaskFromListInput({ fromEnter: true });
                                   }
                                 }}
-                                placeholder={taskInputPlaceholder(
-                                  selectedListId,
-                                )}
+                                placeholder={taskInputPlaceholder(selectedListId)}
                                 disabled={!selectedListId}
-                                className={`flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 placeholder:transition-opacity placeholder:duration-200 outline-none text-[15px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed transition-opacity duration-200 ease-out ${
+                                className={`flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[13px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed ${
                                   taskInputClearFlash ? "opacity-40" : ""
                                 }`}
                               />
                             </div>
                             {taskInputLiveHints.length > 0 && (
-                              <div
-                                className="pl-1 space-y-0.5"
-                                role="status"
-                                aria-live="polite"
-                              >
+                              <div className="pl-1 mt-0.5" role="status" aria-live="polite">
                                 {taskInputLiveHints.map((hint, hi) => (
-                                  <p
-                                    key={hi}
-                                    className="text-[11px] leading-snug text-zinc-500 micro-hint-in"
-                                    style={{ animationDelay: `${hi * 40}ms` }}
-                                  >
-                                    {hint}
-                                  </p>
+                                  <p key={hi} className="text-[10px] leading-snug text-zinc-500" style={{ animationDelay: `${hi * 40}ms` }}>{hint}</p>
                                 ))}
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* Tasks list */}
-                        <div
-                          className={`relative flex-1 min-h-0 overflow-y-auto ${
-                            selectedListId === SYS_LIST_OVERDUE ? "mt-1" : "mt-2"
-                          }`}
-                        >
+                        {/* Continuous scrollable task area */}
+                        <div className="relative flex-1 min-h-0 overflow-y-auto mt-0.5">
                           {completionBurstTier ? (
-                            <div
-                              className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`}
-                              aria-hidden
-                            />
+                            <div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />
                           ) : null}
+
                           {!selectedListId ? (
-                            <div className="h-full min-h-[240px] flex flex-col items-center justify-center px-6 text-center">
-                              <p className="text-[15px] font-semibold text-zinc-200 mb-1">
-                                No list selected
-                              </p>
-                              <p className="text-sm text-zinc-500 max-w-xs">
-                                Choose a list from the sidebar to add and view tasks.
-                              </p>
+                            <div className="px-3 py-6 text-zinc-500 text-[13px]">
+                              Select a list from the sidebar.
                             </div>
                           ) : tasksListSkeletonVisible ? (
                             <TaskListSkeletonRows />
-                          ) : visibleTasksForList.length === 0 ? (
-                            allElasticListTasksComplete ? (
-                              <div className="flex flex-col items-center justify-center min-h-[min(320px,50vh)] px-6 py-12 text-center">
-                                <p className="text-[15px] font-semibold text-zinc-200 microcopy-in">
-                                  Everything handled.
-                                </p>
-                                <p className="mt-1.5 text-sm text-zinc-500 max-w-xs">
-                                  Open{" "}
-                                  <span className="text-zinc-400">Completed</span>{" "}
-                                  in the sidebar to review or undo from the toast.
-                                </p>
-                              </div>
-                            ) : selectedListId === SYS_LIST_OVERDUE ? (
-                              <div className="flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-6 py-12">
-                                <DogHomeworkOverdueIllustration />
-                                <p className="text-[15px] font-medium text-zinc-300 text-center max-w-[280px] leading-relaxed">
-                                  Looks like nothing is missing. Nice work!
-                                </p>
-                              </div>
-                            ) : (
-                              <div
-                                className={`flex flex-col items-center justify-center min-h-[min(420px,60vh)] px-4 py-10 ${
-                                  listEmptyExit ? "micro-empty-out" : ""
-                                }`}
-                              >
-                                <DefaultTasksEmptyIllustration />
-                                <p className="text-lg font-semibold text-zinc-100 tracking-tight">
-                                  {listEmptyHeadline(
-                                    selectedListId,
-                                    isUserListSelected,
-                                  )}
-                                </p>
-                                <p className="mt-1.5 text-sm text-zinc-400">
-                                  Click the input box to add
-                                </p>
-                              </div>
-                            )
                           ) : (
-                            <div
-                              className={`space-y-0.5 pt-1 micro-content-reveal ${
-                                listFirstTaskEnter ? "micro-list-shell-in" : ""
-                              }`}
-                            >
-                              {visibleTasksForList.map((t) => {
-                                  const isSelected = selectedTaskId === t.id;
-                                  return (
-                                    <div
-                                      key={t.id}
-                                      role="button"
-                                      tabIndex={0}
-                                      onClick={() => {
-                                        setSelectedTaskId(t.id);
-                                      }}
-                                      onKeyDown={(e) => {
-                                        if (e.key !== "Enter") return;
-                                        setSelectedTaskId(t.id);
-                                      }}
-                                      className={`group mx-1 rounded-xl px-2 py-1.5 flex items-center gap-2.5 transition-all duration-300 ease-out cursor-pointer ${
-                                        taskRowExitingId === t.id
-                                          ? "opacity-0 -translate-y-1 scale-[0.98] pointer-events-none"
-                                          : ""
-                                      } ${
-                                        taskReappearId === t.id
-                                          ? "animate-task-reappear"
-                                          : ""
-                                      } ${
-                                        visibleTasksForList.length === 1
-                                          ? "micro-last-task-row"
-                                          : ""
-                                      } ${
-                                        newListTaskAnimId === t.id
-                                          ? "micro-row-enter"
-                                          : ""
-                                      } ${
-                                        isSelected
-                                          ? "bg-[#333333] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.07)]"
-                                          : "hover:bg-[#1c1c1c]"
-                                      }`}
-                                    >
-                                      <button
-                                        type="button"
-                                        disabled={taskCheckAnimatingId === t.id}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          const next = !t.completed;
-                                          if (!selectedListId) return;
-                                          if (next && listUsesElasticComplete) {
-                                            scheduleElasticListTaskComplete(
-                                              t,
-                                              selectedListId,
-                                              selectedList?.label ?? "",
-                                            );
-                                            return;
-                                          }
-                                          if (next) {
-                                            appendCompletedActivity(
-                                              t.text,
-                                              0,
-                                              selectedListId,
-                                              selectedList?.label ?? "",
-                                            );
-                                          } else {
-                                            removeLastCompletedForTaskOnList(
-                                              t.text,
-                                              selectedListId,
-                                            );
-                                          }
-                                          setTasks((prev) =>
-                                            prev.map((x) =>
-                                              x.id === t.id
-                                                ? { ...x, completed: next }
-                                                : x,
-                                            ),
-                                          );
-                                        }}
-                                        className={`btn-press-instant shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors disabled:opacity-100 ${
-                                          t.completed ||
-                                          taskCheckAnimatingId === t.id
-                                            ? "border-blue-500 bg-blue-500"
-                                            : "border-zinc-500 hover:border-zinc-400"
-                                        } ${
-                                          taskCheckAnimatingId === t.id
-                                            ? "elastic-cb-pulse"
-                                            : ""
-                                        }`}
-                                        aria-label={
-                                          t.completed
-                                            ? "Mark incomplete"
-                                            : "Complete task"
-                                        }
-                                      >
-                                        {listUsesElasticComplete &&
-                                        taskCheckAnimatingId === t.id ? (
-                                          <svg
-                                            className="w-[11px] h-[11px]"
-                                            viewBox="0 0 12 12"
-                                            fill="none"
-                                            aria-hidden
-                                          >
-                                            <path
-                                              className="elastic-check-path-draw"
-                                              d="M2.5 6.2 L5 8.8 L9.5 3.5"
-                                              stroke="white"
-                                              strokeWidth="2"
-                                              strokeLinecap="round"
-                                              strokeLinejoin="round"
-                                            />
-                                          </svg>
-                                        ) : t.completed ? (
-                                          <span className="text-white text-[10px] leading-none">
-                                            ✓
-                                          </span>
-                                        ) : null}
-                                      </button>
-                                      <span
-                                        className={`text-[13px] truncate flex-1 text-left ${
-                                          t.completed
-                                            ? "text-zinc-500 line-through"
-                                            : "text-zinc-200"
+                            <div className="flex flex-col">
+                              {/* Priority / Focus section (inline, compact) */}
+                              {selectedListId === SYS_LIST_TODAY && focusTodayFlatRows.length > 0 && (
+                                <div className="mb-0.5">
+                                  {focusTodayFlatRows.map((item, rowIdx) => {
+                                    if (item.kind === "header") {
+                                      return (
+                                        <div key={`hdr-${rowIdx}-${item.label}`} className={`flex items-center gap-2 px-2 ${rowIdx === 0 ? "pt-0.5 pb-1" : "pt-2.5 pb-1"}`}>
+                                          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">{item.label}</span>
+                                          <div className="flex-1 h-px bg-[#2a2a2a]" />
+                                        </div>
+                                      );
+                                    }
+                                    const pick = item.pick;
+                                    const visuals = focusForTodayRowVisuals(pick.urgency);
+                                    const tagLabel = FOCUS_FOR_TODAY_TAG_LABELS[pick.listId] ?? "Task";
+                                    const dayNum = parseISODate(notificationDay).getDate();
+                                    const task = getTaskForPick(tasksByListId, pick);
+                                    const timeLine = formatFocusTimeLine(pick, task);
+                                    const showEstimate = focusEstimatePromptKeys.has(`${pick.listId}:${pick.taskId}`);
+                                    return (
+                                      <div key={`${pick.listId}:${pick.taskId}`} className="border-b border-[#222]">
+                                        <button
+                                          type="button"
+                                          onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)}
+                                          className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-white/[0.04] transition-colors"
+                                        >
+                                          <span className={`w-0.5 h-6 shrink-0 rounded-full ${visuals.bar}`} aria-hidden />
+                                          <TaskSystemNavIcon listId={pick.listId} dayOfMonth={dayNum} className="h-4 w-4 shrink-0 text-zinc-500" />
+                                          <span className="truncate text-[13px] font-medium text-zinc-100 flex-1">{pick.displayTitle}</span>
+                                          <span className="text-[11px] text-zinc-500 shrink-0 tabular-nums">{timeLine}</span>
+                                          <span className="text-[10px] text-zinc-500 shrink-0">{tagLabel}</span>
+                                        </button>
+                                        {showEstimate && (
+                                          <div className="pb-1.5 pl-8 pr-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                            <span className="text-[10px] text-zinc-500">Est:</span>
+                                            {([
+                                              [15, "15m"],
+                                              [30, "30m"],
+                                              [60, "1h"],
+                                              [120, "2h"],
+                                            ] as const).map(([mins, lab]) => (
+                                              <button key={mins} type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, mins); }} className="rounded border border-zinc-700/80 bg-zinc-900/80 px-1.5 py-px text-[10px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-40">{lab}</button>
+                                            ))}
+                                            <button type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, "skip"); }} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40">Skip</button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  })}
+                                  {/* Divider before main tasks */}
+                                  {visibleTasksForList.length > 0 && (
+                                    <div className="flex items-center gap-2 px-2 pt-2.5 pb-1">
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Tasks</span>
+                                      <div className="flex-1 h-px bg-[#2a2a2a]" />
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+
+                              {/* Main task list */}
+                              {visibleTasksForList.length === 0 && focusTodayFlatRows.length === 0 ? (
+                                allElasticListTasksComplete ? (
+                                  <div className="px-3 py-4 text-[13px] text-zinc-400">
+                                    All tasks complete. Check <span className="text-zinc-300">Completed</span> in sidebar.
+                                  </div>
+                                ) : selectedListId === SYS_LIST_OVERDUE ? (
+                                  <div className="px-3 py-4 text-[13px] text-zinc-400">
+                                    Nothing overdue — nice work.
+                                  </div>
+                                ) : (
+                                  <div className={`px-3 py-4 text-[13px] text-zinc-500 ${listEmptyExit ? "micro-empty-out" : ""}`}>
+                                    No tasks yet
+                                  </div>
+                                )
+                              ) : (
+                                <div className={`divide-y divide-[#222] ${listFirstTaskEnter ? "micro-list-shell-in" : ""}`}>
+                                  {visibleTasksForList.map((t) => {
+                                    const isSelected = selectedTaskId === t.id;
+                                    return (
+                                      <div
+                                        key={t.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setSelectedTaskId(t.id)}
+                                        onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(t.id); }}
+                                        className={`group flex items-center gap-2 px-2 py-[5px] cursor-pointer transition-colors duration-100 ${
+                                          taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""
+                                        } ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${
+                                          isSelected ? "bg-[#282828]" : "hover:bg-[#1e1e1e]"
                                         }`}
                                       >
-                                        {t.text}
-                                      </span>
-                                      {selectedListId &&
-                                        (selectedListId === SYS_LIST_TODAY ||
-                                          (t.dueDate &&
-                                            (DUE_DATE_PICKER_LIST_IDS.has(
-                                              selectedListId,
-                                            ) ||
-                                              selectedListId ===
-                                                SYS_LIST_OVERDUE))) && (
-                                          <span className="relative inline-flex items-center shrink-0 max-w-[88px]">
-                                            <span
-                                              className="due-date-aura-row-soft"
-                                              aria-hidden
-                                            />
-                                            <span
-                                              className="due-date-aura-row"
-                                              aria-hidden
-                                            />
-                                            <span className="relative z-[1] inline-flex items-center rounded-md border border-white/[0.1] bg-[#2a2a2a] px-2 py-1 text-[12px] font-medium text-zinc-300 tabular-nums truncate">
-                                              {selectedListId === SYS_LIST_TODAY
-                                                ? formatDueButtonLabel(
-                                                    calendarDay,
-                                                  )
-                                                : selectedListId ===
-                                                    SYS_LIST_OVERDUE
-                                                  ? formatOverdueRowDue(
-                                                      t.dueDate!,
-                                                    )
-                                                  : formatDueButtonLabel(
-                                                      t.dueDate!,
-                                                    )}
-                                            </span>
+                                        <button
+                                          type="button"
+                                          disabled={taskCheckAnimatingId === t.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const next = !t.completed;
+                                            if (!selectedListId) return;
+                                            if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; }
+                                            if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); }
+                                            setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x));
+                                          }}
+                                          className={`btn-press-instant shrink-0 w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${
+                                            t.completed || taskCheckAnimatingId === t.id ? "border-blue-500 bg-blue-500" : "border-zinc-600 hover:border-zinc-400"
+                                          } ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`}
+                                          aria-label={t.completed ? "Mark incomplete" : "Complete task"}
+                                        >
+                                          {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (
+                                            <svg className="w-[10px] h-[10px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                          ) : t.completed ? (
+                                            <span className="text-white text-[9px] leading-none">✓</span>
+                                          ) : null}
+                                        </button>
+                                        <span className={`text-[13px] truncate flex-1 text-left ${t.completed ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{t.text}</span>
+                                        {selectedListId && (selectedListId === SYS_LIST_TODAY || (t.dueDate && (DUE_DATE_PICKER_LIST_IDS.has(selectedListId) || selectedListId === SYS_LIST_OVERDUE))) && (
+                                          <span className="shrink-0 text-[11px] text-zinc-500 tabular-nums">
+                                            {selectedListId === SYS_LIST_TODAY ? formatDueButtonLabel(calendarDay) : selectedListId === SYS_LIST_OVERDUE ? formatOverdueRowDue(t.dueDate!) : formatDueButtonLabel(t.dueDate!)}
                                           </span>
                                         )}
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          if (!selectedListId) return;
-                                          if (deleteUndoToastTimerRef.current) {
-                                            clearTimeout(
-                                              deleteUndoToastTimerRef.current,
-                                            );
-                                            deleteUndoToastTimerRef.current =
-                                              null;
-                                          }
-                                          setTasks((prev) =>
-                                            prev.filter((x) => x.id !== t.id),
-                                          );
-                                          if (selectedTaskId === t.id) {
-                                            setSelectedTaskId(null);
-                                          }
-                                          setDeleteUndoToast({
-                                            task: { ...t },
-                                            listId: selectedListId,
-                                          });
-                                          deleteUndoToastTimerRef.current =
-                                            setTimeout(() => {
-                                              setDeleteUndoToast(null);
-                                              deleteUndoToastTimerRef.current =
-                                                null;
-                                            }, 8000);
-                                        }}
-                                        className="btn-press-instant shrink-0 w-7 h-7 rounded-md text-zinc-500 hover:text-zinc-300 hover:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity"
-                                        aria-label="Delete task"
-                                      >
-                                        ✕
-                                      </button>
-                                    </div>
-                                  );
-                                })}
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            if (!selectedListId) return;
+                                            if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; }
+                                            setTasks((prev) => prev.filter((x) => x.id !== t.id));
+                                            if (selectedTaskId === t.id) setSelectedTaskId(null);
+                                            setDeleteUndoToast({ task: { ...t }, listId: selectedListId });
+                                            deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000);
+                                          }}
+                                          className="btn-press-instant shrink-0 w-6 h-6 rounded text-zinc-600 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity text-[11px]"
+                                          aria-label="Delete task"
+                                        >
+                                          ✕
+                                        </button>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
                       </div>
 
-                      {/* RIGHT PANEL: task details (TickTick detail column) */}
+                      {/* RIGHT PANEL: task details */}
                       <div
-                        className="border-l border-[#2a2a2a] flex flex-col h-full min-h-0"
+                        className={`border-l border-[#2a2a2a] flex flex-col h-full min-h-0 transition-opacity duration-200 ${
+                          selectedTask ? "opacity-100" : "opacity-50"
+                        }`}
                         style={{ backgroundColor: TT_MAIN_GREY }}
                       >
                         {!selectedListId ? (
-                          <div className="flex-1 flex items-center justify-center text-zinc-500 text-sm px-6 text-center">
-                            Select a list to view details
+                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[12px] px-6 text-center">
+                            Select a list
                           </div>
                         ) : selectedTask ? (
                           <>
@@ -6347,8 +5919,8 @@ export default function App() {
                             </div>
                           </>
                         ) : (
-                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[13px] px-6 text-center">
-                            Select a task to view details
+                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[12px] px-6 text-center">
+                            Click a task to view details
                           </div>
                         )}
                       </div>
