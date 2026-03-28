@@ -8,18 +8,18 @@
   animation: demo-cursor-blink 1s step-end infinite;
 }
 
-/* ===== Sidebar (Todoist-inspired: warm neutrals + red accent) ===== */
+/* ===== Sidebar (Todoist web: tokens + layout) ===== */
 .app-sidebar {
-  --sb-bg: #fcfaf8;
+  --sb-bg: #ffffff;
   --sb-border: #e8e6e3;
   --sb-text: #202020;
   --sb-muted: #666666;
-  --sb-icon: #5a5a5a;
-  --sb-hover: #f3f0ee;
-  --sb-accent: #dc4c3f;
+  --sb-icon: #666666;
+  --sb-hover: #eeeeee;
+  --sb-accent: #db4c3f;
   --sb-accent-hover: #c73a2e;
   --sb-active-bg: #ffefe5;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -34,12 +34,12 @@
   user-select: none;
 }
 
-.sidebar-section-label--tools {
+.sidebar-section-label--projects {
   text-transform: none;
   letter-spacing: 0.01em;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
-  color: #5f6b7a;
+  color: #202020;
 }
 
 /* Focus Today — Todoist “Add task” row: no frame; only the lead glyph is full color */
@@ -73,9 +73,9 @@
 }
 
 .sidebar-focus-cta:focus-visible {
-  outline: 2px solid rgba(220, 76, 63, 0.35);
+  outline: 2px solid rgba(219, 76, 63, 0.35);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 5px;
 }
 
 .sidebar-focus-cta-ring {
@@ -83,7 +83,7 @@
   width: 24px;
   height: 24px;
   border-radius: 9999px;
-  background: #dc4c3f;
+  background: #db4c3f;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -100,7 +100,7 @@
   flex: 1;
   font-size: 13px;
   font-weight: 600;
-  color: #dc4c3f;
+  color: #db4c3f;
   letter-spacing: -0.01em;
 }
 
@@ -114,33 +114,45 @@
   text-align: right;
 }
 
-/* Todoist-style footer link */
-.sidebar-footer-help {
+.sidebar-footer-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sidebar-footer-muted {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 6px;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 5px;
   border: none;
   background: transparent;
   cursor: pointer;
   text-align: left;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 400;
-  color: #6b6b6b;
+  color: var(--sb-muted);
   transition: background 0.12s ease;
   font-family: inherit;
   width: 100%;
 }
 
-.sidebar-footer-help:hover {
-  background: #f3f0ee;
+.sidebar-footer-muted:hover {
+  background: var(--sb-hover);
   color: #404040;
 }
 
-.sidebar-footer-help:focus-visible {
-  outline: 2px solid rgba(222, 76, 74, 0.25);
+.sidebar-footer-muted:focus-visible {
+  outline: 2px solid rgba(219, 76, 63, 0.25);
   outline-offset: 1px;
+}
+
+.sidebar-footer-muted-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  opacity: 0.95;
 }
 
 .app-sidebar button.sidebar-section-label {
@@ -155,15 +167,44 @@
   flex-shrink: 0;
 }
 
+.sidebar-icon-slot {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-icon-slot svg {
+  width: 20px;
+  height: 20px;
+}
+
+.sidebar-project-hash {
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--sb-muted);
+  line-height: 1;
+}
+
+.sidebar-nav-item--project {
+  gap: 10px;
+}
+
 .sidebar-nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 5px 8px;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 8px;
   font-size: 13px;
   font-weight: 400;
   line-height: 1.3;
-  border-radius: 8px;
+  border-radius: 5px;
   transition:
     background-color 0.12s ease,
     color 0.12s ease,
@@ -198,6 +239,9 @@
   font-weight: 500;
 }
 .sidebar-nav-item--active .sidebar-badge-muted {
+  color: var(--sb-accent);
+}
+.sidebar-nav-item--active .sidebar-project-hash {
   color: var(--sb-accent);
 }
 .sidebar-nav-item--active svg {
