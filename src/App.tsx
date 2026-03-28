@@ -1398,13 +1398,219 @@ const TASK_CATEGORY_LISTS: TodayList[] = [
 ];
 
 /** Sidebar primary list rows (same order as TASK_CATEGORY_LISTS for system lists). */
-const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string; emoji: string }[] = [
-  { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
-  { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
-  { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
-  { id: SYS_LIST_TESTS, label: "Tests", emoji: "🧪" },
-  { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
+const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string }[] = [
+  { id: SYS_LIST_OVERDUE, label: "Overdue" },
+  { id: SYS_LIST_TODAY, label: "Today" },
+  { id: SYS_LIST_PROJECTS, label: "Projects" },
+  { id: SYS_LIST_TESTS, label: "Tests" },
+  { id: SYS_LIST_LONGTERM, label: "Long-Term" },
 ];
+
+const SIDEBAR_RED = "#dc4c3f";
+const SIDEBAR_ICON_MUTED = "#808080";
+
+/** Todoist-like list icons: red outline when idle, solid red when active. */
+function SidebarPrimaryListIcon({
+  listId,
+  active,
+  className = "h-[18px] w-[18px] shrink-0",
+}: {
+  listId: string;
+  active: boolean;
+  className?: string;
+}) {
+  const stroke = active ? "none" : SIDEBAR_RED;
+  const sw = active ? 0 : 1.5;
+  if (listId === SYS_LIST_OVERDUE) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+        {active ? (
+          <>
+            <circle cx="12" cy="13" r="8" fill={SIDEBAR_RED} />
+            <path d="M12 9v4l2.5 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+            <circle cx="12" cy="5" r="1.5" fill="white" />
+          </>
+        ) : (
+          <>
+            <circle cx="12" cy="13" r="8" stroke={stroke} strokeWidth={sw} />
+            <path d="M12 9v4l2.5 1.5" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+            <circle cx="12" cy="5" r="1.5" stroke={stroke} strokeWidth={sw} />
+          </>
+        )}
+      </svg>
+    );
+  }
+  if (listId === SYS_LIST_TODAY) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <path
+            fill={SIDEBAR_RED}
+            d="M7 2h2v2h6V2h2v2h3a1 1 0 011 1v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5a1 1 0 011-1h3V2zm11 8H6v10h12V10zm-7 2h2v6h-2v-6z"
+          />
+        ) : (
+          <>
+            <rect x="4" y="5" width="16" height="16" rx="1.5" stroke={stroke} strokeWidth={sw} fill="none" />
+            <path d="M8 3v4M16 3v4M4 11h16" stroke={stroke} strokeWidth={sw} />
+          </>
+        )}
+      </svg>
+    );
+  }
+  if (listId === SYS_LIST_PROJECTS) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <path
+            fill={SIDEBAR_RED}
+            d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+          />
+        ) : (
+          <path
+            d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"
+            stroke={stroke}
+            strokeWidth={sw}
+            fill="none"
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    );
+  }
+  if (listId === SYS_LIST_TESTS) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <path
+            fill={SIDEBAR_RED}
+            d="M9 2h6v2h4a1 1 0 011 1v15a2 2 0 01-2 2H6a2 2 0 01-2-2V5a1 1 0 011-1h4V2zm1 4v12h4V6h-4zm2-4V4h2V2h-2z"
+          />
+        ) : (
+          <>
+            <path
+              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+              stroke={stroke}
+              strokeWidth={sw}
+              fill="none"
+              strokeLinejoin="round"
+            />
+            <path d="M14 2v6h6M10 12h4M10 16h4" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+          </>
+        )}
+      </svg>
+    );
+  }
+  if (listId === SYS_LIST_LONGTERM) {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <path
+            fill={SIDEBAR_RED}
+            d="M6 2h12a2 2 0 012 2v16l-8-4-8 4V4a2 2 0 012-2z"
+          />
+        ) : (
+          <path
+            d="M19 21l-7-4-7 4V5a2 2 0 012-2h10a2 2 0 012 2v16z"
+            stroke={stroke}
+            strokeWidth={sw}
+            fill="none"
+            strokeLinejoin="round"
+          />
+        )}
+      </svg>
+    );
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+      <circle cx="12" cy="12" r="10" stroke={SIDEBAR_RED} strokeWidth="1.5" />
+    </svg>
+  );
+}
+
+function SidebarCompletedIcon({
+  active,
+  className = "h-[18px] w-[18px] shrink-0",
+}: {
+  active: boolean;
+  className?: string;
+}) {
+  const stroke = active ? "none" : SIDEBAR_RED;
+  const sw = active ? 0 : 1.5;
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      {active ? (
+        <path
+          fill={SIDEBAR_RED}
+          d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14.5l-3.5-3.5 1.41-1.41L10.5 13.17l5.09-5.09L17 9.5l-6.5 6.5z"
+        />
+      ) : (
+        <>
+          <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} fill="none" />
+          <path d="M9 12l2 2 4-4" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+function SidebarToolsIcon({
+  kind,
+  active,
+  className = "h-[18px] w-[18px] shrink-0",
+}: {
+  kind: "timer" | "insights" | "schedule";
+  active: boolean;
+  className?: string;
+}) {
+  const stroke =
+    kind === "timer"
+      ? SIDEBAR_ICON_MUTED
+      : active
+        ? "none"
+        : SIDEBAR_ICON_MUTED;
+  const fill = active ? SIDEBAR_RED : "none";
+  const sw = kind === "timer" ? 1.5 : active ? 0 : 1.5;
+  if (kind === "timer") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+        <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} />
+        <path d="M12 6v6l4 2" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+      </svg>
+    );
+  }
+  if (kind === "insights") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <>
+            <rect x="4" y="14" width="4" height="6" rx="1" fill={fill} />
+            <rect x="10" y="8" width="4" height="12" rx="1" fill={fill} />
+            <rect x="16" y="4" width="4" height="16" rx="1" fill={fill} />
+          </>
+        ) : (
+          <>
+            <path d="M18 20V10M12 20V4M6 20v-6" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+          </>
+        )}
+      </svg>
+    );
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      {active ? (
+        <path
+          fill={fill}
+          d="M8 2h8v2h4a1 1 0 011 1v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5a1 1 0 011-1h4V2zm1 4v12h6V6H9zm3-4V4h2V2h-2z"
+        />
+      ) : (
+        <>
+          <rect x="4" y="5" width="16" height="16" rx="1.5" stroke={stroke} strokeWidth={sw} fill="none" />
+          <path d="M8 3v4M16 3v4M4 11h16" stroke={stroke} strokeWidth={sw} />
+        </>
+      )}
+    </svg>
+  );
+}
 
 const DEFAULT_USER_TODAY_LISTS: TodayList[] = [
   { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
@@ -4692,8 +4898,8 @@ export default function App() {
                   </div>
 
                   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain px-2.5 pb-3 pt-2">
-                    {/* Focus Today — primary CTA */}
-                    <div className="sidebar-focus-today-wrap mb-3 px-0.5 pt-1">
+                    {/* Focus Today — Todoist “Add task” row (only the lead icon is full color) */}
+                    <div className="sidebar-focus-today-wrap mb-1.5 px-0.5 pt-0.5">
                       <button
                         type="button"
                         onClick={() => {
@@ -4703,17 +4909,24 @@ export default function App() {
                         }}
                         className={`sidebar-focus-cta ${activeView === "tasks" && todayMainMode === "focus-today" ? "sidebar-focus-cta--active" : ""}`}
                       >
-                        <span className="sidebar-focus-cta-emoji" aria-hidden>
-                          🎯
+                        <span className="sidebar-focus-cta-ring" aria-hidden>
+                          <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none">
+                            <circle cx="12" cy="12" r="3" fill="white" />
+                            <circle cx="12" cy="12" r="7" stroke="white" strokeWidth="1.75" />
+                            <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="1.5" strokeOpacity="0.9" />
+                          </svg>
                         </span>
                         <span className="sidebar-focus-cta-label">Focus Today</span>
                         {focusForTodayItems.length > 0 ? (
-                          <span className="sidebar-focus-cta-badge">{focusForTodayItems.length}</span>
+                          <span className="sidebar-focus-cta-count">{focusForTodayItems.length}</span>
                         ) : null}
+                        <span className="sidebar-focus-ai-patch" title="AI-assisted prioritization">
+                          AI
+                        </span>
                       </button>
                     </div>
 
-                    <nav className="flex flex-col gap-[1px]" aria-label="Tasks">
+                    <nav className="flex flex-col gap-px" aria-label="Tasks">
                       {SIDEBAR_PRIMARY_LIST_NAV.map((row) => {
                         const n = (tasksByListId[row.id] ?? []).filter((t) => !t.completed && !t.removing).length;
                         const isActive =
@@ -4731,9 +4944,7 @@ export default function App() {
                             }}
                             className={`sidebar-nav-item ${isActive ? "sidebar-nav-item--active" : ""}`}
                           >
-                            <span className="flex w-[22px] shrink-0 justify-center text-[15px] leading-none" aria-hidden>
-                              {row.emoji}
-                            </span>
+                            <SidebarPrimaryListIcon listId={row.id} active={isActive} />
                             <span className="min-w-0 flex-1 truncate text-left text-[14px]">{row.label}</span>
                             {n > 0 ? <span className="sidebar-badge-muted shrink-0">{n}</span> : null}
                           </button>
@@ -4754,14 +4965,12 @@ export default function App() {
                         }}
                         className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <span className="flex w-[22px] shrink-0 justify-center text-[15px] leading-none" aria-hidden>
-                          ✅
-                        </span>
+                        <SidebarCompletedIcon active={activeView === "tasks" && todayMainMode === "completed"} />
                         <span className="min-w-0 flex-1 truncate text-left text-[14px]">Completed</span>
                       </button>
                     </nav>
 
-                    <div className="h-6" />
+                    <div className="h-5" />
 
                     <div className="sidebar-section-label sidebar-section-label--tools mb-1.5 px-2.5">Tools</div>
                     <nav className="flex flex-col gap-[1px]" aria-label="Tools">
@@ -4771,10 +4980,7 @@ export default function App() {
                         onClick={handleStartFocusSession}
                         className="sidebar-nav-item"
                       >
-                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="12 6 12 12 16 14" />
-                        </svg>
+                        <SidebarToolsIcon kind="timer" active={false} />
                         <span className="min-w-0 flex-1 truncate text-left text-[14px]">Timer</span>
                       </button>
                       <button
@@ -4782,11 +4988,7 @@ export default function App() {
                         onClick={() => handleSidebarNavClick("analytics")}
                         className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 20V10" />
-                          <path d="M12 20V4" />
-                          <path d="M6 20v-6" />
-                        </svg>
+                        <SidebarToolsIcon kind="insights" active={activeView === "analytics"} />
                         <span className="min-w-0 flex-1 truncate text-left text-[14px]">Insights</span>
                       </button>
                       <button
@@ -4794,10 +4996,7 @@ export default function App() {
                         onClick={() => handleSidebarNavClick("calendar")}
                         className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                          <rect x="3" y="4" width="18" height="18" rx="2" />
-                          <path d="M16 2v4M8 2v4M3 10h18" />
-                        </svg>
+                        <SidebarToolsIcon kind="schedule" active={activeView === "calendar"} />
                         <span className="min-w-0 flex-1 truncate text-left text-[14px]">Schedule</span>
                       </button>
                     </nav>
@@ -5075,9 +5274,9 @@ export default function App() {
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     <div className="shrink-0 border-b border-[#E5E7EB] px-5 py-3">
                       <div className="flex items-center gap-2.5">
-                        <span className="text-[20px] leading-none" aria-hidden>
-                          {SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.emoji ?? "📋"}
-                        </span>
+                        {selectedListId ? (
+                          <SidebarPrimaryListIcon listId={selectedListId} active className="h-5 w-5 shrink-0" />
+                        ) : null}
                         <h2 className="text-[15px] font-semibold leading-tight tracking-tight text-[#111827]">
                           {SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ?? "Tasks"}
                         </h2>
