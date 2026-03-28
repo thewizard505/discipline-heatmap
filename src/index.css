@@ -8,50 +8,67 @@
   animation: demo-cursor-blink 1s step-end infinite;
 }
 
-/* ===== Icon Rail — sidebar system ===== */
-.icon-rail-active-pill {
-  position: absolute;
-  left: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 3px;
-  height: 20px;
-  border-radius: 0 4px 4px 0;
-  background: #6366F1;
-  transition: opacity 150ms ease-out;
+/* ===== Unified SaaS Sidebar ===== */
+.sidebar-section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9CA3AF;
+  padding: 0 12px;
+  margin-bottom: 4px;
+  user-select: none;
 }
 
-/* ===== Main sidebar — light theme nav items ===== */
 .sidebar-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 12px;
-  font-size: 13px;
-  border-radius: 8px;
-  transition: background-color 120ms ease-out, color 120ms ease-out;
-  color: #6B7280;
+  padding: 7px 12px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  transition: background-color 100ms ease-out, color 100ms ease-out;
+  color: #111827;
   cursor: pointer;
   position: relative;
 }
+.sidebar-nav-item svg {
+  color: #6B7280;
+  transition: color 100ms ease-out;
+}
 .sidebar-nav-item:hover {
   background: #F1F5F9;
-  color: #111827;
+}
+.sidebar-nav-item:hover svg {
+  color: #4B5563;
 }
 .sidebar-nav-item--active {
-  background: #EEF2FF;
-  color: #111827;
+  background: rgba(99, 102, 241, 0.08);
+  color: #6366F1;
   font-weight: 500;
 }
+.sidebar-nav-item--active svg {
+  color: #6366F1;
+}
+.sidebar-nav-item--active::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 2px;
+  border-radius: 0 2px 2px 0;
+  background: #6366F1;
+}
 .sidebar-nav-item:active {
-  background: #E0E7FF;
+  background: rgba(99, 102, 241, 0.12);
 }
 
-/* Section divider line */
 .sidebar-section-divider {
   height: 1px;
-  margin: 8px 14px;
-  background: #E5E7EB;
+  margin: 8px 12px;
+  background: rgba(0, 0, 0, 0.05);
 }
 
 /* Due date aura classes (kept as no-ops for compatibility) */
