@@ -1407,9 +1407,11 @@ const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string }[] = [
 ];
 
 const SIDEBAR_RED = "#dc4c3f";
-const SIDEBAR_ICON_MUTED = "#808080";
+/** Idle icons: dark outline (Todoist-style), not red. */
+const SIDEBAR_ICON_OUTLINE = "#202020";
+const SIDEBAR_ICON_MUTED = "#6b7280";
 
-/** Todoist-like list icons: red outline when idle, solid red when active. */
+/** Todoist-like list icons: black/dark outline when idle, solid red when active. */
 function SidebarPrimaryListIcon({
   listId,
   active,
@@ -1419,7 +1421,7 @@ function SidebarPrimaryListIcon({
   active: boolean;
   className?: string;
 }) {
-  const stroke = active ? "none" : SIDEBAR_RED;
+  const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
   const sw = active ? 0 : 1.5;
   if (listId === SYS_LIST_OVERDUE) {
     return (
@@ -1441,13 +1443,24 @@ function SidebarPrimaryListIcon({
     );
   }
   if (listId === SYS_LIST_TODAY) {
+    const dayNum = new Date().getDate();
     return (
       <svg className={className} viewBox="0 0 24 24" aria-hidden>
         {active ? (
-          <path
-            fill={SIDEBAR_RED}
-            d="M7 2h2v2h6V2h2v2h3a1 1 0 011 1v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5a1 1 0 011-1h3V2zm11 8H6v10h12V10zm-7 2h2v6h-2v-6z"
-          />
+          <>
+            <rect x="4" y="4" width="16" height="16" rx="1.5" fill={SIDEBAR_RED} />
+            <text
+              x="12"
+              y="16"
+              textAnchor="middle"
+              fill="white"
+              fontSize="11"
+              fontWeight="600"
+              fontFamily="Arial, Helvetica, sans-serif"
+            >
+              {dayNum}
+            </text>
+          </>
         ) : (
           <>
             <rect x="4" y="5" width="16" height="16" rx="1.5" stroke={stroke} strokeWidth={sw} fill="none" />
@@ -1522,7 +1535,7 @@ function SidebarPrimaryListIcon({
   }
   return (
     <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="12" cy="12" r="10" stroke={SIDEBAR_RED} strokeWidth="1.5" />
+      <circle cx="12" cy="12" r="10" stroke={SIDEBAR_ICON_OUTLINE} strokeWidth="1.5" />
     </svg>
   );
 }
@@ -1534,7 +1547,7 @@ function SidebarCompletedIcon({
   active: boolean;
   className?: string;
 }) {
-  const stroke = active ? "none" : SIDEBAR_RED;
+  const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
   const sw = active ? 0 : 1.5;
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden>
@@ -1567,7 +1580,7 @@ function SidebarToolsIcon({
       ? SIDEBAR_ICON_MUTED
       : active
         ? "none"
-        : SIDEBAR_ICON_MUTED;
+        : SIDEBAR_ICON_OUTLINE;
   const fill = active ? SIDEBAR_RED : "none";
   const sw = kind === "timer" ? 1.5 : active ? 0 : 1.5;
   if (kind === "timer") {
@@ -4843,7 +4856,7 @@ export default function App() {
                         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#DE4C4A] text-[12px] font-semibold text-white">
                           U
                         </span>
-                        <span className="min-w-0 truncate text-[14px] font-semibold leading-tight text-[#202020]">
+                        <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-[#202020]">
                           User
                         </span>
                         <svg className="ml-0.5 h-3.5 w-3.5 shrink-0 text-[#808080]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -4910,19 +4923,15 @@ export default function App() {
                         className={`sidebar-focus-cta ${activeView === "tasks" && todayMainMode === "focus-today" ? "sidebar-focus-cta--active" : ""}`}
                       >
                         <span className="sidebar-focus-cta-ring" aria-hidden>
-                          <svg viewBox="0 0 24 24" className="h-[22px] w-[22px]" fill="none">
-                            <circle cx="12" cy="12" r="3" fill="white" />
-                            <circle cx="12" cy="12" r="7" stroke="white" strokeWidth="1.75" />
-                            <circle cx="12" cy="12" r="10" stroke="white" strokeWidth="1.5" strokeOpacity="0.9" />
+                          <svg viewBox="0 0 24 24" className="sidebar-focus-cta-plus" fill="none" aria-hidden>
+                            <line x1="12" y1="8" x2="12" y2="16" stroke="white" strokeWidth="2.25" strokeLinecap="round" />
+                            <line x1="8" y1="12" x2="16" y2="12" stroke="white" strokeWidth="2.25" strokeLinecap="round" />
                           </svg>
                         </span>
                         <span className="sidebar-focus-cta-label">Focus Today</span>
                         {focusForTodayItems.length > 0 ? (
                           <span className="sidebar-focus-cta-count">{focusForTodayItems.length}</span>
                         ) : null}
-                        <span className="sidebar-focus-ai-patch" title="AI-assisted prioritization">
-                          AI
-                        </span>
                       </button>
                     </div>
 
@@ -4945,7 +4954,7 @@ export default function App() {
                             className={`sidebar-nav-item ${isActive ? "sidebar-nav-item--active" : ""}`}
                           >
                             <SidebarPrimaryListIcon listId={row.id} active={isActive} />
-                            <span className="min-w-0 flex-1 truncate text-left text-[14px]">{row.label}</span>
+                            <span className="min-w-0 flex-1 truncate text-left">{row.label}</span>
                             {n > 0 ? <span className="sidebar-badge-muted shrink-0">{n}</span> : null}
                           </button>
                         );
@@ -4966,7 +4975,7 @@ export default function App() {
                         className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}
                       >
                         <SidebarCompletedIcon active={activeView === "tasks" && todayMainMode === "completed"} />
-                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Completed</span>
+                        <span className="min-w-0 flex-1 truncate text-left">Completed</span>
                       </button>
                     </nav>
 
@@ -4981,7 +4990,7 @@ export default function App() {
                         className="sidebar-nav-item"
                       >
                         <SidebarToolsIcon kind="timer" active={false} />
-                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Timer</span>
+                        <span className="min-w-0 flex-1 truncate text-left">Timer</span>
                       </button>
                       <button
                         type="button"
@@ -4989,7 +4998,7 @@ export default function App() {
                         className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
                       >
                         <SidebarToolsIcon kind="insights" active={activeView === "analytics"} />
-                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Insights</span>
+                        <span className="min-w-0 flex-1 truncate text-left">Insights</span>
                       </button>
                       <button
                         type="button"
@@ -4997,7 +5006,7 @@ export default function App() {
                         className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
                       >
                         <SidebarToolsIcon kind="schedule" active={activeView === "calendar"} />
-                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Schedule</span>
+                        <span className="min-w-0 flex-1 truncate text-left">Schedule</span>
                       </button>
                     </nav>
 
