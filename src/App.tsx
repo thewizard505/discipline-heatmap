@@ -1397,6 +1397,15 @@ const TASK_CATEGORY_LISTS: TodayList[] = [
   { id: "sys-longterm", label: "Long-Term", icon: "", color: null, system: true },
 ];
 
+/** Sidebar primary list rows (same order as TASK_CATEGORY_LISTS for system lists). */
+const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string; emoji: string }[] = [
+  { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
+  { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
+  { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
+  { id: SYS_LIST_TESTS, label: "Tests", emoji: "🧪" },
+  { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
+];
+
 const DEFAULT_USER_TODAY_LISTS: TodayList[] = [
   { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
   { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
@@ -1753,6 +1762,7 @@ export default function App() {
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const notificationsPanelRef = useRef<HTMLDivElement>(null);
+  const sidebarUserMenuRef = useRef<HTMLDivElement>(null);
   const [notificationsPanelPos, setNotificationsPanelPos] = useState({
     left: 12,
     bottom: 88,
@@ -1766,9 +1776,15 @@ export default function App() {
     CompletedActivityEntry[]
   >([]);
   const [openListMenuId, setOpenListMenuId] = useState<string | null>(null);
-  const [userListsSectionExpanded, setUserListsSectionExpanded] =
-    useState(false);
-  const [myTasksDropdownOpen, setMyTasksDropdownOpen] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return localStorage.getItem("tunnelvision_sidebar_collapsed_v1") === "1";
+    } catch {
+      return false;
+    }
+  });
+  const [sidebarUserMenuOpen, setSidebarUserMenuOpen] = useState(false);
   const [isAddListModalOpen, setIsAddListModalOpen] = useState(false);
   const [newListName, setNewListName] = useState("");
   const [newListColor, setNewListColor] = useState<string | null>("#eab308");
@@ -2147,6 +2163,31 @@ export default function App() {
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, [notificationsPanelOpen]);
+
+  useEffect(() => {
+    if (!sidebarUserMenuOpen) return;
+    const onDown = (e: MouseEvent) => {
+      if (sidebarUserMenuRef.current?.contains(e.target as Node)) return;
+      setSidebarUserMenuOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [sidebarUserMenuOpen]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        "tunnelvision_sidebar_collapsed_v1",
+        sidebarCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
+    if (sidebarCollapsed) {
+      setNotificationsPanelOpen(false);
+      setSidebarUserMenuOpen(false);
+    }
+  }, [sidebarCollapsed]);
 
   const handleNotificationsButtonClick = () => {
     setNotificationsPanelOpen((prev) => {
@@ -3304,21 +3345,6 @@ export default function App() {
     }
   };
 
-  const handleToggleTodaySidebar = () => {
-    if (activeView !== "tasks") return;
-    if (isTodayPanelCollapsed) {
-      setIsTodayPanelCollapsed(false);
-      setIsTodayPanelAnimatingOut(false);
-      return;
-    }
-
-    setIsTodayPanelAnimatingOut(true);
-    window.setTimeout(() => {
-      setIsTodayPanelCollapsed(true);
-      setIsTodayPanelAnimatingOut(false);
-    }, 220);
-  };
-
   const handleSelectList = (listId: string) => {
     if (isFocusTimerRunning) {
       setFocusSessionDialog({
@@ -3335,6 +3361,14 @@ export default function App() {
     }
     applyListSelection(listId);
   };
+
+  useEffect(() => {
+    if (!selectedListId) return;
+    if (TASK_CATEGORY_LISTS.some((l) => l.id === selectedListId)) return;
+    if (todayLists.some((l) => l.id === selectedListId)) {
+      applyListSelection(SYS_LIST_TODAY);
+    }
+  }, [selectedListId, todayLists]);
 
   const triggerTaskInputPress = () => {
     setTaskInputShellPress(true);
@@ -4583,130 +4617,206 @@ export default function App() {
               </div>
             </div>
           )}
-          <div className="h-screen min-h-0 flex w-full bg-white text-[#111827] overflow-hidden">
-            {/* ── Unified SaaS Sidebar ── */}
+          <div className="h-screen min-h-0 flex w-full bg-[#FAFAFA] text-[#111827] overflow-hidden">
+            {/* ── Sidebar (Todoist-style) ── */}
             {!isFocusSessionActive && (
-              <aside className="app-sidebar h-full w-[252px] flex flex-col shrink-0 z-[250] border-r border-[#E8E6E3] bg-[#FAFAF8]">
-                {/* Sidebar header */}
-                <div className="shrink-0 flex items-center gap-2.5 px-4 h-[52px] border-b border-[#E8E6E3]">
-                  <img src="/favicon.svg" className="w-[20px] h-[20px] opacity-90" alt="" />
-                  <span className="text-[14px] font-medium text-[#202020] tracking-tight">TunnelVision</span>
-                </div>
-
-                {/* Scrollable navigation */}
-                <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain py-3 px-2.5">
-                  {/* MAIN section */}
-                  <div className="sidebar-section-label mb-1">Main</div>
-                  <nav className="flex flex-col gap-[2px]" aria-label="Main navigation">
-                    <button
-                      type="button"
-                      onClick={() => { handleSidebarNavClick("tasks"); handleSelectList(SYS_LIST_TODAY); setTodayMainMode("focus-today"); }}
-                      className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "focus-today" ? "sidebar-nav-item--active" : ""}`}
-                    >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l2.5 2.5" /></svg>
-                      <span className="flex-1 text-left truncate">Focus Today</span>
-                      {focusForTodayItems.length > 0 && (
-                        <span className="sidebar-badge-accent shrink-0">{focusForTodayItems.length}</span>
+              <div
+                className={`relative flex h-full shrink-0 overflow-hidden border-r border-[#E8E6E3] bg-[#FAFAFA] transition-[width,min-width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-[250] ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[min(19vw,320px)] min-w-[280px]"}`}
+              >
+                <aside className="app-sidebar flex h-full w-full min-w-[280px] max-w-[320px] flex-col">
+                  {/* Header: user + notifications + collapse */}
+                  <div className="shrink-0 flex h-[52px] items-center gap-1.5 border-b border-[#E8E6E3] px-2.5">
+                    <div ref={sidebarUserMenuRef} className="relative min-w-0 flex-1">
+                      <button
+                        type="button"
+                        onClick={() => setSidebarUserMenuOpen((v) => !v)}
+                        className="flex w-full min-w-0 items-center gap-2 rounded-md py-1.5 pl-1 pr-1 text-left transition-colors hover:bg-[#F0EFED]"
+                        aria-expanded={sidebarUserMenuOpen}
+                        aria-haspopup="menu"
+                      >
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#DE4C4A] text-[12px] font-semibold text-white">
+                          U
+                        </span>
+                        <span className="min-w-0 truncate text-[14px] font-semibold leading-tight text-[#202020]">
+                          User
+                        </span>
+                        <svg className="ml-0.5 h-3.5 w-3.5 shrink-0 text-[#808080]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                          <path d="M6 9l6 6 6-6" />
+                        </svg>
+                      </button>
+                      {sidebarUserMenuOpen && (
+                        <div
+                          className="absolute left-0 top-[calc(100%+4px)] z-[400] w-[min(220px,calc(100vw-24px))] rounded-lg border border-[#E5E5E5] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)]"
+                          role="menu"
+                        >
+                          <button
+                            type="button"
+                            role="menuitem"
+                            className="w-full px-3 py-2 text-left text-[13px] text-[#202020] hover:bg-[#F5F5F5]"
+                            onClick={() => setSidebarUserMenuOpen(false)}
+                          >
+                            Settings
+                          </button>
+                        </div>
                       )}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => { handleSidebarNavClick("tasks"); if (!selectedListId || ![SYS_LIST_TODAY, SYS_LIST_OVERDUE, SYS_LIST_PROJECTS, SYS_LIST_TESTS, SYS_LIST_LONGTERM].includes(selectedListId)) { handleSelectList(SYS_LIST_TODAY); } setTodayMainMode("tasks"); }}
-                      className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "tasks" ? "sidebar-nav-item--active" : ""}`}
-                    >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
-                      <span className="flex-1 text-left truncate">My Tasks</span>
-                      {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="sidebar-badge-muted shrink-0">{total}</span> : null; })()}
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSidebarNavClick("calendar")}
-                      className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
-                    >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                      <span className="flex-1 text-left truncate">Schedule</span>
-                    </button>
-                  </nav>
-
-                  {/* Spacing between sections */}
-                  <div className="h-5" />
-
-                  {/* PRODUCTIVITY section */}
-                  <div className="sidebar-section-label mb-1">Productivity</div>
-                  <nav className="flex flex-col gap-[2px]">
-                    <button
-                      ref={focusNavButtonRef}
-                      type="button"
-                      onClick={handleStartFocusSession}
-                      className="sidebar-nav-item"
-                    >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
-                      <span className="flex-1 text-left truncate">Timer</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSidebarNavClick("analytics")}
-                      className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
-                    >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></svg>
-                      <span className="flex-1 text-left truncate">Insights</span>
-                    </button>
-                  </nav>
-
-                  {/* Spacing between sections */}
-                  <div className="h-5" />
-
-                  {/* ORGANIZATION section (collapsible) */}
-                  <button
-                    type="button"
-                    onClick={() => setUserListsSectionExpanded((v) => !v)}
-                    className="sidebar-section-label flex items-center justify-between w-full cursor-pointer transition-opacity hover:opacity-80 mb-1"
-                    aria-expanded={userListsSectionExpanded}
-                  >
-                    <span>Organization</span>
-                    <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                  </button>
-                  <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                    <div className="min-h-0 overflow-hidden">
-                      <div className="flex flex-col gap-[2px] overflow-y-auto max-h-[280px]">
-                        {/* Add list button */}
-                        <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="sidebar-nav-item sidebar-nav-item--add pl-[20px]">
-                          <svg className="w-[16px] h-[16px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                          <span className="text-[14px]">Add List</span>
-                        </button>
-                        {todayLists.map((list) => (
-                          <div key={list.id} role="button" tabIndex={0} onClick={() => { handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); } }} className={`group relative w-full sidebar-list-row pr-2 ${selectedListId === list.id && activeView === "tasks" ? "sidebar-list-row--active" : ""}`}>
-                            <svg className="w-[16px] h-[16px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
-                            <span className="truncate flex-1">{list.label}</span>
-                            {list.color && <span className="w-[5px] h-[5px] rounded-full shrink-0 opacity-90" style={{ backgroundColor: list.color }} aria-hidden />}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-[#888888] rounded w-5 h-5 flex items-center justify-center hover:bg-[#E8E6E3]/80 text-[10px] shrink-0" aria-label="List menu">
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
-                            </button>
-                            {openListMenuId === list.id && (
-                              <div ref={listMenuRef} className="absolute right-2 top-full mt-1 w-[140px] rounded-lg bg-white border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] overflow-hidden z-10">
-                                <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[13px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors">Delete List</button>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
                     </div>
+                    <button
+                      ref={notificationsButtonRef}
+                      type="button"
+                      onClick={handleNotificationsButtonClick}
+                      aria-expanded={notificationsPanelOpen}
+                      aria-haspopup="dialog"
+                      aria-label="Notifications"
+                      className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F0EFED]"
+                    >
+                      {hasUnreadNotifications && (
+                        <span className="absolute right-1.5 top-1.5 z-[1] h-1.5 w-1.5 rounded-full bg-[#DE4C4A] ring-2 ring-[#FAFAFA]" aria-hidden />
+                      )}
+                      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 01-3.46 0" />
+                      </svg>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSidebarCollapsed(true)}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F0EFED]"
+                      aria-label="Collapse sidebar"
+                      title="Collapse sidebar"
+                    >
+                      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <rect x="4" y="5" width="16" height="14" rx="1.5" />
+                        <line x1="9" y1="5" x2="9" y2="19" />
+                      </svg>
+                    </button>
                   </div>
 
-                  <div className="flex-1 min-h-[24px]" />
-                </div>
+                  <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain px-2.5 pb-3 pt-2">
+                    {/* Focus Today — primary CTA */}
+                    <div className="sidebar-focus-today-wrap mb-3 px-0.5 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleSidebarNavClick("tasks");
+                          handleSelectList(SYS_LIST_TODAY);
+                          setTodayMainMode("focus-today");
+                        }}
+                        className={`sidebar-focus-cta ${activeView === "tasks" && todayMainMode === "focus-today" ? "sidebar-focus-cta--active" : ""}`}
+                      >
+                        <span className="sidebar-focus-cta-emoji" aria-hidden>
+                          🎯
+                        </span>
+                        <span className="sidebar-focus-cta-label">Focus Today</span>
+                        {focusForTodayItems.length > 0 ? (
+                          <span className="sidebar-focus-cta-badge">{focusForTodayItems.length}</span>
+                        ) : null}
+                      </button>
+                    </div>
 
-                {/* Bottom pinned section */}
-                <div className="shrink-0 border-t border-[#E8E6E3] px-2.5 py-2">
-                  <button type="button" onClick={() => {}} className="sidebar-nav-item w-full">
-                    <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></svg>
-                    <span className="flex-1 text-left truncate">Resources</span>
-                  </button>
-                </div>
-              </aside>
+                    <nav className="flex flex-col gap-[1px]" aria-label="Tasks">
+                      {SIDEBAR_PRIMARY_LIST_NAV.map((row) => {
+                        const n = (tasksByListId[row.id] ?? []).filter((t) => !t.completed && !t.removing).length;
+                        const isActive =
+                          activeView === "tasks" &&
+                          todayMainMode === "tasks" &&
+                          selectedListId === row.id;
+                        return (
+                          <button
+                            key={row.id}
+                            type="button"
+                            onClick={() => {
+                              handleSidebarNavClick("tasks");
+                              handleSelectList(row.id);
+                              setTodayMainMode("tasks");
+                            }}
+                            className={`sidebar-nav-item ${isActive ? "sidebar-nav-item--active" : ""}`}
+                          >
+                            <span className="flex w-[22px] shrink-0 justify-center text-[15px] leading-none" aria-hidden>
+                              {row.emoji}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-left text-[14px]">{row.label}</span>
+                            {n > 0 ? <span className="sidebar-badge-muted shrink-0">{n}</span> : null}
+                          </button>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isFocusTimerRunning) {
+                            setFocusSessionDialog({ kind: "quit", pending: { action: "completed" } });
+                            return;
+                          }
+                          if (focusEnterZenActive) cancelFocusEnterZen();
+                          if (isFocusSessionActive) cleanupFocusSessionAfterQuit();
+                          setCollapsedCompletedDates({});
+                          handleSidebarNavClick("tasks");
+                          setTodayMainMode("completed");
+                        }}
+                        className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}
+                      >
+                        <span className="flex w-[22px] shrink-0 justify-center text-[15px] leading-none" aria-hidden>
+                          ✅
+                        </span>
+                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Completed</span>
+                      </button>
+                    </nav>
+
+                    <div className="h-6" />
+
+                    <div className="sidebar-section-label sidebar-section-label--tools mb-1.5 px-2.5">Tools</div>
+                    <nav className="flex flex-col gap-[1px]" aria-label="Tools">
+                      <button
+                        ref={focusNavButtonRef}
+                        type="button"
+                        onClick={handleStartFocusSession}
+                        className="sidebar-nav-item"
+                      >
+                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <circle cx="12" cy="12" r="10" />
+                          <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Timer</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSidebarNavClick("analytics")}
+                        className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
+                      >
+                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 20V10" />
+                          <path d="M12 20V4" />
+                          <path d="M6 20v-6" />
+                        </svg>
+                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Insights</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSidebarNavClick("calendar")}
+                        className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
+                      >
+                        <svg className="h-[18px] w-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="3" y="4" width="18" height="18" rx="2" />
+                          <path d="M16 2v4M8 2v4M3 10h18" />
+                        </svg>
+                        <span className="min-w-0 flex-1 truncate text-left text-[14px]">Schedule</span>
+                      </button>
+                    </nav>
+
+                    <div className="min-h-[20px] flex-1" />
+                  </div>
+
+                  <div className="shrink-0 border-t border-[#E8E6E3] px-2 py-2">
+                    <button type="button" className="sidebar-footer-help w-full" onClick={() => {}}>
+                      <svg className="h-[18px] w-[18px] shrink-0 text-[#8E8E8E]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <circle cx="12" cy="12" r="10" />
+                        <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3" />
+                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                      </svg>
+                      <span>Help &amp; resources</span>
+                    </button>
+                  </div>
+                </aside>
+              </div>
             )}
 
             {/* Expand sidebar strip (focus session) */}
@@ -4731,20 +4841,25 @@ export default function App() {
 
             {/* ── Main content column ── */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Top bar (search + notifications + user) */}
-              <div className="shrink-0 h-[52px] flex items-center justify-between border-b border-[#E5E7EB] bg-white px-5 z-[260]">
-                <div className="relative w-full max-w-[420px]">
-                  <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-[#9CA3AF] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                  <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[36px] pl-10 pr-4 bg-[#F8FAFC] rounded-[6px] text-[14px] text-[#111827] placeholder:text-[#9CA3AF] outline-none border border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/10 focus:bg-white transition-all" />
-                </div>
-                <div className="flex items-center gap-1">
-                  <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="relative flex items-center justify-center w-9 h-9 rounded-[6px] transition-colors duration-100 hover:bg-[#F1F5F9]">
-                    {hasUnreadNotifications && (<span className="absolute top-1.5 right-1.5 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-white" aria-hidden />)}
-                    <svg className="w-[18px] h-[18px] text-[#6B7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
+              {/* Top bar (search; notifications live in sidebar) */}
+              <div className="relative z-[260] flex h-[52px] shrink-0 items-center gap-3 border-b border-[#E5E7EB] bg-white px-5">
+                {!isFocusSessionActive && sidebarCollapsed ? (
+                  <button
+                    type="button"
+                    onClick={() => setSidebarCollapsed(false)}
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5]"
+                    aria-label="Expand sidebar"
+                    title="Expand sidebar"
+                  >
+                    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <rect x="4" y="5" width="16" height="14" rx="1.5" />
+                      <line x1="9" y1="5" x2="9" y2="19" />
+                    </svg>
                   </button>
-                  <div className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center text-white text-[12px] font-semibold ml-1">
-                    U
-                  </div>
+                ) : null}
+                <div className="relative max-w-[480px] flex-1">
+                  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                  <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8FAFC] pl-10 pr-4 text-[14px] text-[#111827] outline-none transition-all placeholder:text-[#9CA3AF] hover:border-[#D1D5DB] focus:border-[#6366F1] focus:bg-white focus:ring-1 focus:ring-[#6366F1]/10" />
                 </div>
               </div>
 
@@ -4913,7 +5028,7 @@ export default function App() {
                 ) : activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     <header className="shrink-0 flex items-center gap-3 px-5 h-[40px] border-b border-[#E5E7EB]">
-                      <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
+                      <button type="button" onClick={() => setSidebarCollapsed((c) => !c)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] hover:bg-[#F1F5F9] transition-colors" aria-label="Toggle sidebar">
                         <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
                       </button>
                       <svg className="w-[18px] h-[18px] text-[#6B7280] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
@@ -4958,29 +5073,14 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" && todayMainMode === "tasks" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    {/* ── "My Tasks" title + category tabs (ClickUp style) ── */}
-                    <div className="shrink-0 px-5 pt-2.5 pb-0 border-b border-[#E5E7EB]">
-                      <div className="flex items-center gap-2 mb-1.5">
-                        <span className="w-5 h-5 rounded-lg bg-[#6366F1] flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
-                        <h2 className="text-[15px] font-semibold text-[#111827] leading-none">My Tasks</h2>
-                      </div>
-                      <div className="flex items-center -ml-1">
-                        {[
-                          { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
-                          { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
-                          { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
-                          { id: SYS_LIST_TESTS, label: "Tests", emoji: "🧪" },
-                          { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
-                        ].map((tab) => {
-                          const isActive = selectedListId === tab.id;
-                          return (
-                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-100 ${isActive ? "text-[#111827]" : "text-[#6B7280] hover:text-[#111827]"}`}>
-                              <span className="text-[11px]">{tab.emoji}</span>
-                              <span>{tab.label}</span>
-                              {isActive && <span className="absolute bottom-0 left-1.5 right-1.5 h-[2px] bg-[#6366F1] rounded-full" />}
-                            </button>
-                          );
-                        })}
+                    <div className="shrink-0 border-b border-[#E5E7EB] px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[20px] leading-none" aria-hidden>
+                          {SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.emoji ?? "📋"}
+                        </span>
+                        <h2 className="text-[15px] font-semibold leading-tight tracking-tight text-[#111827]">
+                          {SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ?? "Tasks"}
+                        </h2>
                       </div>
                     </div>
 
