@@ -61,7 +61,6 @@ const SYS_LIST_LONGTERM = "sys-longterm";
 
 /** Lists that use elastic checkbox + “move to Completed” flow (excludes Overdue). */
 const ELASTIC_COMPLETE_SYS_LIST_IDS = new Set<string>([
-  SYS_LIST_INBOX,
   SYS_LIST_TODAY,
   SYS_LIST_TESTS,
   SYS_LIST_PROJECTS,
@@ -340,6 +339,70 @@ function getTaskForPick(
   pick: FocusForTodayPick,
 ): Task | undefined {
   return (tasksByListId[pick.listId] ?? []).find((t) => t.id === pick.taskId);
+}
+
+function findTaskListIdContaining(
+  tbl: Record<string, Task[]>,
+  taskId: number,
+): string | null {
+  for (const [lid, arr] of Object.entries(tbl)) {
+    if (!Array.isArray(arr)) continue;
+    if (arr.some((t) => t.id === taskId)) return lid;
+  }
+  return null;
+}
+
+/** Ordered tasks for Focus Today (read-only aggregate of other lists). */
+function buildFocusTodayTasksFromStorage(
+  tbl: Record<string, Task[]>,
+  dayIso: string,
+): Task[] {
+  const picks = applySoftEstimateReorder(
+    buildFocusForTodayPicks(tbl, dayIso),
+    tbl,
+  );
+  return picks
+    .map((p) => getTaskForPick(tbl, p))
+    .filter((t): t is Task => !!t && !t.removing);
+}
+
+const EMPTY_STATE_IMG = {
+  today: "/empty-states/today-all-done.png",
+  longterm: "/empty-states/longterm-all-done.png",
+  tests: "/empty-states/tests-all-done.png",
+  projects: "/empty-states/projects-all-done.png",
+  focusDayOff: "/empty-states/focus-today-day-off.png",
+} as const;
+
+function ListEmptyHero({
+  src,
+  title,
+  subtitle,
+  className = "",
+}: {
+  src: string;
+  title: string;
+  subtitle: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-col items-center justify-center min-h-[300px] px-4 text-center ${className}`}
+    >
+      <img
+        src={src}
+        alt=""
+        className="mb-5 h-auto w-[min(100%,280px)] max-h-[220px] object-contain select-none"
+        draggable={false}
+      />
+      <p className="text-[17px] font-bold leading-snug text-[#202020] max-w-md">
+        {title}
+      </p>
+      <p className="mt-2 max-w-sm text-[14px] leading-relaxed text-[#6B7280]">
+        {subtitle}
+      </p>
+    </div>
+  );
 }
 
 function estimateMinutesForSort(task: Task | undefined): number | null {
@@ -2305,6 +2368,10 @@ export default function App() {
     useState<DOMRect | null>(null);
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  /** When Focus Today is selected, edits apply to this source list. */
+  const [editingSourceListId, setEditingSourceListId] = useState<string | null>(
+    null,
+  );
   const [editDraftTitle, setEditDraftTitle] = useState("");
   const [editDraftDescription, setEditDraftDescription] = useState("");
   const [editDraftDue, setEditDraftDue] = useState<string | null>(null);
@@ -2570,10 +2637,32 @@ export default function App() {
     return applySoftEstimateReorder(base, tasksByListId);
   }, [tasksByListId, notificationDay]);
 
-  const inboxFocusPicks = useMemo(
-    () => focusForTodayItems.filter((p) => p.listId === SYS_LIST_INBOX),
-    [focusForTodayItems],
-  );
+  const mainPanelTaskCount = useMemo(() => {
+    if (!selectedListId) return 0;
+    const searchQ = taskSearchQuery.toLowerCase().trim();
+    const base: Task[] =
+      selectedListId === SYS_LIST_INBOX
+        ? buildFocusTodayTasksFromStorage(tasksByListId, notificationDay)
+        : visibleTasksForList;
+    const filtered = searchQ
+      ? base.filter((t) => t.text.toLowerCase().includes(searchQ))
+      : base;
+    return filtered.filter((t) => !t.completed).length;
+  }, [
+    selectedListId,
+    taskSearchQuery,
+    tasksByListId,
+    notificationDay,
+    visibleTasksForList,
+  ]);
+
+  const focusTaskSourceByTaskId = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const p of focusForTodayItems) {
+      m.set(p.taskId, p.listId);
+    }
+    return m;
+  }, [focusForTodayItems]);
 
   const [estimateSessionActions, setEstimateSessionActions] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -3005,6 +3094,13 @@ export default function App() {
             ),
           };
         });
+        if (selectedListIdRef.current === SYS_LIST_INBOX) {
+          setTasks((prev) =>
+            prev.map((x) =>
+              x.id === task.id ? { ...x, completed: true } : x,
+            ),
+          );
+        }
       }
       setTaskCheckAnimatingId(null);
       setTaskRowExitingId(null);
@@ -3042,7 +3138,10 @@ export default function App() {
       arr[i] = { ...arr[i], completed: false };
       return { ...prev, [listId]: arr };
     });
-    if (selectedListIdRef.current === listId) {
+    if (
+      selectedListIdRef.current === listId ||
+      selectedListIdRef.current === SYS_LIST_INBOX
+    ) {
       setTasks((prev) =>
         prev.map((x) =>
           x.id === taskId ? { ...x, completed: false } : x,
@@ -3235,11 +3334,19 @@ export default function App() {
     if (isSimulation) return;
     if (isSwitchingListRef.current) return;
     if (skipNextTasksPersistRef.current) return;
+    if (selectedListId === SYS_LIST_INBOX) return;
     setTasksByListId((prev) => ({
       ...prev,
       [selectedListId]: tasks,
     }));
   }, [tasks, selectedListId, isSimulation]);
+
+  useEffect(() => {
+    if (selectedListId !== SYS_LIST_INBOX) return;
+    if (isSimulation) return;
+    if (isSwitchingListRef.current) return;
+    setTasks(buildFocusTodayTasksFromStorage(tasksByListId, notificationDay));
+  }, [tasksByListId, notificationDay, selectedListId, isSimulation]);
 
   useEffect(() => {
     if (isSimulation) return;
@@ -3293,6 +3400,7 @@ export default function App() {
     setComposerPriorityOpen(false);
     setComposerPriorityAnchor(null);
     setEditingTaskId(null);
+    setEditingSourceListId(null);
     setEditDraftDuePopover(null);
     setEditDraftPriorityOpen(false);
     setEditDraftPriorityAnchor(null);
@@ -3704,24 +3812,31 @@ export default function App() {
 
   const applyListSelection = (listId: string) => {
     isSwitchingListRef.current = true;
-    if (selectedListId) {
-      setTasksByListId((prev) => ({
-        ...prev,
-        [selectedListId]: tasks,
-      }));
-    }
+    setTasksByListId((prev) => {
+      let merged = prev;
+      if (selectedListId && selectedListId !== SYS_LIST_INBOX) {
+        merged = { ...prev, [selectedListId]: tasks };
+      }
+      requestAnimationFrame(() => {
+        if (listId === SYS_LIST_INBOX) {
+          setTasks(buildFocusTodayTasksFromStorage(merged, notificationDay));
+        } else {
+          setTasks(merged[listId] ?? []);
+        }
+        isSwitchingListRef.current = false;
+      });
+      return merged;
+    });
     setSelectedListId(listId);
     setSelectedTaskId(null);
     setTodayMainMode("tasks");
     setOpenListMenuId(null);
-    setTasks(tasksByListId[listId] ?? []);
-    isSwitchingListRef.current = false;
   };
 
   const performOpenTaskInList = (listId: string, taskId: number) => {
     isSwitchingListRef.current = true;
     const merged = { ...tasksByListId };
-    if (selectedListId) {
+    if (selectedListId && selectedListId !== SYS_LIST_INBOX) {
       merged[selectedListId] = tasks;
     }
     const slice = [...(merged[listId] ?? [])];
@@ -3932,6 +4047,7 @@ export default function App() {
   const addTaskFromListInput = (opts?: { fromEnter?: boolean }) => {
     if (!selectedListId) return;
     if (selectedListId === SYS_LIST_OVERDUE) return;
+    if (selectedListId === SYS_LIST_INBOX) return;
     const trimmed = taskInput.trim();
     if (!trimmed) {
       if (opts?.fromEnter) flashInvalidInput("list");
@@ -3989,7 +4105,12 @@ export default function App() {
   };
 
   const openQuickAddComposer = () => {
-    if (!selectedListId || selectedListId === SYS_LIST_OVERDUE) return;
+    if (
+      !selectedListId ||
+      selectedListId === SYS_LIST_OVERDUE ||
+      selectedListId === SYS_LIST_INBOX
+    )
+      return;
     setQuickAddOpen(true);
     setComposerTitle("");
     setComposerDescription("");
@@ -4007,7 +4128,12 @@ export default function App() {
   };
 
   const submitQuickAddComposer = () => {
-    if (!selectedListId || selectedListId === SYS_LIST_OVERDUE) return;
+    if (
+      !selectedListId ||
+      selectedListId === SYS_LIST_OVERDUE ||
+      selectedListId === SYS_LIST_INBOX
+    )
+      return;
     const trimmed = composerTitle.trim();
     if (!trimmed) {
       flashInvalidInput("list");
@@ -4059,6 +4185,7 @@ export default function App() {
 
   const cancelEditDraft = () => {
     setEditingTaskId(null);
+    setEditingSourceListId(null);
     setEditDraftDuePopover(null);
     setEditDraftPriorityOpen(false);
     setEditDraftPriorityAnchor(null);
@@ -4066,33 +4193,47 @@ export default function App() {
 
   const saveEditDraft = () => {
     if (editingTaskId == null || !selectedListId) return;
+    const effectiveListId = editingSourceListId ?? selectedListId;
     const trimmed = editDraftTitle.trim();
     if (!trimmed) return;
-    const dueLocked = selectedListId === SYS_LIST_TODAY;
+    const dueLocked = effectiveListId === SYS_LIST_TODAY;
+    const nextRow = {
+      text: trimmed,
+      description: editDraftDescription.trim(),
+      dueDate: dueLocked ? toISODate(new Date()) : editDraftDue,
+      priority: editDraftPriority,
+    };
+    setTasksByListId((prev) => {
+      const arr = [...(prev[effectiveListId] ?? [])];
+      const idx = arr.findIndex((x) => x.id === editingTaskId);
+      if (idx === -1) return prev;
+      arr[idx] = { ...arr[idx], ...nextRow };
+      return { ...prev, [effectiveListId]: arr };
+    });
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id !== editingTaskId) return t;
-        const nextDue = dueLocked ? toISODate(new Date()) : editDraftDue;
-        return {
-          ...t,
-          text: trimmed,
-          description: editDraftDescription.trim(),
-          dueDate: nextDue,
-          priority: editDraftPriority,
-        };
+        return { ...t, ...nextRow };
       }),
     );
     cancelEditDraft();
   };
 
-  const startEditTask = (t: Task) => {
+  const startEditTask = (t: Task, sourceListIdForFocus?: string | null) => {
     if (selectedListId === SYS_LIST_OVERDUE) return;
     setTaskDetailModalId(null);
     setEditingTaskId(t.id);
+    setEditingSourceListId(
+      selectedListId === SYS_LIST_INBOX
+        ? sourceListIdForFocus ?? null
+        : selectedListId,
+    );
     setEditDraftTitle(t.text);
     setEditDraftDescription(t.description ?? "");
     setEditDraftDue(
-      selectedListId === SYS_LIST_TODAY
+      (selectedListId === SYS_LIST_INBOX
+        ? sourceListIdForFocus
+        : selectedListId) === SYS_LIST_TODAY
         ? toISODate(new Date())
         : t.dueDate ?? null,
     );
@@ -4574,6 +4715,35 @@ export default function App() {
           workModePromptQueueRef.current = queue;
           setPendingWorkModeTaskId(queue[0].taskId);
           setPendingWorkModeListId(queue[0].listId);
+          setIsWorkModeModalOpen(true);
+        });
+      }
+      return [...prev, ...added];
+    });
+  }
+
+  function addAllFocusQueueToSession() {
+    setFocusSessionEntries((prev) => {
+      const keys = new Set(prev.map((e) => `${e.listId}:${e.taskId}`));
+      const added: FocusSessionEntry[] = [];
+      for (const p of focusForTodayItems) {
+        const t = getTaskForPick(tasksByListId, p);
+        if (!t || t.completed || t.removing) continue;
+        const key = `${p.listId}:${p.taskId}`;
+        if (keys.has(key)) continue;
+        keys.add(key);
+        added.push({ listId: p.listId, taskId: p.taskId });
+      }
+      if (!added.length) return prev;
+      if (!isSimulation) {
+        queueMicrotask(() => {
+          const queue = added.map((e) => ({
+            taskId: e.taskId,
+            listId: e.listId,
+          }));
+          workModePromptQueueRef.current = queue;
+          setPendingWorkModeTaskId(queue[0]!.taskId);
+          setPendingWorkModeListId(queue[0]!.listId);
           setIsWorkModeModalOpen(true);
         });
       }
@@ -5736,7 +5906,8 @@ export default function App() {
                 ) : activeView === "tasks" &&
                   (todayMainMode === "tasks" || todayMainMode === "search") ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
-                    <header className="shrink-0 px-8 pt-8 pb-2 bg-[#FAFAFA]">
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
+                    <header className="shrink-0 bg-[#FAFAFA] pb-2 pt-8">
                       <div>
                         <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
                           {mainTasksPanelTitle}
@@ -5748,16 +5919,8 @@ export default function App() {
                               <path d="M22 4L12 14.01l-3-3" />
                             </svg>
                             <span>
-                              {(() => {
-                                const searchQ = taskSearchQuery.toLowerCase().trim();
-                                const filtered = searchQ
-                                  ? visibleTasksForList.filter((t) =>
-                                      t.text.toLowerCase().includes(searchQ),
-                                    )
-                                  : visibleTasksForList;
-                                const n = filtered.filter((t) => !t.completed).length;
-                                return `${n} ${n === 1 ? "task" : "tasks"}`;
-                              })()}
+                              {mainPanelTaskCount}{" "}
+                              {mainPanelTaskCount === 1 ? "task" : "tasks"}
                             </span>
                           </p>
                         ) : null}
@@ -5765,17 +5928,29 @@ export default function App() {
                     </header>
 
                     {/* ── Task List ── */}
-                    <div className="relative flex-1 min-h-0 overflow-y-auto px-8 pb-8">
+                    <div className="relative flex-1 min-h-0 overflow-y-auto pb-8">
                       {completionBurstTier ? (<div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />) : null}
 
                       {!selectedListId ? (
                         <div className="px-6 py-10 text-[#9CA3AF] text-[14px] text-center">Select a category to view tasks</div>
                       ) : (() => {
                         const searchQ = taskSearchQuery.toLowerCase().trim();
-                        const filtered = searchQ ? visibleTasksForList.filter((t) => t.text.toLowerCase().includes(searchQ)) : visibleTasksForList;
+                        const baseList: Task[] =
+                          selectedListId === SYS_LIST_INBOX
+                            ? buildFocusTodayTasksFromStorage(
+                                tasksByListId,
+                                notificationDay,
+                              )
+                            : visibleTasksForList;
+                        const filtered = searchQ
+                          ? baseList.filter((t) =>
+                              t.text.toLowerCase().includes(searchQ),
+                            )
+                          : baseList;
                         const todoTasks = filtered.filter((t) => !t.completed);
                         const doneTasks = filtered.filter((t) => t.completed);
 
+                        const dispName = name?.trim() || "User";
                         const emptyBlock =
                           todayMainMode === "search" && searchQ ? (
                             <div className="flex min-h-[200px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
@@ -5789,18 +5964,56 @@ export default function App() {
                               </p>
                               <p className="text-[13px] text-[#9CA3AF] mt-1">You&apos;re all clear.</p>
                             </div>
+                          ) : selectedListId === SYS_LIST_INBOX &&
+                            focusForTodayItems.length === 0 ? (
+                            <ListEmptyHero
+                              src={EMPTY_STATE_IMG.focusDayOff}
+                              className={listEmptyExit ? "micro-empty-out" : ""}
+                              title={`Enjoy a true day off, ${dispName}!`}
+                              subtitle="Nothing is showing from your lists yet — add tasks in Today, Projects, Tests, or Long-Term and they will line up here automatically."
+                            />
                           ) : allElasticListTasksComplete ? (
-                            <div
-                              className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
-                            >
-                              <SaaSAllCaughtUpIllustration />
-                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
-                                {todoistEmptyDayMessage.title}
-                              </p>
-                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
-                                You&apos;re all caught up in this view.
-                              </p>
-                            </div>
+                            selectedListId === SYS_LIST_TODAY ? (
+                              <ListEmptyHero
+                                src={EMPTY_STATE_IMG.today}
+                                className={listEmptyExit ? "micro-empty-out" : ""}
+                                title={`Have a marvelous day, ${dispName}!`}
+                                subtitle="You're all caught up for today."
+                              />
+                            ) : selectedListId === SYS_LIST_LONGTERM ? (
+                              <ListEmptyHero
+                                src={EMPTY_STATE_IMG.longterm}
+                                className={listEmptyExit ? "micro-empty-out" : ""}
+                                title={`Long-term load is light, ${dispName}`}
+                                subtitle="No long-term assignments need attention in this view right now."
+                              />
+                            ) : selectedListId === SYS_LIST_TESTS ? (
+                              <ListEmptyHero
+                                src={EMPTY_STATE_IMG.tests}
+                                className={listEmptyExit ? "micro-empty-out" : ""}
+                                title={`Tests are clear, ${dispName}`}
+                                subtitle="No exams or test prep tasks here — you're covered for now."
+                              />
+                            ) : selectedListId === SYS_LIST_PROJECTS ? (
+                              <ListEmptyHero
+                                src={EMPTY_STATE_IMG.projects}
+                                className={listEmptyExit ? "micro-empty-out" : ""}
+                                title={`Project board is quiet, ${dispName}`}
+                                subtitle="No active project tasks in this list. Enjoy the pause or add your next milestone."
+                              />
+                            ) : (
+                              <div
+                                className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
+                              >
+                                <SaaSAllCaughtUpIllustration />
+                                <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
+                                  {todoistEmptyDayMessage.title}
+                                </p>
+                                <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
+                                  You&apos;re all caught up in this view.
+                                </p>
+                              </div>
+                            )
                           ) : (
                             <div
                               className={`flex flex-col items-center justify-center min-h-[260px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
@@ -5816,8 +6029,9 @@ export default function App() {
                           );
 
                         return (
-                          <div className="flex flex-col max-w-[820px]">
-                            {selectedListId !== SYS_LIST_OVERDUE && (
+                          <div className="flex w-full flex-col">
+                            {selectedListId !== SYS_LIST_OVERDUE &&
+                              selectedListId !== SYS_LIST_INBOX && (
                               <>
                                 {quickAddOpen ? (
                                   <div className="rounded-lg border border-[#E5E7EB] bg-white p-3 shadow-sm mb-4">
@@ -5937,7 +6151,7 @@ export default function App() {
                                       Order uses due dates and quick time estimates. Add an estimate when prompted to keep the queue accurate.
                                     </p>
                                     <ol className="mt-3 space-y-2">
-                                      {inboxFocusPicks.map((p, i) => {
+                                      {focusForTodayItems.map((p, i) => {
                                         const t = getTaskForPick(tasksByListId, p);
                                         const key = `${p.listId}:${p.taskId}`;
                                         const showEst =
@@ -5999,7 +6213,7 @@ export default function App() {
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      addAllTasksToFocusSession(SYS_LIST_INBOX);
+                                      addAllFocusQueueToSession();
                                       if (!isFocusSessionActive && !focusEnterZenActive) {
                                         runFocusEnterZenTransition();
                                       }
@@ -6021,11 +6235,38 @@ export default function App() {
                             >
                                 {todoTasks.map((t) => {
                                   const isSelected = taskDetailModalId === t.id;
-                                  const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
-                                  const listReadOnly = selectedListId === SYS_LIST_OVERDUE;
-                                  if (editingTaskId === t.id && !listReadOnly) {
+                                  const sourceListId =
+                                    selectedListId === SYS_LIST_INBOX
+                                      ? focusTaskSourceByTaskId.get(t.id) ??
+                                        selectedListId
+                                      : selectedListId!;
+                                  const classLabel =
+                                    sourceListId === SYS_LIST_TODAY
+                                      ? "Today"
+                                      : sourceListId === SYS_LIST_OVERDUE
+                                        ? "Overdue"
+                                        : sourceListId === SYS_LIST_PROJECTS
+                                          ? "Projects"
+                                          : sourceListId === SYS_LIST_TESTS
+                                            ? "Tests"
+                                            : sourceListId === SYS_LIST_LONGTERM
+                                              ? "Long-Term"
+                                              : sourceListId === SYS_LIST_INBOX
+                                                ? "Inbox"
+                                                : selectedList?.label ?? "—";
+                                  const listReadOnly =
+                                    selectedListId === SYS_LIST_OVERDUE;
+                                  const noReorder =
+                                    selectedListId === SYS_LIST_OVERDUE ||
+                                    selectedListId === SYS_LIST_INBOX;
+                                  const editListId =
+                                    editingSourceListId ?? selectedListId;
+                                  if (
+                                    editingTaskId === t.id &&
+                                    selectedListId !== SYS_LIST_OVERDUE
+                                  ) {
                                     return (
-                                      <div key={t.id} className="border-b border-[#E5E7EB] bg-white p-3">
+                                      <div key={`${sourceListId}-${t.id}`} className="border-b border-[#E5E7EB] bg-white p-3">
                                         <input
                                           value={editDraftTitle}
                                           onChange={(e) => setEditDraftTitle(e.target.value)}
@@ -6039,7 +6280,7 @@ export default function App() {
                                           className="mt-2 w-full resize-none border-0 bg-transparent p-0 text-[13px] text-[#202020] outline-none"
                                         />
                                         <div className="mt-3 flex flex-wrap items-center gap-2">
-                                          {selectedListId === SYS_LIST_TODAY ? (
+                                          {editListId === SYS_LIST_TODAY ? (
                                             <span className="inline-flex items-center gap-1 rounded-md bg-[#E8F5E9] px-2 py-1 text-[12px] font-medium text-[#058527]">
                                               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                                                 <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -6067,8 +6308,8 @@ export default function App() {
                                               </svg>
                                               {formatDueChipLabel(editDraftDue, calendarDay)}
                                               {editDraftDue &&
-                                              selectedListId &&
-                                              DUE_DATE_PICKER_LIST_IDS.has(selectedListId) ? (
+                                              editListId &&
+                                              DUE_DATE_PICKER_LIST_IDS.has(editListId) ? (
                                                 <span
                                                   role="button"
                                                   tabIndex={0}
@@ -6124,18 +6365,32 @@ export default function App() {
                                     t.completed || taskCheckAnimatingId === t.id
                                       ? "border-emerald-500 bg-emerald-500"
                                       : priorityCheckboxRingClass(pr);
+                                  const sourceListLabel =
+                                    allListsForSelection.find(
+                                      (l) => l.id === sourceListId,
+                                    )?.label ?? "Tasks";
+                                  const rowElasticComplete =
+                                    sourceListId !== SYS_LIST_OVERDUE &&
+                                    (ELASTIC_COMPLETE_SYS_LIST_IDS.has(
+                                      sourceListId,
+                                    ) ||
+                                      todayLists.some(
+                                        (l) => l.id === sourceListId,
+                                      ));
                                   return (
                                     <div
-                                      key={t.id}
+                                      key={`${sourceListId}-${t.id}`}
                                       role="button"
                                       tabIndex={0}
                                       onDragOver={(e) => {
+                                        if (noReorder) return;
                                         if (draggingTaskId == null || draggingTaskId === t.id) return;
                                         e.preventDefault();
                                         setDropBeforeTaskId(t.id);
                                       }}
                                       onDrop={(e) => {
                                         e.preventDefault();
+                                        if (noReorder) return;
                                         if (draggingTaskId == null) return;
                                         handleReorderDrop(draggingTaskId, t.id);
                                       }}
@@ -6160,7 +6415,7 @@ export default function App() {
                                           <span className="absolute -left-0.5 h-2 w-2 rounded-full bg-[#db4c3f]" />
                                         </div>
                                       ) : null}
-                                      {!listReadOnly ? (
+                                      {!noReorder ? (
                                         <button
                                           type="button"
                                           draggable={editingTaskId !== t.id}
@@ -6200,11 +6455,11 @@ export default function App() {
                                             e.stopPropagation();
                                             const next = !t.completed;
                                             if (!selectedListId) return;
-                                            if (next && listUsesElasticComplete) {
+                                            if (next && rowElasticComplete) {
                                               scheduleElasticListTaskComplete(
                                                 t,
-                                                selectedListId,
-                                                selectedList?.label ?? "",
+                                                sourceListId,
+                                                sourceListLabel,
                                               );
                                               return;
                                             }
@@ -6212,18 +6467,39 @@ export default function App() {
                                               appendCompletedActivity(
                                                 t.text,
                                                 0,
-                                                selectedListId,
-                                                selectedList?.label ?? "",
+                                                sourceListId,
+                                                sourceListLabel,
                                               );
                                             } else {
                                               removeLastCompletedForTaskOnList(
                                                 t.text,
-                                                selectedListId,
+                                                sourceListId,
                                               );
+                                            }
+                                            if (selectedListId === SYS_LIST_INBOX) {
+                                              setTasksByListId((prev) => {
+                                                const arr = [
+                                                  ...(prev[sourceListId] ?? []),
+                                                ];
+                                                const idx = arr.findIndex(
+                                                  (x) => x.id === t.id,
+                                                );
+                                                if (idx === -1) return prev;
+                                                arr[idx] = {
+                                                  ...arr[idx],
+                                                  completed: next,
+                                                };
+                                                return {
+                                                  ...prev,
+                                                  [sourceListId]: arr,
+                                                };
+                                              });
                                             }
                                             setTasks((prev) =>
                                               prev.map((x) =>
-                                                x.id === t.id ? { ...x, completed: next } : x,
+                                                x.id === t.id
+                                                  ? { ...x, completed: next }
+                                                  : x,
                                               ),
                                             );
                                           }}
@@ -6232,7 +6508,7 @@ export default function App() {
                                           }`}
                                           aria-label={t.completed ? "Mark incomplete" : "Complete task"}
                                         >
-                                          {listUsesElasticComplete &&
+                                          {rowElasticComplete &&
                                           taskCheckAnimatingId === t.id ? (
                                             <svg className="h-[9px] w-[9px]" viewBox="0 0 12 12" fill="none" aria-hidden>
                                               <path
@@ -6267,7 +6543,14 @@ export default function App() {
                                           type="button"
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            startEditTask(t);
+                                            startEditTask(
+                                              t,
+                                              selectedListId === SYS_LIST_INBOX
+                                                ? focusTaskSourceByTaskId.get(
+                                                    t.id,
+                                                  )
+                                                : undefined,
+                                            );
                                           }}
                                           className="shrink-0 rounded-md p-1.5 text-[#9CA3AF] opacity-0 transition-opacity hover:bg-[#F1F5F9] hover:text-[#6B7280] group-hover:opacity-100"
                                           aria-label="Edit task"
@@ -6283,7 +6566,9 @@ export default function App() {
                                 })}
                             </div>
 
-                            {selectedListId && draggingTaskId !== null ? (
+                            {selectedListId &&
+                            selectedListId !== SYS_LIST_INBOX &&
+                            draggingTaskId !== null ? (
                               <div
                                 onDragOver={(e) => {
                                   e.preventDefault();
@@ -6345,11 +6630,36 @@ export default function App() {
                         );
                       })()}
                     </div>
+                    </div>
                     <MiniDueDatePopover
                       open={dueDatePopover !== null}
                       anchor={dueDatePopover?.anchor ?? null}
                       selectedIso={dueDatePopover ? tasks.find((x) => x.id === dueDatePopover.taskId)?.dueDate ?? null : null}
-                      onSelect={(iso) => { const tid = dueDatePopover?.taskId; if (tid == null) return; setTasks((prev) => prev.map((x) => x.id === tid ? { ...x, dueDate: iso } : x)); setDueDatePopover(null); }}
+                      onSelect={(iso) => {
+                        const tid = dueDatePopover?.taskId;
+                        if (tid == null) return;
+                        const lid =
+                          selectedListId === SYS_LIST_INBOX
+                            ? focusTaskSourceByTaskId.get(tid)
+                            : selectedListId;
+                        const resolved =
+                          lid ?? findTaskListIdContaining(tasksByListId, tid);
+                        if (resolved) {
+                          setTasksByListId((prev) => {
+                            const arr = [...(prev[resolved] ?? [])];
+                            const i = arr.findIndex((x) => x.id === tid);
+                            if (i === -1) return prev;
+                            arr[i] = { ...arr[i], dueDate: iso };
+                            return { ...prev, [resolved]: arr };
+                          });
+                        }
+                        setTasks((prev) =>
+                          prev.map((x) =>
+                            x.id === tid ? { ...x, dueDate: iso } : x,
+                          ),
+                        );
+                        setDueDatePopover(null);
+                      }}
                       onClose={() => setDueDatePopover(null)}
                     />
                     <MiniDueDatePopover
