@@ -4624,10 +4624,20 @@ export default function App() {
               </div>
             </div>
           )}
-          <div className="h-screen min-h-0 flex w-full bg-black text-zinc-200 overflow-hidden">
-            {/* ── Icon Rail (far-left, clean ClickUp style) ── */}
-            <aside className="h-screen w-[48px] bg-[#0e0e10] flex flex-col items-center justify-between py-5 z-[250] shrink-0">
-              <div className="flex flex-col items-center gap-4">
+          <div className="h-screen min-h-0 flex flex-col w-full bg-white text-zinc-800 overflow-hidden">
+            {/* ── Global Top Bar (spans full width like ClickUp) ── */}
+            <div className="shrink-0 h-[44px] flex items-center justify-center border-b border-zinc-200/60 bg-white px-4 z-[260]">
+              <div className="relative w-full max-w-[520px]">
+                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[34px] pl-10 pr-10 bg-zinc-50 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-zinc-200/80 hover:border-zinc-300 focus:border-violet-400 focus:ring-1 focus:ring-violet-100 focus:bg-white transition-all" />
+                <img src="/favicon.svg" className="absolute right-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] opacity-40" alt="" />
+              </div>
+            </div>
+
+            <div className="flex-1 min-h-0 flex overflow-hidden">
+            {/* ── Icon Rail (far-left, ClickUp style) ── */}
+            <aside className="h-full w-[48px] bg-[#1e1e22] flex flex-col items-center justify-between py-4 z-[250] shrink-0">
+              <div className="flex flex-col items-center gap-3">
                 <button type="button" onClick={() => handleSidebarNavClick("tasks")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]" style={{ background: activeView === "tasks" ? "rgba(255,255,255,0.1)" : undefined }}>
                   {activeView === "tasks" && <span className="icon-rail-active-pill" />}
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={activeView === "tasks" ? "#e4e4e7" : "none"} stroke={activeView === "tasks" ? "none" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{activeView === "tasks" ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /> : <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />}</svg>
@@ -4642,10 +4652,15 @@ export default function App() {
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "calendar" ? "#e4e4e7" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                   <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Calendar</div></div>
                 </button>
+                <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]" style={{ background: activeView === "analytics" ? "rgba(255,255,255,0.1)" : undefined }}>
+                  {activeView === "analytics" && <span className="icon-rail-active-pill" />}
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "analytics" ? "#e4e4e7" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><polyline points="5 15 10 10 14 14 19 8" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Stats</div></div>
+                </button>
               </div>
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-3">
                 <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]">
-                  {hasUnreadNotifications && (<span className="absolute top-1 right-1 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-[#0e0e10]" aria-hidden />)}
+                  {hasUnreadNotifications && (<span className="absolute top-1 right-1 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-[#1e1e22]" aria-hidden />)}
                   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 16v-5a6 6 0 00-12 0v5" /><path d="M5 16h14" /><path d="M10 19a2 2 0 004 0" /></svg>
                   <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Notifications</div></div>
                 </button>
@@ -4718,113 +4733,88 @@ export default function App() {
               activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-screen w-[240px] bg-white flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-zinc-200/70 ${
+                  className={`h-full w-[260px] bg-white flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-zinc-200/70 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
                   }`}
                 >
                   <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
-                    <div className="px-5 pt-6 pb-4">
-                      <h2 className="text-[17px] font-bold text-zinc-900 tracking-[-0.01em]">Home</h2>
+                    {/* Home header with + button like ClickUp */}
+                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                      <h2 className="text-[16px] font-bold text-zinc-900">Home</h2>
+                      <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors" aria-label="Add new">
+                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                      </button>
                     </div>
 
-                    <nav className="flex flex-col gap-0.5 px-3" aria-label="Main navigation">
-                      {/* Focus Today */}
+                    <nav className="flex flex-col gap-0.5 px-2" aria-label="Main navigation">
+                      {/* Focus Today - inbox-style icon */}
                       <button
                         type="button"
                         onClick={() => { handleSelectList(SYS_LIST_TODAY); setTodayMainMode("focus-today"); }}
                         className={`sidebar-nav-item ${todayMainMode === "focus-today" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <span className="text-[15px] shrink-0">🎯</span>
+                        <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
                         <span className="flex-1 text-left">Focus Today</span>
                         {focusForTodayItems.length > 0 && (
-                          <span className="shrink-0 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{focusForTodayItems.length}</span>
+                          <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{focusForTodayItems.length}</span>
                         )}
                       </button>
 
-                      {/* My Tasks */}
+                      {/* My Tasks - checkmark icon */}
                       <button
                         type="button"
                         onClick={() => { if (!selectedListId || ![SYS_LIST_TODAY, SYS_LIST_OVERDUE, SYS_LIST_PROJECTS, SYS_LIST_TESTS, SYS_LIST_LONGTERM].includes(selectedListId)) { handleSelectList(SYS_LIST_TODAY); } setTodayMainMode("tasks"); }}
                         className={`sidebar-nav-item ${todayMainMode === "tasks" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <span className="text-[15px] shrink-0">📋</span>
+                        <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
                         <span className="flex-1 text-left">My Tasks</span>
-                        {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="shrink-0 min-w-[18px] h-[18px] rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{total}</span> : null; })()}
+                        {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{total}</span> : null; })()}
                       </button>
 
-                      {/* Schedule */}
-                      <button type="button" onClick={() => {}} className="sidebar-nav-item" style={{ color: "#a1a1aa", cursor: "default" }}>
-                        <span className="text-[15px] shrink-0">📅</span>
+                      {/* Schedule - calendar icon */}
+                      <button type="button" onClick={() => handleSidebarNavClick("calendar")} className="sidebar-nav-item">
+                        <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                         <span>Schedule</span>
                       </button>
                     </nav>
 
                     <div className="sidebar-section-divider" />
 
-                    <div className="px-5 pt-1 pb-2">
-                      <span className="text-[11px] font-semibold text-zinc-400 select-none">Spaces</span>
+                    {/* Lists section - TickTick flat style */}
+                    <div className="flex items-center justify-between px-4 pt-1 pb-1.5">
+                      <span className="text-[11px] font-semibold text-zinc-400 select-none">Lists</span>
+                      <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="text-zinc-400 hover:text-zinc-600 transition-colors" aria-expanded={userListsSectionExpanded}>
+                        <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                      </button>
                     </div>
-                    <nav className="flex flex-col gap-0.5 px-3" aria-label="Organization">
-                      <div className="flex items-center">
-                        <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="sidebar-nav-item flex-1 min-w-0" aria-expanded={userListsSectionExpanded}>
-                          <svg className={`w-3 h-3 shrink-0 text-zinc-400 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                          <span>Lists</span>
-                        </button>
-                        <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="shrink-0 w-6 h-6 mr-1 rounded-md flex items-center justify-center text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-all duration-150 text-[14px] leading-none" aria-label="Add List">+</button>
-                      </div>
-                      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
-                        <div className="min-h-0 overflow-hidden">
-                          <div className="flex flex-col gap-0.5 ml-3 pl-3 border-l border-zinc-200/60 overflow-y-auto max-h-[220px]">
-                            {todayLists.map((list) => (
-                              <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-2.5 py-[7px] px-3 text-[13px] rounded-lg transition-all duration-150 cursor-pointer ${selectedListId === list.id ? "bg-violet-50 text-zinc-900 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}>
-                                {list.color ? <span className="w-[8px] h-[8px] rounded-[3px] shrink-0" style={{ backgroundColor: list.color }} aria-hidden /> : <span className="w-[8px] h-[8px] rounded-[3px] shrink-0 bg-zinc-300" aria-hidden />}
-                                <span className="text-[13px] shrink-0">{list.icon}</span>
-                                <span className="truncate flex-1">{list.label}</span>
-                                <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-400 rounded-md w-5 h-5 flex items-center justify-center hover:bg-zinc-200/60 text-[10px] shrink-0" aria-label="List menu">•••</button>
-                                {openListMenuId === list.id && (
-                                  <div ref={listMenuRef} className="absolute right-0 top-full mt-1 w-[140px] rounded-lg bg-white border border-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] overflow-hidden z-10">
-                                    <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[12px] text-zinc-600 hover:bg-zinc-50 transition-colors">Delete List</button>
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
+                    <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                      <div className="min-h-0 overflow-hidden">
+                        <div className="flex flex-col overflow-y-auto max-h-[280px]">
+                          {todayLists.map((list) => (
+                            <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-3 py-[9px] px-5 text-[14px] transition-colors duration-100 cursor-pointer border-l-[3px] ${selectedListId === list.id ? "border-l-violet-500 bg-violet-50/50 text-zinc-900 font-medium" : "border-l-transparent text-zinc-600 hover:bg-zinc-50"}`}>
+                              <span className="text-[15px] shrink-0">{list.icon || "📋"}</span>
+                              <span className="truncate flex-1">{list.label}</span>
+                              {list.color && <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: list.color }} aria-hidden />}
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-400 rounded w-5 h-5 flex items-center justify-center hover:bg-zinc-200/60 text-[10px] shrink-0" aria-label="List menu">•••</button>
+                              {openListMenuId === list.id && (
+                                <div ref={listMenuRef} className="absolute right-2 top-full mt-1 w-[140px] rounded-lg bg-white border border-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] overflow-hidden z-10">
+                                  <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[12px] text-zinc-600 hover:bg-zinc-50 transition-colors">Delete List</button>
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       </div>
-                    </nav>
-
-                    <div className="sidebar-section-divider" />
-
-                    <nav className="flex flex-col gap-0.5 px-3" aria-label="Insights">
-                      <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="sidebar-nav-item">
-                        <span className="text-[15px] shrink-0">📊</span>
-                        <span>Stats</span>
-                      </button>
-                      <button type="button" onClick={() => {}} className="sidebar-nav-item" style={{ color: "#a1a1aa", cursor: "default" }}>
-                        <span className="text-[15px] shrink-0">🎯</span>
-                        <span>Goals</span>
-                      </button>
-                    </nav>
+                    </div>
 
                     <div className="flex-1 min-h-[24px]" />
-
-                    <div className="shrink-0 px-4 mb-3">
-                      <div className="flex items-center justify-between gap-2 mb-2">
-                        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">Progress</span>
-                        <span className="text-[10px] font-semibold tabular-nums text-zinc-500 inline-flex items-center gap-1"><span className="text-[12px]" aria-hidden>🔥</span>{streak}</span>
-                      </div>
-                      <div className="h-[3px] rounded-full bg-zinc-100 overflow-hidden">
-                        <div className="h-full rounded-full transition-[width] duration-500 ease-out bg-violet-500" style={{ width: `${dailyTaskProgress.pct}%` }} />
-                      </div>
-                      <p className="text-[9px] text-zinc-400 tabular-nums mt-1.5">{dailyTaskProgress.done} done · {dailyTaskProgress.open} open</p>
-                    </div>
                   </div>
 
-                  <div className="shrink-0 border-t border-zinc-200/70 px-3 py-2">
+                  <div className="shrink-0 border-t border-zinc-200/70 px-2 py-2">
                     <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "completed" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setCollapsedCompletedDates({}); setTodayMainMode("completed"); }} className={`sidebar-nav-item w-full ${todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}>
-                      <span className="text-[15px] shrink-0">✅</span>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
                       <span>Completed</span>
                     </button>
                   </div>
@@ -4842,7 +4832,7 @@ export default function App() {
                     setIsTodayPanelCollapsed(false);
                     setIsTodayPanelAnimatingOut(false);
                   }}
-                  className="h-screen w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#141414] border-r border-[#2a2a2a] text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04] transition-colors"
+                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-zinc-50 border-r border-zinc-200/70 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
                   aria-label="Expand lists sidebar"
                   title="Show lists"
                 >
@@ -4862,7 +4852,7 @@ export default function App() {
             {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 min-h-0 h-screen flex flex-col ${
+              className={`flex-1 min-h-0 h-full flex flex-col ${
                 activeView === "tasks" &&
                 (todayMainMode === "tasks" || todayMainMode === "completed" || todayMainMode === "focus-today")
                   ? "overflow-hidden"
@@ -4921,24 +4911,12 @@ export default function App() {
                 </div>
                 {activeView === "tasks" && todayMainMode === "focus-today" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    {/* Global top bar */}
-                    <div className="shrink-0 h-[46px] flex items-center justify-center border-b border-zinc-200/60 bg-white px-4">
-                      <div className="relative w-full max-w-[480px]">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                        <input placeholder="Search..." className="w-full h-[32px] pl-9 pr-10 bg-zinc-100 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-transparent focus:border-violet-300 focus:bg-white transition-all" />
-                        <img src="/favicon.svg" className="absolute right-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] opacity-40" alt="" />
-                      </div>
-                    </div>
-
                     {/* Focus Today header */}
-                    <div className="shrink-0 px-6 pt-4 pb-3 border-b border-zinc-200/60">
+                    <div className="shrink-0 px-6 pt-3 pb-3 border-b border-zinc-200/60">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
-                            <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
-                          </button>
-                          <span className="text-[17px]">🎯</span>
-                          <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">Focus Today</h2>
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-[22px] h-[22px] rounded bg-orange-500 flex items-center justify-center"><svg className="w-[13px] h-[13px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></span>
+                          <h2 className="text-[16px] font-semibold text-zinc-900">Focus Today</h2>
                         </div>
                         {focusForTodayItems.length > 0 && (
                           <button type="button" onClick={handleFocusForTodayStartSession} className="rounded-lg bg-violet-600 hover:bg-violet-700 px-4 py-2 text-[13px] font-semibold text-white transition-colors shadow-sm">Start Focus Session</button>
@@ -5019,15 +4997,7 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    {/* Global top bar */}
-                    <div className="shrink-0 h-[46px] flex items-center justify-center border-b border-zinc-200/60 bg-white px-4">
-                      <div className="relative w-full max-w-[480px]">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                        <input placeholder="Search..." className="w-full h-[32px] pl-9 pr-10 bg-zinc-100 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-transparent focus:border-violet-300 focus:bg-white transition-all" />
-                        <img src="/favicon.svg" className="absolute right-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] opacity-40" alt="" />
-                      </div>
-                    </div>
-                    <header className="shrink-0 flex items-center gap-3 px-6 h-[52px] border-b border-zinc-200/70">
+                    <header className="shrink-0 flex items-center gap-3 px-6 h-[48px] border-b border-zinc-200/70">
                       <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
                         <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
                       </button>
@@ -5073,50 +5043,26 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" && todayMainMode === "tasks" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    {/* ── Global Top Search Bar (ClickUp style) ── */}
-                    <div className="shrink-0 h-[46px] flex items-center justify-center border-b border-zinc-200/60 bg-white px-4">
-                      <div className="relative w-full max-w-[480px]">
-                        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                        <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[32px] pl-9 pr-10 bg-zinc-100 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-transparent focus:border-violet-300 focus:bg-white transition-all" />
-                        <img src="/favicon.svg" className="absolute right-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] opacity-40" alt="" />
-                      </div>
-                    </div>
-
                     {/* ── "My Tasks" title + category tabs (ClickUp style) ── */}
-                    <div className="shrink-0 px-6 pt-4 pb-0 border-b border-zinc-200/60">
-                      <div className="flex items-center gap-2 mb-3">
-                        <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
-                          <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
-                        </button>
-                        <span className="text-[17px]">📋</span>
-                        <h2 className="text-[18px] font-bold text-zinc-900 tracking-tight">My Tasks</h2>
+                    <div className="shrink-0 px-6 pt-3 pb-0 border-b border-zinc-200/60">
+                      <div className="flex items-center gap-2.5 mb-2.5">
+                        <span className="w-[22px] h-[22px] rounded bg-violet-500 flex items-center justify-center"><svg className="w-[13px] h-[13px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
+                        <h2 className="text-[16px] font-semibold text-zinc-900">My Tasks</h2>
                       </div>
-                      {/* Category tabs */}
-                      <div className="flex items-center gap-0.5">
+                      <div className="flex items-center gap-0">
                         {[
-                          { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
-                          { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
-                          { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
-                          { id: SYS_LIST_TESTS, label: "Tests", emoji: "📚" },
-                          { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
+                          { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⚡" },
+                          { id: SYS_LIST_TODAY, label: "Today", emoji: "☀️" },
+                          { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📂" },
+                          { id: SYS_LIST_TESTS, label: "Tests", emoji: "✏️" },
+                          { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🗓️" },
                         ].map((tab) => {
                           const isActive = selectedListId === tab.id;
                           return (
-                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${isActive ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"}`}>
-                              <span className="text-[13px]">{tab.emoji}</span>
+                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"}`}>
+                              <span className="text-[12px]">{tab.emoji}</span>
                               <span>{tab.label}</span>
-                              {isActive && <span className="absolute bottom-0 left-1 right-1 h-[2px] bg-zinc-900 rounded-full" />}
-                            </button>
-                          );
-                        })}
-                        <span className="text-zinc-300 mx-1">|</span>
-                        {todayLists.map((list) => {
-                          const isActive = selectedListId === list.id;
-                          return (
-                            <button key={list.id} type="button" onClick={() => handleSelectList(list.id)} className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${isActive ? "text-zinc-900" : "text-zinc-500 hover:text-zinc-700"}`}>
-                              <span className="text-[13px]">{list.icon || "📋"}</span>
-                              <span>{list.label}</span>
-                              {isActive && <span className="absolute bottom-0 left-1 right-1 h-[2px] bg-zinc-900 rounded-full" />}
+                              {isActive && <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-zinc-900 rounded-full" />}
                             </button>
                           );
                         })}
@@ -6638,6 +6584,8 @@ export default function App() {
               </div>
             </div>
           )}
+
+          </div>{/* end flex-row: icon rail + sidebar + content */}
 
           {!isSimulation && focusSessionDialog?.kind === "quit" && (
             <div
