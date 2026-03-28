@@ -1521,6 +1521,11 @@ export default function App() {
     useState(false);
   const analyticsTaskPickerRef = useRef<HTMLDivElement>(null);
 
+  const [taskViewTab, setTaskViewTab] = useState<"list" | "board" | "calendar">("list");
+  const [taskSearchQuery, setTaskSearchQuery] = useState("");
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
+  const categoryDropdownRef = useRef<HTMLDivElement>(null);
+
   const [warning, setWarning] = useState<string | null>(null);
   const heroGraphData: HistoryPoint[] = [
     { value: 82, date: "Mon" },
@@ -2932,6 +2937,15 @@ export default function App() {
   useEffect(() => {
     if (activeView !== "analytics") setAnalyticsTaskPickerOpen(false);
   }, [activeView]);
+
+  useEffect(() => {
+    if (!categoryDropdownOpen) return;
+    const h = (e: MouseEvent) => {
+      if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) setCategoryDropdownOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [categoryDropdownOpen]);
 
   /* ------------------- FOCUS INTEGRITY ENGINE ------------------- */
   useEffect(() => {
@@ -5037,104 +5051,177 @@ export default function App() {
                   )}
                 </div>
                 {activeView === "tasks" && todayMainMode === "completed" ? (
-                  <div
-                    className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
-                    style={{ backgroundColor: TT_MAIN_GREY }}
-                  >
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] flex-1 min-h-0">
-                      <div
-                        className="pl-3 pr-2 pt-3 pb-2 flex flex-col h-full min-h-0 border-r border-[#2a2a2a]"
-                        style={{ backgroundColor: TT_MAIN_GREY }}
-                      >
-                        <div className="flex items-center justify-between gap-4 mb-3 shrink-0">
-                          <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={handleToggleTodaySidebar}
-                              disabled={isTodayPanelAnimatingOut}
-                              className="inline-flex items-center justify-center w-9 h-9 rounded-md border border-transparent bg-transparent text-zinc-300 hover:border-zinc-600 hover:shadow-[0_1px_8px_rgba(0,0,0,0.45)] hover:bg-zinc-800/40 transition-all duration-150 disabled:opacity-50"
-                              aria-label="Collapse Tasks sidebar"
-                            >
-                              <svg
-                                className="w-[18px] h-[18px]"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                aria-hidden
-                              >
-                                <line x1="4" y1="6" x2="20" y2="6" />
-                                <line x1="4" y1="12" x2="20" y2="12" />
-                                <line x1="4" y1="18" x2="20" y2="18" />
-                              </svg>
-                            </button>
-                            <h2 className="text-xl font-semibold text-zinc-100 tracking-normal leading-7">
-                              Completed
-                            </h2>
-                          </div>
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+                    <header className="shrink-0 flex items-center gap-3 px-5 h-[52px] border-b border-zinc-200/70">
+                      <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
+                        <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
+                      </button>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[15px]">✅</span>
+                        <h2 className="text-[15px] font-semibold text-zinc-900 tracking-tight">Completed</h2>
+                      </div>
+                    </header>
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      {completedGroups.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center min-h-[300px] text-zinc-400 text-[14px]">No completed tasks yet</div>
+                      ) : (
+                        <div>
+                          {completedGroups.map((group) => {
+                            const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
+                            return (
+                              <div key={group.dateStr} className="border-b border-zinc-100">
+                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2.5 px-5 py-3 text-left hover:bg-zinc-50 transition-colors">
+                                  <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                                  <span className="flex-1 text-[14px] font-semibold text-zinc-800">{group.label}</span>
+                                  <span className="text-[12px] text-zinc-400 font-medium tabular-nums">{group.items.length}</span>
+                                </button>
+                                {!isCollapsed && (
+                                  <div className="divide-y divide-zinc-50">
+                                    {group.items.map((item) => (
+                                      <div key={item.key} className="flex items-center gap-3 px-5 py-2.5 pl-12 hover:bg-zinc-50/50 transition-colors">
+                                        <span className="shrink-0 w-[16px] h-[16px] rounded-full bg-indigo-500 flex items-center justify-center"><span className="text-white text-[9px] leading-none">✓</span></span>
+                                        <span className="flex-1 min-w-0 text-[13px] text-zinc-400 line-through truncate">{item.taskName}</span>
+                                        <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">{item.minutes}m</span>
+                                        <span className="shrink-0 text-[10px] text-zinc-400 truncate max-w-[100px]">{item.listLabel}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
+                      )}
+                    </div>
+                  </div>
+                ) : activeView === "tasks" && todayMainMode === "tasks" ? (
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
+                    {/* ── Workspace Header ── */}
+                    <header className="shrink-0 flex items-center justify-between px-5 h-[52px] border-b border-zinc-200/70">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
+                          <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
+                        </button>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-[15px] shrink-0">{selectedListId === SYS_LIST_TODAY ? "📅" : selectedListId === SYS_LIST_OVERDUE ? "⏰" : selectedListId === SYS_LIST_PROJECTS ? "📁" : selectedListId === SYS_LIST_TESTS ? "📚" : selectedListId === SYS_LIST_LONGTERM ? "🧠" : selectedList?.icon ?? "📋"}</span>
+                          <h2 className="text-[15px] font-semibold text-zinc-900 truncate tracking-tight">{selectedList?.label ?? "Tasks"}</h2>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1 bg-zinc-100 rounded-lg p-[3px]">
+                        {(["list", "board", "calendar"] as const).map((tab) => (
+                          <button key={tab} type="button" onClick={() => { if (tab === "calendar") { handleSidebarNavClick("calendar"); return; } setTaskViewTab(tab); }} className={`px-3 py-1 text-[12px] font-medium rounded-md transition-all duration-150 capitalize ${taskViewTab === tab ? "bg-white text-zinc-800 shadow-sm" : "text-zinc-500 hover:text-zinc-700"}`}>{tab}</button>
+                        ))}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {selectedListId === SYS_LIST_TODAY && focusForTodayItems.length > 0 && (
+                          <button type="button" onClick={handleFocusForTodayStartSession} className="shrink-0 rounded-lg bg-indigo-600 hover:bg-indigo-700 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors shadow-sm">Focus Session</button>
+                        )}
+                      </div>
+                    </header>
 
-                        <div className="flex-1 min-h-0 overflow-y-auto">
-                          {completedGroups.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center min-h-[200px] text-zinc-500 text-sm px-4">
-                              No completed tasks
-                            </div>
-                          ) : (
-                            <div className="space-y-0">
-                              {completedGroups.map((group) => {
-                                const isCollapsed =
-                                  collapsedCompletedDates[group.dateStr] ?? false;
+                    {/* ── Filter / Control Row ── */}
+                    <div className="shrink-0 flex items-center gap-3 px-5 py-2 border-b border-zinc-100 bg-zinc-50/40">
+                      <div className="relative" ref={categoryDropdownRef}>
+                        <button type="button" onClick={() => setCategoryDropdownOpen((v) => !v)} className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-zinc-200 hover:border-zinc-300 text-[13px] font-medium text-zinc-700 rounded-full transition-colors shadow-sm">
+                          <span className="text-[13px]">{selectedListId === SYS_LIST_TODAY ? "📅" : selectedListId === SYS_LIST_OVERDUE ? "⏰" : selectedListId === SYS_LIST_PROJECTS ? "📁" : selectedListId === SYS_LIST_TESTS ? "📚" : selectedListId === SYS_LIST_LONGTERM ? "🧠" : selectedList?.icon ?? "📋"}</span>
+                          <span>{selectedList?.label ?? "Today"}</span>
+                          <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-150 ${categoryDropdownOpen ? "rotate-180" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                        </button>
+                        {categoryDropdownOpen && (
+                          <div className="absolute left-0 top-full mt-1 w-[210px] bg-white rounded-xl shadow-[0_8px_30px_rgba(0,0,0,0.12)] border border-zinc-200/80 py-1.5 z-50 overflow-hidden">
+                            {[
+                              { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
+                              { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
+                              { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
+                              { id: SYS_LIST_TESTS, label: "Tests", emoji: "📚" },
+                              { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
+                              ...todayLists.map((l) => ({ id: l.id, label: l.label, emoji: l.icon || "📋" })),
+                            ].map((item) => (
+                              <button key={item.id} type="button" onClick={() => { handleSelectList(item.id); setCategoryDropdownOpen(false); }} className={`w-full flex items-center gap-2.5 px-3.5 py-2 text-[13px] transition-colors ${selectedListId === item.id ? "bg-indigo-50 text-indigo-700 font-medium" : "text-zinc-600 hover:bg-zinc-50"}`}>
+                                <span className="text-[13px]">{item.emoji}</span>
+                                <span>{item.label}</span>
+                                {selectedListId === item.id && <svg className="w-4 h-4 ml-auto text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12l5 5L20 7" /></svg>}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-1" />
+                      <div className="relative flex items-center">
+                        <svg className="absolute left-2.5 w-4 h-4 text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                        <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search tasks..." className="w-[180px] pl-8 pr-3 py-1.5 bg-white border border-zinc-200 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-50 transition-all" />
+                      </div>
+                    </div>
+
+                    {/* ── Task Input ── */}
+                    {selectedListId !== SYS_LIST_OVERDUE && (
+                      <div className="shrink-0 px-5 pt-3 pb-1.5">
+                        <div className={`flex items-center gap-2.5 px-3.5 h-10 bg-zinc-50 border border-zinc-200 rounded-lg hover:border-zinc-300 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-50 transition-all ${invalidInputTarget === "list" ? "micro-input-invalid" : taskInputShellPress ? "micro-input-press" : ""}`}>
+                          <svg className="w-4 h-4 text-zinc-400 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                          <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder={taskInputPlaceholder(selectedListId)} disabled={!selectedListId} className={`flex-1 h-full bg-transparent text-zinc-800 placeholder:text-zinc-400 outline-none text-[13px] disabled:opacity-50 disabled:cursor-not-allowed ${taskInputClearFlash ? "opacity-40" : ""}`} />
+                        </div>
+                        {taskInputLiveHints.length > 0 && (
+                          <div className="pl-1 mt-1" role="status" aria-live="polite">
+                            {taskInputLiveHints.map((hint, hi) => (
+                              <p key={hi} className="text-[10px] leading-snug text-zinc-400" style={{ animationDelay: `${hi * 40}ms` }}>{hint}</p>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Task List ── */}
+                    <div className="relative flex-1 min-h-0 overflow-y-auto">
+                      {completionBurstTier ? (<div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />) : null}
+
+                      {!selectedListId ? (
+                        <div className="px-5 py-10 text-zinc-400 text-[14px] text-center">Select a list to view tasks</div>
+                      ) : tasksListSkeletonVisible ? (
+                        <TaskListSkeletonRows />
+                      ) : taskViewTab === "board" ? (
+                        <div className="flex-1 flex items-center justify-center py-20 text-zinc-400 text-[14px]">Board view coming soon</div>
+                      ) : (
+                        <div className="flex flex-col pb-8">
+                          {/* Focus for today section */}
+                          {selectedListId === SYS_LIST_TODAY && focusTodayFlatRows.length > 0 && (
+                            <div className="border-b border-zinc-100">
+                              {focusTodayFlatRows.map((item, rowIdx) => {
+                                if (item.kind === "header") {
+                                  return (
+                                    <div key={`hdr-${rowIdx}-${item.label}`} className={`flex items-center gap-2 px-5 ${rowIdx === 0 ? "pt-3 pb-1.5" : "pt-4 pb-1.5"}`}>
+                                      <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-400">{item.label}</span>
+                                      <div className="flex-1 h-px bg-zinc-100" />
+                                    </div>
+                                  );
+                                }
+                                const pick = item.pick;
+                                const visuals = focusForTodayRowVisuals(pick.urgency);
+                                const tagLabel = FOCUS_FOR_TODAY_TAG_LABELS[pick.listId] ?? "Task";
+                                const dayNum = parseISODate(notificationDay).getDate();
+                                const task = getTaskForPick(tasksByListId, pick);
+                                const timeLine = formatFocusTimeLine(pick, task);
+                                const showEstimate = focusEstimatePromptKeys.has(`${pick.listId}:${pick.taskId}`);
                                 return (
-                                  <div
-                                    key={group.dateStr}
-                                    className="border-b border-[#2a2a2a]"
-                                  >
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setCollapsedCompletedDates((prev) => ({
-                                          ...prev,
-                                          [group.dateStr]: !isCollapsed,
-                                        }))
-                                      }
-                                      className="w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-white/[0.04] transition-colors"
-                                    >
-                                      <span
-                                        className={`text-zinc-500 text-xs w-4 flex justify-center transition-transform ${isCollapsed ? "" : "rotate-90"}`}
-                                        aria-hidden
-                                      >
-                                        ▼
-                                      </span>
-                                      <span className="flex-1 text-[14px] font-semibold text-zinc-200">
-                                        {group.label}
-                                      </span>
+                                  <div key={`${pick.listId}:${pick.taskId}`} className="border-b border-zinc-50">
+                                    <button type="button" onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)} className="flex w-full items-center gap-2.5 px-5 py-2 text-left hover:bg-zinc-50 transition-colors">
+                                      <span className={`w-0.5 h-5 shrink-0 rounded-full ${visuals.bar}`} aria-hidden />
+                                      <TaskSystemNavIcon listId={pick.listId} dayOfMonth={dayNum} className="h-4 w-4 shrink-0 text-zinc-400" />
+                                      <span className="truncate text-[13px] font-medium text-zinc-800 flex-1">{pick.displayTitle}</span>
+                                      <span className="text-[11px] text-zinc-400 shrink-0 tabular-nums">{timeLine}</span>
+                                      <span className="text-[10px] text-zinc-400 shrink-0 bg-zinc-100 px-1.5 py-0.5 rounded">{tagLabel}</span>
                                     </button>
-                                    {!isCollapsed && (
-                                      <div className="divide-y divide-[#2a2a2a]/80">
-                                        {group.items.map((item) => (
-                                          <div
-                                            key={item.key}
-                                            className="flex items-center gap-3 px-3 py-2.5 pl-9"
-                                          >
-                                            <span className="shrink-0 w-[16px] h-[16px] rounded border border-blue-500 bg-blue-500 flex items-center justify-center">
-                                              <span className="text-white text-[9px] leading-none">
-                                                ✓
-                                              </span>
-                                            </span>
-                                            <span className="flex-1 min-w-0 text-[13px] text-zinc-500 line-through truncate">
-                                              {item.taskName}
-                                            </span>
-                                            <span className="shrink-0 text-right">
-                                              <span className="text-[11px] text-zinc-600 block">
-                                                {item.minutes}m
-                                              </span>
-                                              <span className="text-[10px] text-zinc-600/90 truncate max-w-[100px] block">
-                                                {item.listLabel}
-                                              </span>
-                                            </span>
-                                          </div>
+                                    {showEstimate && (
+                                      <div className="pb-2 pl-12 pr-5 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                                        <span className="text-[10px] text-zinc-400">Est:</span>
+                                        {([
+                                          [15, "15m"],
+                                          [30, "30m"],
+                                          [60, "1h"],
+                                          [120, "2h"],
+                                        ] as const).map(([mins, lab]) => (
+                                          <button key={mins} type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, mins); }} className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-700 hover:border-zinc-300 transition-colors disabled:opacity-40">{lab}</button>
                                         ))}
+                                        <button type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, "skip"); }} className="text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-40">Skip</button>
                                       </div>
                                     )}
                                   </div>
@@ -5142,596 +5229,85 @@ export default function App() {
                               })}
                             </div>
                           )}
-                        </div>
-                      </div>
 
-                      <div
-                        className="hidden lg:flex flex-col h-full min-h-0 items-center justify-center relative overflow-hidden"
-                        style={{ backgroundColor: "#0f0f0f" }}
-                      >
-                        <div
-                          className="absolute inset-0 opacity-[0.12]"
-                          style={{
-                            background:
-                              "radial-gradient(ellipse at 50% 65%, rgba(250,250,250,0.15), transparent 55%)",
-                          }}
-                        />
-                        <svg
-                          className="relative z-[1] w-[min(100%,320px)] max-h-[45vh] text-zinc-500/50"
-                          viewBox="0 0 240 200"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          aria-hidden
-                        >
-                          <rect
-                            x="48"
-                            y="44"
-                            width="72"
-                            height="96"
-                            rx="4"
-                            className="fill-zinc-800/30"
-                          />
-                          <path d="M56 56h56M56 68h40M56 80h48M56 92h36" />
-                          <path d="M68 120h32" strokeDasharray="3 3" />
-                          <rect
-                            x="118"
-                            y="52"
-                            width="10"
-                            height="28"
-                            rx="1"
-                            className="fill-zinc-700/40"
-                          />
-                          <path d="M128 80 L132 120 L124 120 Z" className="fill-zinc-600/30" />
-                          <ellipse cx="168" cy="118" rx="22" ry="8" />
-                          <path d="M150 118 L186 118" />
-                          <path d="M162 110 L174 102" />
-                          <rect x="178" y="64" width="28" height="36" rx="3" />
-                          <path d="M182 72h20M182 80h16" />
-                          <circle cx="88" cy="36" r="6" strokeDasharray="2 2" />
-                          <rect x="152" y="36" width="14" height="14" rx="2" />
-                          <path d="M156 40h6M159 37v6" />
-                        </svg>
-                      </div>
-                    </div>
-                  </div>
-                ) : activeView === "tasks" && todayMainMode === "tasks" ? (
-                  <div
-                    className="w-full flex-1 min-h-0 flex flex-col overflow-hidden"
-                    style={{ backgroundColor: TT_MAIN_GREY }}
-                  >
-                    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)] flex-1 min-h-0">
-                      {/* LEFT PANEL: continuous task workflow */}
-                      <div
-                        className="pl-3 pr-2 pt-2 pb-1 flex flex-col h-full min-h-0"
-                        style={{ backgroundColor: TT_MAIN_GREY }}
-                      >
-                        {/* Header row */}
-                        <div className="flex items-center justify-between gap-2 mb-1.5 shrink-0">
-                          <div className="flex items-center gap-2 min-w-0 flex-1">
-                            <button
-                              type="button"
-                              onClick={handleToggleTodaySidebar}
-                              disabled={isTodayPanelAnimatingOut}
-                              className="inline-flex items-center justify-center w-8 h-8 rounded-md text-zinc-300 hover:bg-white/[0.06] transition-colors duration-150 disabled:opacity-50"
-                              aria-label="Collapse Tasks sidebar"
-                              title="Collapse Tasks sidebar"
-                            >
-                              <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                                <line x1="4" y1="6" x2="20" y2="6" />
-                                <line x1="4" y1="12" x2="20" y2="12" />
-                                <line x1="4" y1="18" x2="20" y2="18" />
-                              </svg>
-                            </button>
-                            {selectedList ? (
-                              <h2 className="text-[17px] font-semibold text-zinc-100 truncate leading-6">
-                                {selectedList.label}
-                              </h2>
-                            ) : (
-                              <h2 className="text-[17px] font-semibold text-zinc-300 truncate leading-6">
-                                Tasks
-                              </h2>
-                            )}
-                          </div>
-                          {selectedListId === SYS_LIST_TODAY && focusForTodayItems.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={handleFocusForTodayStartSession}
-                              className="relative z-0 overflow-visible shrink-0 rounded-md border border-zinc-600/70 bg-zinc-800/90 px-2.5 py-1 text-[11px] font-semibold leading-none text-zinc-200 hover:border-zinc-500 hover:bg-zinc-700/95 transition-colors"
-                            >
-                              <span className="focus-session-start-aura-soft" aria-hidden />
-                              <span className="focus-session-start-aura" aria-hidden />
-                              <span className="relative z-[1]">Focus Session</span>
-                            </button>
-                          )}
-                        </div>
+                          {/* TO DO group */}
+                          {(() => {
+                            const searchQ = taskSearchQuery.toLowerCase().trim();
+                            const filtered = searchQ ? visibleTasksForList.filter((t) => t.text.toLowerCase().includes(searchQ)) : visibleTasksForList;
+                            const todoTasks = filtered.filter((t) => !t.completed);
+                            const doneTasks = filtered.filter((t) => t.completed);
 
-                        {/* Task input bar */}
-                        {selectedListId !== SYS_LIST_OVERDUE && (
-                          <div className="shrink-0 mb-1">
-                            <div
-                              className={`border border-[#2a2a2a] rounded-lg px-2.5 h-9 flex items-center gap-2 ${
-                                invalidInputTarget === "list"
-                                  ? "micro-input-invalid"
-                                  : taskInputShellPress
-                                    ? "micro-input-press"
-                                    : ""
-                              }`}
-                              style={{ backgroundColor: TT_INPUT_ROW }}
-                            >
-                              <span className="text-zinc-500 text-sm leading-none">+</span>
-                              <input
-                                ref={taskListInputRef}
-                                value={taskInput}
-                                onChange={(e) => setTaskInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    addTaskFromListInput({ fromEnter: true });
-                                  }
-                                }}
-                                placeholder={taskInputPlaceholder(selectedListId)}
-                                disabled={!selectedListId}
-                                className={`flex-1 h-full bg-transparent text-zinc-200 placeholder:text-zinc-500 outline-none text-[13px] leading-normal disabled:opacity-50 disabled:cursor-not-allowed ${
-                                  taskInputClearFlash ? "opacity-40" : ""
-                                }`}
-                              />
-                            </div>
-                            {taskInputLiveHints.length > 0 && (
-                              <div className="pl-1 mt-0.5" role="status" aria-live="polite">
-                                {taskInputLiveHints.map((hint, hi) => (
-                                  <p key={hi} className="text-[10px] leading-snug text-zinc-500" style={{ animationDelay: `${hi * 40}ms` }}>{hint}</p>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Continuous scrollable task area */}
-                        <div className="relative flex-1 min-h-0 overflow-y-auto mt-0.5">
-                          {completionBurstTier ? (
-                            <div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />
-                          ) : null}
-
-                          {!selectedListId ? (
-                            <div className="px-3 py-6 text-zinc-500 text-[13px]">
-                              Select a list from the sidebar.
-                            </div>
-                          ) : tasksListSkeletonVisible ? (
-                            <TaskListSkeletonRows />
-                          ) : (
-                            <div className="flex flex-col">
-                              {/* Priority / Focus section (inline, compact) */}
-                              {selectedListId === SYS_LIST_TODAY && focusTodayFlatRows.length > 0 && (
-                                <div className="mb-0.5">
-                                  {focusTodayFlatRows.map((item, rowIdx) => {
-                                    if (item.kind === "header") {
-                                      return (
-                                        <div key={`hdr-${rowIdx}-${item.label}`} className={`flex items-center gap-2 px-2 ${rowIdx === 0 ? "pt-0.5 pb-1" : "pt-2.5 pb-1"}`}>
-                                          <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">{item.label}</span>
-                                          <div className="flex-1 h-px bg-[#2a2a2a]" />
-                                        </div>
-                                      );
-                                    }
-                                    const pick = item.pick;
-                                    const visuals = focusForTodayRowVisuals(pick.urgency);
-                                    const tagLabel = FOCUS_FOR_TODAY_TAG_LABELS[pick.listId] ?? "Task";
-                                    const dayNum = parseISODate(notificationDay).getDate();
-                                    const task = getTaskForPick(tasksByListId, pick);
-                                    const timeLine = formatFocusTimeLine(pick, task);
-                                    const showEstimate = focusEstimatePromptKeys.has(`${pick.listId}:${pick.taskId}`);
-                                    return (
-                                      <div key={`${pick.listId}:${pick.taskId}`} className="border-b border-[#222]">
-                                        <button
-                                          type="button"
-                                          onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)}
-                                          className="flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-white/[0.04] transition-colors"
-                                        >
-                                          <span className={`w-0.5 h-6 shrink-0 rounded-full ${visuals.bar}`} aria-hidden />
-                                          <TaskSystemNavIcon listId={pick.listId} dayOfMonth={dayNum} className="h-4 w-4 shrink-0 text-zinc-500" />
-                                          <span className="truncate text-[13px] font-medium text-zinc-100 flex-1">{pick.displayTitle}</span>
-                                          <span className="text-[11px] text-zinc-500 shrink-0 tabular-nums">{timeLine}</span>
-                                          <span className="text-[10px] text-zinc-500 shrink-0">{tagLabel}</span>
-                                        </button>
-                                        {showEstimate && (
-                                          <div className="pb-1.5 pl-8 pr-2 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                            <span className="text-[10px] text-zinc-500">Est:</span>
-                                            {([
-                                              [15, "15m"],
-                                              [30, "30m"],
-                                              [60, "1h"],
-                                              [120, "2h"],
-                                            ] as const).map(([mins, lab]) => (
-                                              <button key={mins} type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, mins); }} className="rounded border border-zinc-700/80 bg-zinc-900/80 px-1.5 py-px text-[10px] font-medium text-zinc-400 hover:text-zinc-200 hover:border-zinc-500 transition-colors disabled:opacity-40">{lab}</button>
-                                            ))}
-                                            <button type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, "skip"); }} className="text-[10px] text-zinc-500 hover:text-zinc-300 transition-colors disabled:opacity-40">Skip</button>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                  {/* Divider before main tasks */}
-                                  {visibleTasksForList.length > 0 && (
-                                    <div className="flex items-center gap-2 px-2 pt-2.5 pb-1">
-                                      <span className="text-[10px] font-semibold uppercase tracking-[0.1em] text-zinc-500">Tasks</span>
-                                      <div className="flex-1 h-px bg-[#2a2a2a]" />
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Main task list */}
-                              {visibleTasksForList.length === 0 && focusTodayFlatRows.length === 0 ? (
-                                allElasticListTasksComplete ? (
-                                  <div className="px-3 py-4 text-[13px] text-zinc-400">
-                                    All tasks complete. Check <span className="text-zinc-300">Completed</span> in sidebar.
-                                  </div>
-                                ) : selectedListId === SYS_LIST_OVERDUE ? (
-                                  <div className="px-3 py-4 text-[13px] text-zinc-400">
-                                    Nothing overdue — nice work.
-                                  </div>
-                                ) : (
-                                  <div className={`px-3 py-4 text-[13px] text-zinc-500 ${listEmptyExit ? "micro-empty-out" : ""}`}>
-                                    No tasks yet
-                                  </div>
-                                )
+                            if (filtered.length === 0 && focusTodayFlatRows.length === 0) {
+                              return allElasticListTasksComplete ? (
+                                <div className="px-5 py-8 text-[14px] text-zinc-400 text-center">All tasks complete — check <span className="font-medium text-zinc-600">Completed</span> in sidebar.</div>
+                              ) : selectedListId === SYS_LIST_OVERDUE ? (
+                                <div className="px-5 py-8 text-[14px] text-zinc-400 text-center">Nothing overdue — nice work!</div>
                               ) : (
-                                <div className={`divide-y divide-[#222] ${listFirstTaskEnter ? "micro-list-shell-in" : ""}`}>
-                                  {visibleTasksForList.map((t) => {
-                                    const isSelected = selectedTaskId === t.id;
-                                    return (
-                                      <div
-                                        key={t.id}
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => setSelectedTaskId(t.id)}
-                                        onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(t.id); }}
-                                        className={`group flex items-center gap-2 px-2 py-[5px] cursor-pointer transition-colors duration-100 ${
-                                          taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""
-                                        } ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${
-                                          isSelected ? "bg-[#282828]" : "hover:bg-[#1e1e1e]"
-                                        }`}
-                                      >
-                                        <button
-                                          type="button"
-                                          disabled={taskCheckAnimatingId === t.id}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            const next = !t.completed;
-                                            if (!selectedListId) return;
-                                            if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; }
-                                            if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); }
-                                            setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x));
-                                          }}
-                                          className={`btn-press-instant shrink-0 w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${
-                                            t.completed || taskCheckAnimatingId === t.id ? "border-blue-500 bg-blue-500" : "border-zinc-600 hover:border-zinc-400"
-                                          } ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`}
-                                          aria-label={t.completed ? "Mark incomplete" : "Complete task"}
-                                        >
-                                          {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (
-                                            <svg className="w-[10px] h-[10px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                          ) : t.completed ? (
-                                            <span className="text-white text-[9px] leading-none">✓</span>
-                                          ) : null}
-                                        </button>
-                                        <span className={`text-[13px] truncate flex-1 text-left ${t.completed ? "text-zinc-500 line-through" : "text-zinc-200"}`}>{t.text}</span>
-                                        {selectedListId && (selectedListId === SYS_LIST_TODAY || (t.dueDate && (DUE_DATE_PICKER_LIST_IDS.has(selectedListId) || selectedListId === SYS_LIST_OVERDUE))) && (
-                                          <span className="shrink-0 text-[11px] text-zinc-500 tabular-nums">
-                                            {selectedListId === SYS_LIST_TODAY ? formatDueButtonLabel(calendarDay) : selectedListId === SYS_LIST_OVERDUE ? formatOverdueRowDue(t.dueDate!) : formatDueButtonLabel(t.dueDate!)}
-                                          </span>
-                                        )}
-                                        <button
-                                          type="button"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (!selectedListId) return;
-                                            if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; }
-                                            setTasks((prev) => prev.filter((x) => x.id !== t.id));
-                                            if (selectedTaskId === t.id) setSelectedTaskId(null);
-                                            setDeleteUndoToast({ task: { ...t }, listId: selectedListId });
-                                            deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000);
-                                          }}
-                                          className="btn-press-instant shrink-0 w-6 h-6 rounded text-zinc-600 hover:text-zinc-300 opacity-0 group-hover:opacity-100 transition-opacity text-[11px]"
-                                          aria-label="Delete task"
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                                <div className={`px-5 py-8 text-[14px] text-zinc-400 text-center ${listEmptyExit ? "micro-empty-out" : ""}`}>No tasks yet. Add one above.</div>
+                              );
+                            }
 
-                      {/* RIGHT PANEL: task details */}
-                      <div
-                        className={`border-l border-[#2a2a2a] flex flex-col h-full min-h-0 transition-opacity duration-200 ${
-                          selectedTask ? "opacity-100" : "opacity-50"
-                        }`}
-                        style={{ backgroundColor: TT_MAIN_GREY }}
-                      >
-                        {!selectedListId ? (
-                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[12px] px-6 text-center">
-                            Select a list
-                          </div>
-                        ) : selectedTask ? (
-                          <>
-                            <div className="flex items-center gap-3 px-4 py-2.5 shrink-0">
-                              <button
-                                type="button"
-                                disabled={
-                                  taskCheckAnimatingId === selectedTask.id
-                                }
-                                onClick={() => {
-                                  const next = !selectedTask.completed;
-                                  if (!selectedListId) return;
-                                  if (next && listUsesElasticComplete) {
-                                    scheduleElasticListTaskComplete(
-                                      selectedTask,
-                                      selectedListId,
-                                      selectedList?.label ?? "",
-                                    );
-                                    return;
-                                  }
-                                  if (next) {
-                                    appendCompletedActivity(
-                                      selectedTask.text,
-                                      0,
-                                      selectedListId,
-                                      selectedList?.label ?? "",
-                                    );
-                                  } else {
-                                    removeLastCompletedForTaskOnList(
-                                      selectedTask.text,
-                                      selectedListId,
-                                    );
-                                  }
-                                  setTasks((prev) =>
-                                    prev.map((x) =>
-                                      x.id === selectedTask.id
-                                        ? { ...x, completed: next }
-                                        : x,
-                                    ),
-                                  );
-                                }}
-                                className={`btn-press-instant shrink-0 w-[18px] h-[18px] rounded-full border-2 flex items-center justify-center transition-colors ${
-                                  selectedTask.completed ||
-                                  taskCheckAnimatingId === selectedTask.id
-                                    ? "border-blue-500 bg-blue-500"
-                                    : "border-zinc-500 hover:border-zinc-400"
-                                } ${
-                                  taskCheckAnimatingId === selectedTask.id
-                                    ? "elastic-cb-pulse"
-                                    : ""
-                                }`}
-                                aria-label="Toggle complete"
-                              >
-                                {listUsesElasticComplete &&
-                                taskCheckAnimatingId === selectedTask.id ? (
-                                  <svg
-                                    className="w-[11px] h-[11px]"
-                                    viewBox="0 0 12 12"
-                                    fill="none"
-                                    aria-hidden
-                                  >
-                                    <path
-                                      className="elastic-check-path-draw"
-                                      d="M2.5 6.2 L5 8.8 L9.5 3.5"
-                                      stroke="white"
-                                      strokeWidth="2"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
-                                    />
-                                  </svg>
-                                ) : selectedTask.completed ? (
-                                  <span className="text-white text-[10px]">
-                                    ✓
-                                  </span>
-                                ) : null}
-                              </button>
-                            </div>
-
-                            <div className="px-4 pt-1 flex items-start justify-between gap-2 shrink-0">
-                              <h3 className="text-lg font-semibold text-white leading-snug flex-1 min-w-0">
-                                {selectedTask.text}
-                              </h3>
-                              <div className="flex items-center gap-2 shrink-0">
-                                {selectedListId === SYS_LIST_TODAY && (
-                                  <span className="relative inline-flex items-center rounded-lg shrink-0">
-                                    <span
-                                      className="due-date-aura-detail-soft"
-                                      aria-hidden
-                                    />
-                                    <span
-                                      className="due-date-aura-detail"
-                                      aria-hidden
-                                    />
-                                    <button
-                                      type="button"
-                                      disabled
-                                      aria-disabled="true"
-                                      tabIndex={-1}
-                                      onClick={(e) => e.preventDefault()}
-                                      className="relative z-[1] inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-[#2a2a2a] px-3 py-2 text-[13px] font-medium text-zinc-200 cursor-default"
-                                    >
-                                      <span className="tabular-nums">
-                                        {formatDueButtonLabel(calendarDay)}
+                            return (
+                              <>
+                                {todoTasks.length > 0 && (
+                                  <>
+                                    <div className="flex items-center gap-2 px-5 pt-3 pb-1.5">
+                                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-600">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                        To Do
                                       </span>
-                                      <svg
-                                        className="w-4 h-4 text-zinc-500"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="2"
-                                        aria-hidden
-                                      >
-                                        <path d="M6 9l6 6 6-6" />
-                                      </svg>
-                                    </button>
-                                  </span>
+                                      <span className="text-[11px] font-medium text-zinc-400 tabular-nums">{todoTasks.length}</span>
+                                    </div>
+                                    <div className={listFirstTaskEnter ? "micro-list-shell-in" : ""}>
+                                      {todoTasks.map((t) => {
+                                        const isSelected = selectedTaskId === t.id;
+                                        return (
+                                          <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center gap-3 px-5 py-2.5 cursor-pointer transition-colors duration-100 border-b border-zinc-100/80 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-indigo-50/60" : "hover:bg-zinc-50"}`}>
+                                            <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); const next = !t.completed; if (!selectedListId) return; if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; } if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); } setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x)); }} className={`btn-press-instant shrink-0 w-[17px] h-[17px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${t.completed || taskCheckAnimatingId === t.id ? "border-indigo-500 bg-indigo-500" : "border-zinc-300 hover:border-zinc-400"} ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`} aria-label={t.completed ? "Mark incomplete" : "Complete task"}>
+                                              {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (<svg className="w-[10px] h-[10px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) : t.completed ? (<span className="text-white text-[9px] leading-none">✓</span>) : null}
+                                            </button>
+                                            <span className="text-[13.5px] truncate flex-1 text-left text-zinc-800">{t.text}</span>
+                                            {selectedListId && (selectedListId === SYS_LIST_TODAY || (t.dueDate && (DUE_DATE_PICKER_LIST_IDS.has(selectedListId) || selectedListId === SYS_LIST_OVERDUE))) && (
+                                              <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums bg-zinc-100 px-2 py-0.5 rounded">{selectedListId === SYS_LIST_TODAY ? formatDueButtonLabel(calendarDay) : selectedListId === SYS_LIST_OVERDUE ? formatOverdueRowDue(t.dueDate!) : formatDueButtonLabel(t.dueDate!)}</span>
+                                            )}
+                                            <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); if (selectedTaskId === t.id) setSelectedTaskId(null); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant shrink-0 w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 opacity-0 group-hover:opacity-100 transition-all text-[11px]" aria-label="Delete task">✕</button>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                  </>
                                 )}
-                                {selectedListId === SYS_LIST_OVERDUE &&
-                                  selectedTask.dueDate && (
-                                    <span className="relative inline-flex items-center rounded-lg shrink-0">
-                                      <span
-                                        className="due-date-aura-detail-soft"
-                                        aria-hidden
-                                      />
-                                      <span
-                                        className="due-date-aura-detail"
-                                        aria-hidden
-                                      />
-                                      <button
-                                        type="button"
-                                        disabled
-                                        aria-disabled="true"
-                                        tabIndex={-1}
-                                        onClick={(e) => e.preventDefault()}
-                                        className="relative z-[1] inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-[#2a2a2a] px-3 py-2 text-[13px] font-medium text-zinc-200 cursor-default"
-                                      >
-                                        <span className="tabular-nums">
-                                          {formatOverdueRowDue(
-                                            selectedTask.dueDate,
-                                          )}
-                                        </span>
-                                        <svg
-                                          className="w-4 h-4 text-zinc-500"
-                                          viewBox="0 0 24 24"
-                                          fill="none"
-                                          stroke="currentColor"
-                                          strokeWidth="2"
-                                          aria-hidden
-                                        >
-                                          <path d="M6 9l6 6 6-6" />
-                                        </svg>
-                                      </button>
-                                    </span>
-                                  )}
-                                {selectedListId &&
-                                  DUE_DATE_PICKER_LIST_IDS.has(
-                                    selectedListId,
-                                  ) && (
-                                    <span className="relative inline-flex items-center rounded-lg shrink-0">
-                                      <span
-                                        className="due-date-aura-detail-soft"
-                                        aria-hidden
-                                      />
-                                      <span
-                                        className="due-date-aura-detail"
-                                        aria-hidden
-                                      />
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setDueDatePopover({
-                                            taskId: selectedTask.id,
-                                            anchor:
-                                              e.currentTarget.getBoundingClientRect(),
-                                          });
-                                        }}
-                                        className="relative z-[1] inline-flex items-center gap-1.5 rounded-lg border border-white/[0.1] bg-[#2a2a2a] px-3 py-2 text-[13px] font-medium text-zinc-200 hover:bg-[#323232] transition-colors"
-                                      >
-                                        {selectedTask.dueDate ? (
-                                          <>
-                                            <span className="tabular-nums">
-                                              {formatDueButtonLabel(
-                                                selectedTask.dueDate,
-                                              )}
-                                            </span>
-                                            <svg
-                                              className="w-4 h-4 text-zinc-500"
-                                              viewBox="0 0 24 24"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth="2"
-                                              aria-hidden
-                                            >
-                                              <path d="M6 9l6 6 6-6" />
-                                            </svg>
-                                          </>
-                                        ) : (
-                                          <>
-                                            <span>Due date</span>
-                                            <svg
-                                              className="w-4 h-4 text-zinc-500"
-                                              viewBox="0 0 24 24"
-                                              fill="none"
-                                              stroke="currentColor"
-                                              strokeWidth="1.75"
-                                              aria-hidden
-                                            >
-                                              <rect
-                                                x="3"
-                                                y="5"
-                                                width="18"
-                                                height="16"
-                                                rx="2"
-                                              />
-                                              <path d="M8 3v4M16 3v4M3 11h18" />
-                                            </svg>
-                                          </>
-                                        )}
-                                      </button>
-                                    </span>
-                                  )}
-                                <button
-                                  type="button"
-                                  className="text-zinc-500 hover:text-zinc-300 p-1 shrink-0"
-                                  aria-label="Task menu"
-                                >
-                                  ⋮
-                                </button>
-                              </div>
-                            </div>
-
-                            <div className="flex-1 min-h-0 px-4 pt-3 pb-6 overflow-y-auto">
-                              <textarea
-                                value={selectedTask.description}
-                                onChange={(e) => {
-                                  const val = e.target.value;
-                                  setTasks((prev) =>
-                                    prev.map((t) =>
-                                      t.id === selectedTask.id
-                                        ? { ...t, description: val }
-                                        : t,
-                                    ),
-                                  );
-                                }}
-                                placeholder="Write a description"
-                                className="w-full min-h-[200px] bg-transparent text-[13px] text-zinc-300 placeholder:text-zinc-600 outline-none resize-none leading-relaxed"
-                              />
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex-1 flex items-center justify-center text-zinc-600 text-[12px] px-6 text-center">
-                            Click a task to view details
-                          </div>
-                        )}
-                      </div>
+                                {doneTasks.length > 0 && (
+                                  <>
+                                    <div className="flex items-center gap-2 px-5 pt-4 pb-1.5">
+                                      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
+                                        Done
+                                      </span>
+                                      <span className="text-[11px] font-medium text-zinc-400 tabular-nums">{doneTasks.length}</span>
+                                    </div>
+                                    <div>
+                                      {doneTasks.map((t) => (
+                                        <div key={t.id} className={`group flex items-center gap-3 px-5 py-2 cursor-default border-b border-zinc-50 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
+                                          <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; removeLastCompletedForTaskOnList(t.text, selectedListId); setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: false } : x)); }} className="btn-press-instant shrink-0 w-[17px] h-[17px] rounded-full border-[1.5px] border-indigo-500 bg-indigo-500 flex items-center justify-center transition-colors disabled:opacity-100" aria-label="Mark incomplete"><span className="text-white text-[9px] leading-none">✓</span></button>
+                                          <span className="text-[13.5px] truncate flex-1 text-left text-zinc-400 line-through">{t.text}</span>
+                                          <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant shrink-0 w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 opacity-0 group-hover:opacity-100 transition-all text-[11px]" aria-label="Delete task">✕</button>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      )}
                     </div>
                     <MiniDueDatePopover
                       open={dueDatePopover !== null}
                       anchor={dueDatePopover?.anchor ?? null}
-                      selectedIso={
-                        dueDatePopover
-                          ? tasks.find((x) => x.id === dueDatePopover.taskId)
-                              ?.dueDate ?? null
-                          : null
-                      }
-                      onSelect={(iso) => {
-                        const tid = dueDatePopover?.taskId;
-                        if (tid == null) return;
-                        setTasks((prev) =>
-                          prev.map((x) =>
-                            x.id === tid ? { ...x, dueDate: iso } : x,
-                          ),
-                        );
-                        setDueDatePopover(null);
-                      }}
+                      selectedIso={dueDatePopover ? tasks.find((x) => x.id === dueDatePopover.taskId)?.dueDate ?? null : null}
+                      onSelect={(iso) => { const tid = dueDatePopover?.taskId; if (tid == null) return; setTasks((prev) => prev.map((x) => x.id === tid ? { ...x, dueDate: iso } : x)); setDueDatePopover(null); }}
                       onClose={() => setDueDatePopover(null)}
                     />
                   </div>
