@@ -7,16 +7,9 @@
 }
 
 body {
-  background: #000;
-  color: white;
-  font-family:
-    system-ui,
-    -apple-system,
-    Segoe UI,
-    Roboto,
-    Helvetica,
-    Arial,
-    sans-serif;
+  background: #ffffff;
+  color: #111827;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
 }
 
@@ -29,74 +22,70 @@ body {
   text-align: left;
 }
 
-/* ---------- GLASS PANELS ---------- */
+/* ---------- PANELS ---------- */
 
 .card {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px);
-  border-radius: 32px;
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
   padding: 2rem;
-  transition: all 0.4s ease;
+  transition: all 0.2s ease;
 }
 
 .card:hover {
-  border: 1px solid rgba(59, 130, 246, 0.4);
-  transform: translateY(-4px);
-  box-shadow: 0 10px 40px rgba(59, 130, 246, 0.15);
+  border: 1px solid #6366F1;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 /* ---------- BUTTON SYSTEM ---------- */
 
 button {
-  border-radius: 999px;
+  border-radius: 8px;
   border: none;
   padding: 0.7rem 1.6rem;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   cursor: pointer;
-  transition: all 0.25s ease;
+  transition: all 0.15s ease;
 }
 
 button.primary {
-  background: linear-gradient(135deg, #2563eb, #60a5fa);
+  background: #6366F1;
   color: white;
-  box-shadow: 0 0 25px rgba(59, 130, 246, 0.35);
 }
 
 button.primary:hover {
-  transform: scale(1.05);
-  box-shadow: 0 0 45px rgba(59, 130, 246, 0.6);
+  background: #4f46e5;
 }
 
 button.secondary {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: white;
+  background: #F8FAFC;
+  border: 1px solid #E5E7EB;
+  color: #111827;
 }
 
 button.secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #F1F5F9;
 }
 
 /* ---------- INPUT FIELD ---------- */
 
 input {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 20px;
+  background: #ffffff;
+  border: 1px solid #E5E7EB;
+  border-radius: 8px;
   padding: 14px 18px;
-  color: white;
-  font-size: 14px;
+  color: #111827;
+  font-size: 13px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   outline: none;
-  transition: all 0.25s ease;
+  transition: all 0.15s ease;
 }
 
 input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 15px rgba(59, 130, 246, 0.35);
+  border-color: #6366F1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
 }
 
 /* ---------- LOGO STYLE ---------- */
@@ -104,44 +93,26 @@ input:focus {
 .logo {
   height: 5em;
   padding: 1em;
-  transition:
-    transform 0.3s ease,
-    filter 0.3s ease;
+  transition: transform 0.2s ease;
 }
 
 .logo:hover {
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 20px rgba(59, 130, 246, 0.6));
+  transform: scale(1.05);
 }
 
-/* ---------- TITLE GLOW ---------- */
+/* ---------- TITLE ---------- */
 
 .title-glow {
   font-size: 3rem;
-  font-weight: 200;
-  letter-spacing: 0.4em;
-  text-transform: uppercase;
-  background: linear-gradient(to bottom, white, rgba(255, 255, 255, 0.2));
-  -webkit-background-clip: text;
-  color: transparent;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #111827;
 }
 
-/* ---------- HERO GLOW ---------- */
+/* ---------- HERO ---------- */
 
 .hero-glow {
-  position: absolute;
-  width: 900px;
-  height: 900px;
-  background: radial-gradient(
-    circle,
-    rgba(59, 130, 246, 0.25),
-    transparent 70%
-  );
-  filter: blur(120px);
-  top: 120px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: -1;
+  display: none;
 }
 
 /* ---------- FLOAT ANIMATION ---------- */
@@ -151,7 +122,7 @@ input:focus {
     transform: translateY(0px);
   }
   50% {
-    transform: translateY(-6px);
+    transform: translateY(-4px);
   }
   100% {
     transform: translateY(0px);
@@ -162,19 +133,19 @@ input:focus {
   animation: float 4s ease-in-out infinite;
 }
 
-/* ---------- BUTTON BREATHING EFFECT ---------- */
+/* ---------- BREATHING EFFECT ---------- */
 
 @keyframes breathing {
   0% {
-    opacity: 0.6;
+    opacity: 0.85;
     transform: scale(1);
   }
   50% {
     opacity: 1;
-    transform: scale(1.04);
+    transform: scale(1.02);
   }
   100% {
-    opacity: 0.6;
+    opacity: 0.85;
     transform: scale(1);
   }
 }
@@ -188,7 +159,7 @@ input:focus {
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
@@ -197,7 +168,7 @@ input:focus {
 }
 
 .fade-in {
-  animation: fadeIn 0.5s ease;
+  animation: fadeIn 0.4s ease;
 }
 
 /* ---------- SCROLLBAR ---------- */
@@ -211,10 +182,10 @@ input:focus {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: #D1D5DB;
   border-radius: 10px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(59, 130, 246, 0.5);
+  background: #9CA3AF;
 }

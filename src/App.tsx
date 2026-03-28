@@ -382,19 +382,18 @@ function formatFocusTimeLine(
   return base;
 }
 
-/** Muted urgency bar: overdue / due today → rose; 1–2d → amber; 3+d → zinc. */
 function focusForTodayRowVisuals(
   urgency: FocusForTodayPick["urgency"],
 ): { bar: string } {
   switch (urgency) {
     case "overdue":
-      return { bar: "bg-rose-900/90" };
+      return { bar: "bg-red-100" };
     case "critical":
-      return { bar: "bg-rose-800/75" };
+      return { bar: "bg-red-50" };
     case "soon":
-      return { bar: "bg-amber-800/55" };
+      return { bar: "bg-amber-50" };
     default:
-      return { bar: "bg-zinc-600/45" };
+      return { bar: "bg-[#F8FAFC]" };
   }
 }
 
@@ -653,7 +652,7 @@ function MiniDueDatePopover({
   return (
     <div
       id="mini-due-date-popover"
-      className="fixed w-[268px] rounded-xl border border-white/[0.08] bg-[#1c1c1c] shadow-[0_16px_48px_rgba(0,0,0,0.55)] p-3 z-[500]"
+      className="fixed w-[268px] rounded-lg border border-[#E5E7EB] bg-white shadow-sm p-3 z-[500]"
       style={{ top, left }}
       role="dialog"
       aria-label="Choose due date"
@@ -662,24 +661,24 @@ function MiniDueDatePopover({
         <button
           type="button"
           onClick={() => shiftMonth(-1)}
-          className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] text-sm"
+          className="w-8 h-8 rounded-lg text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-sm"
           aria-label="Previous month"
         >
           ‹
         </button>
-        <span className="text-[13px] font-semibold text-zinc-200 tabular-nums">
+        <span className="text-[13px] font-semibold text-[#111827] tabular-nums">
           {monthLabel}
         </span>
         <button
           type="button"
           onClick={() => shiftMonth(1)}
-          className="w-8 h-8 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.06] text-sm"
+          className="w-8 h-8 rounded-lg text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-sm"
           aria-label="Next month"
         >
           ›
         </button>
       </div>
-      <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] font-medium text-zinc-500 uppercase tracking-wide mb-1">
+      <div className="grid grid-cols-7 gap-y-1 text-center text-[10px] font-medium text-[#6B7280] uppercase tracking-wide mb-1">
         {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((d) => (
           <div key={d}>{d}</div>
         ))}
@@ -699,10 +698,10 @@ function MiniDueDatePopover({
               onClick={() => onSelect(iso)}
               className={`h-8 rounded-lg text-[12px] font-medium transition-colors ${
                 isSelected
-                  ? "bg-white/[0.12] text-zinc-50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12),0_0_0_1px_rgba(255,255,255,0.06)]"
+                  ? "bg-[#6366F1] text-white"
                   : isToday
-                    ? "text-blue-400 hover:bg-white/[0.06]"
-                    : "text-zinc-300 hover:bg-white/[0.06]"
+                    ? "text-[#6366F1] hover:bg-[#F8FAFC]"
+                    : "text-[#111827] hover:bg-[#F8FAFC]"
               }`}
             >
               {d}
@@ -736,10 +735,9 @@ function DefaultTasksEmptyIllustration() {
   return (
     <div className="relative w-[220px] h-[150px] mb-6">
       <div
-        className="absolute inset-0 rounded-[2rem] opacity-95"
+        className="absolute inset-0 rounded-lg opacity-95"
         style={{
-          background:
-            "radial-gradient(ellipse 80% 70% at 45% 35%, #262626 0%, #171717 75%)",
+          background: "#F8FAFC",
         }}
       />
       <svg
@@ -1055,13 +1053,13 @@ function TasksDueCalendarMonth({
   });
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-gradient-to-b from-[#111110] via-[#0e0e0e] to-[#0a0a0a] antialiased [text-rendering:optimizeLegibility]">
-      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-3.5 pb-3 border-b border-white/[0.07] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.04)]">
+    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-white antialiased [text-rendering:optimizeLegibility]">
+      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-3.5 pb-3 border-b border-[#E5E7EB]">
         <div className="min-w-0 flex items-baseline gap-2.5 flex-wrap">
-          <h2 className="text-xl sm:text-2xl font-semibold text-zinc-50 tracking-[-0.02em] tabular-nums">
+          <h2 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-[-0.02em] tabular-nums">
             {monthTitle}
           </h2>
-          <span className="text-lg sm:text-xl font-medium text-zinc-500 tabular-nums">
+          <span className="text-lg sm:text-xl font-medium text-[#6B7280] tabular-nums">
             {yearTitle}
           </span>
         </div>
@@ -1069,14 +1067,14 @@ function TasksDueCalendarMonth({
           <button
             type="button"
             onClick={onTodayMonth}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-zinc-200 bg-white/[0.07] border border-white/[0.1] shadow-[0_1px_2px_rgba(0,0,0,0.35),inset_0_1px_0_rgba(255,255,255,0.06)] hover:bg-white/[0.11] hover:border-white/[0.14] transition-all duration-150 active:scale-[0.98]"
+            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-[#111827] bg-white border border-[#E5E7EB] hover:bg-[#F8FAFC] transition-all duration-150 active:scale-[0.98]"
           >
             Today
           </button>
           <button
             type="button"
             onClick={onPrevMonth}
-            className="w-9 h-9 rounded-lg border border-white/[0.1] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] hover:border-white/[0.12] text-lg leading-none transition-all duration-150 flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.4)] active:scale-[0.97]"
+            className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-lg leading-none transition-all duration-150 flex items-center justify-center active:scale-[0.97]"
             aria-label="Previous month"
           >
             ‹
@@ -1084,7 +1082,7 @@ function TasksDueCalendarMonth({
           <button
             type="button"
             onClick={onNextMonth}
-            className="w-9 h-9 rounded-lg border border-white/[0.1] bg-[#181818] text-zinc-400 hover:text-zinc-100 hover:bg-white/[0.06] hover:border-white/[0.12] text-lg leading-none transition-all duration-150 flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.4)] active:scale-[0.97]"
+            className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-lg leading-none transition-all duration-150 flex items-center justify-center active:scale-[0.97]"
             aria-label="Next month"
           >
             ›
@@ -1093,11 +1091,11 @@ function TasksDueCalendarMonth({
       </header>
 
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="grid grid-cols-7 shrink-0 border-b border-black/50 bg-[#151515] shadow-[inset_0_-1px_0_0_rgba(255,255,255,0.05)]">
+        <div className="grid grid-cols-7 shrink-0 border-b border-[#E5E7EB] bg-[#F8FAFC]">
           {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((wd) => (
             <div
               key={wd}
-              className="py-2 text-center text-[11px] font-medium text-zinc-500 tracking-tight"
+              className="py-2 text-center text-[11px] font-medium text-[#6B7280] tracking-tight"
             >
               {wd}
             </div>
@@ -1105,7 +1103,7 @@ function TasksDueCalendarMonth({
         </div>
 
         <div
-          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#1c1c1c]"
+          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#E5E7EB]"
           style={{
             gridTemplateRows: `repeat(${rowCount}, minmax(80px, 1fr))`,
           }}
@@ -1115,10 +1113,10 @@ function TasksDueCalendarMonth({
               return (
                 <div
                   key={cell.key}
-                  className="bg-[#0f0f0f] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.03)]"
+                  className="bg-[#F8FAFC] min-h-[100px] p-1.5 flex flex-col min-w-0"
                   aria-hidden
                 >
-                  <div className="text-[11px] font-medium tabular-nums text-zinc-600 mb-1 shrink-0">
+                  <div className="text-[11px] font-medium tabular-nums text-[#D1D5DB] mb-1 shrink-0">
                     {cell.displayDay}
                   </div>
                 </div>
@@ -1140,27 +1138,27 @@ function TasksDueCalendarMonth({
             return (
               <div
                 key={cell.key}
-                className={`relative bg-[#131313] min-h-[100px] p-1.5 flex flex-col min-w-0 shadow-[inset_0_1px_0_0_rgba(255,255,255,0.045)] ${
+                className={`relative bg-white min-h-[100px] p-1.5 flex flex-col min-w-0 ${
                   isToday
-                    ? "ring-1 ring-inset ring-zinc-500/40 bg-[#161616]"
+                    ? "ring-1 ring-inset ring-[#6366F1]/30 bg-[#EEF2FF]"
                     : ""
                 }`}
               >
                 <div className="mb-1 shrink-0">
                   {isToday ? (
                     <span
-                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-zinc-700 text-[11px] font-semibold text-zinc-100 tabular-nums ring-1 ring-zinc-600/60 shadow-[0_1px_2px_rgba(0,0,0,0.35)]"
+                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-[#6366F1] text-[11px] font-semibold text-white tabular-nums"
                       title="Today"
                     >
                       {cell.day}
                     </span>
                   ) : (
-                    <span className="inline-flex text-[11px] font-semibold tabular-nums text-zinc-500 pl-0.5">
+                    <span className="inline-flex text-[11px] font-semibold tabular-nums text-[#6B7280] pl-0.5">
                       {dayLabel}
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(63,63,70,0.6)_transparent]">
+                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(209,213,219,0.6)_transparent]">
                   {visible.map((t) => (
                     <button
                       key={`${t.listId}-${t.id}`}
@@ -1170,23 +1168,23 @@ function TasksDueCalendarMonth({
                       title={`${t.categoryLabel} — ${t.text}`}
                     >
                       <span className="flex items-baseline gap-1 min-w-0 w-full">
-                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-zinc-200 leading-tight">
+                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-[#6B7280] leading-tight">
                           {t.categoryLabel}
                         </span>
                         <span
-                          className="shrink-0 text-[11px] text-zinc-500 font-light select-none"
+                          className="shrink-0 text-[11px] text-[#D1D5DB] font-light select-none"
                           aria-hidden
                         >
                           ·
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-zinc-50 leading-snug">
+                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#111827] leading-snug">
                           {t.text}
                         </span>
                       </span>
                     </button>
                   ))}
                   {more > 0 ? (
-                    <div className="text-[10px] font-medium text-zinc-500 pl-0.5 pt-0.5 tracking-tight">
+                    <div className="text-[10px] font-medium text-[#6B7280] pl-0.5 pt-0.5 tracking-tight">
                       +{more} more
                     </div>
                   ) : null}
@@ -1245,10 +1243,9 @@ type CompletedActivityEntry = {
   listLabel: string;
 };
 
-/** TickTick-style list UI: unified main-pane grey */
-const TT_MAIN_GREY = "#1a1a1a";
-const TT_INPUT_ROW = "#1f1f1f";
-const TT_ACCENT_BLUE = "#2563eb";
+const TT_MAIN_GREY = "#F8FAFC";
+const TT_INPUT_ROW = "#FFFFFF";
+const TT_ACCENT_BLUE = "#6366F1";
 
 /** Swatches for new lists (matches TickTick-style picker); `null` = no accent color */
 const LIST_COLOR_SWATCHES: (string | null)[] = [
@@ -1266,7 +1263,7 @@ const LIST_COLOR_SWATCHES: (string | null)[] = [
 
 function listAccentDotClass(color: string | null) {
   if (!color)
-    return "border border-zinc-500 bg-zinc-800/80";
+    return "border border-[#E5E7EB] bg-[#F8FAFC]";
   return "";
 }
 
@@ -4179,15 +4176,15 @@ export default function App() {
   /** Analytics heatmap — Todoist-like rounded cells; Analytics only. */
   const getHeatmapClass = (symbol: string, isCurrentDay: boolean) => {
     const base =
-      "rounded-2xl border shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-150 hover:brightness-110 hover:ring-1 hover:ring-blue-500/25 hover:z-[5]";
+      "rounded-lg border transition-all duration-150 hover:ring-1 hover:ring-[#6366F1]/25 hover:z-[5]";
     if (isCurrentDay && symbol === "⬜")
-      return `${base} bg-zinc-800/80 border-blue-500/30 ring-1 ring-blue-500/20`;
-    if (symbol === "⬜") return `${base} bg-zinc-900/40 border-zinc-800/50`;
-    if (symbol === "🔹") return `${base} bg-blue-950/60 border-blue-900/35`;
-    if (symbol === "🔷") return `${base} bg-blue-900/45 border-blue-800/30`;
-    if (symbol === "🔵") return `${base} bg-blue-700/40 border-blue-600/28`;
-    if (symbol === "🔥") return `${base} bg-blue-600/50 border-blue-500/25`;
-    return `${base} bg-zinc-900/40 border-zinc-800/50`;
+      return `${base} bg-[#EEF2FF] border-[#6366F1]/30 ring-1 ring-[#6366F1]/20`;
+    if (symbol === "⬜") return `${base} bg-[#F8FAFC] border-[#E5E7EB]`;
+    if (symbol === "🔹") return `${base} bg-[#E0E7FF] border-[#C7D2FE]`;
+    if (symbol === "🔷") return `${base} bg-[#C7D2FE] border-[#A5B4FC]`;
+    if (symbol === "🔵") return `${base} bg-[#A5B4FC] border-[#818CF8]`;
+    if (symbol === "🔥") return `${base} bg-[#818CF8] border-[#6366F1]`;
+    return `${base} bg-[#F8FAFC] border-[#E5E7EB]`;
   };
 
   const improvementDelta = useMemo(() => {
@@ -4284,7 +4281,7 @@ export default function App() {
           width:min(88vmax,1400px); height:min(88vmax,1400px);
           margin-left:calc(min(88vmax,1400px)/-2); margin-top:calc(min(88vmax,1400px)/-2);
           border-radius:50%;
-          background:radial-gradient(circle, rgba(220,235,255,0.1) 0%, rgba(140,180,220,0.04) 48%, transparent 70%);
+          background:rgba(99,102,241,0.04);
           animation:focus-zen-bloom 4.8s cubic-bezier(0.18,0.62,0.16,1) forwards;
         }
         .app-notif-item{
@@ -4297,39 +4294,11 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full ${isSimulation || isFocusSessionActive ? "bg-gradient-to-b from-gray-50 via-gray-50 to-gray-100 text-gray-900" : "bg-black text-zinc-200 antialiased"} selection:bg-blue-500/30 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full bg-white text-[#111827] selection:bg-[#6366F1]/20 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
-        {/* VIGNETTE & AURA (landing / timer only — keep app shell pure black) */}
+        {isSimulation && null}
         {isSimulation && (
-          <>
-            <div
-              className={`fixed inset-0 z-[150] pointer-events-none transition-opacity duration-1000 ${running ? "opacity-100" : "opacity-0"}`}
-              style={{
-                background:
-                  "radial-gradient(circle, transparent 40%, rgba(0,0,0,0.12) 150%)",
-              }}
-            />
-
-            <div
-              className={`fixed inset-0 pointer-events-none z-0 transition-all duration-1000 ${running ? "blur-xl opacity-20" : "blur-0 opacity-100"}`}
-            >
-              <div
-                className="absolute inset-x-0 top-0 h-screen transition-all duration-1000"
-                style={{
-                  background: `radial-gradient(circle at top, rgba(${auraColor}, 0.1), transparent 70%)`,
-                }}
-              />
-              <div
-                className="absolute inset-x-0 bottom-0 h-screen transition-all duration-1000"
-                style={{
-                  background: `radial-gradient(circle at bottom, rgba(${auraColor}, 0.3), transparent 70%)`,
-                }}
-              />
-            </div>
-          </>
-        )}
-        {isSimulation && (
-          <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-white/95 backdrop-blur-xl border-b border-gray-200">
+          <nav className="sticky top-0 z-[500] w-full px-4 md:px-8 py-2 md:py-3 bg-white/95 backdrop-blur-xl border-b border-[#E5E7EB]">
             <div className="w-full pointer-events-auto">
               <div className="flex items-center justify-between px-4 md:px-6 py-2 md:py-2.5">
                 {/* Left: Logo as home button */}
@@ -4341,7 +4310,7 @@ export default function App() {
                       behavior: "smooth",
                     })
                   }
-                  className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-gray-100 hover:scale-[1.02] transition-all duration-200"
+                  className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-[#F1F5F9] hover:scale-[1.02] transition-all duration-200"
                 >
                   <div className="w-8 h-8 rounded-xl overflow-hidden shadow-md">
                     <img
@@ -4350,7 +4319,7 @@ export default function App() {
                       className="w-8 h-8 object-cover"
                     />
                   </div>
-                  <span className="hidden sm:inline text-xs md:text-sm font-bold tracking-[0.18em] uppercase text-gray-700 font-sans">
+                  <span className="hidden sm:inline text-[13px] font-semibold tracking-[0.18em] uppercase text-[#111827] font-sans">
                     TunnelVision
                   </span>
                 </button>
@@ -4373,10 +4342,10 @@ export default function App() {
                             cur === "madeFor" ? null : "madeFor",
                           )
                         }
-                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-[#111827] font-semibold tracking-[0.18em] transition-all duration-200 ${
                           openDropdown === "madeFor"
-                            ? "bg-gray-100 text-gray-900"
-                            : "hover:bg-gray-100 hover:text-gray-900"
+                            ? "bg-[#F1F5F9] text-[#111827]"
+                            : "hover:bg-[#F1F5F9] hover:text-[#111827]"
                         }`}
                       >
                         <span className="leading-none">Made For</span>
@@ -4385,9 +4354,9 @@ export default function App() {
                         </span>
                       </button>
                       {openDropdown === "madeFor" && (
-                        <div className="absolute right-0 mt-4 w-[480px] rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="absolute right-0 mt-4 w-[480px] rounded-lg bg-white border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] overflow-hidden animate-fade-in">
                           <div className="px-6 py-6 space-y-4">
-                            <p className="text-[10px] uppercase tracking-[0.28em] text-gray-500">
+                            <p className="text-[10px] uppercase tracking-[0.28em] text-[#6B7280]">
                               Made For
                             </p>
                             <div className="grid md:grid-cols-3 gap-4">
@@ -4397,15 +4366,15 @@ export default function App() {
                                   scrollToSection(performanceRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+                                className="group flex flex-col items-start rounded-lg bg-[#F8FAFC] border border-[#E5E7EB] px-4 py-4 text-left hover:bg-[#F1F5F9] hover:-translate-y-0.5 transition-all duration-200"
                               >
-                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-500/30 text-[10px]">
+                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6366F1]/20 text-[10px]">
                                   ⚡
                                 </span>
-                                <span className="text-sm font-semibold text-gray-900">
+                                <span className="text-sm font-semibold text-[#111827]">
                                   Performance
                                 </span>
-                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
+                                <span className="mt-1 text-xs text-[#6B7280] leading-relaxed">
                                   Track your task performance and push your
                                   limits.
                                 </span>
@@ -4416,15 +4385,15 @@ export default function App() {
                                   scrollToSection(habitRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+                                className="group flex flex-col items-start rounded-lg bg-[#F8FAFC] border border-[#E5E7EB] px-4 py-4 text-left hover:bg-[#F1F5F9] hover:-translate-y-0.5 transition-all duration-200"
                               >
-                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/25 text-[10px]">
+                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6366F1]/15 text-[10px]">
                                   🌱
                                 </span>
-                                <span className="text-sm font-semibold text-gray-900">
+                                <span className="text-sm font-semibold text-[#111827]">
                                   Habit Building
                                 </span>
-                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
+                                <span className="mt-1 text-xs text-[#6B7280] leading-relaxed">
                                   Turn discipline into a daily habit.
                                 </span>
                               </button>
@@ -4434,15 +4403,15 @@ export default function App() {
                                   scrollToSection(timeRef);
                                   setOpenDropdown(null);
                                 }}
-                                className="group flex flex-col items-start rounded-2xl bg-gray-50 border border-gray-200 px-4 py-4 text-left hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md transition-all duration-200"
+                                className="group flex flex-col items-start rounded-lg bg-[#F8FAFC] border border-[#E5E7EB] px-4 py-4 text-left hover:bg-[#F1F5F9] hover:-translate-y-0.5 transition-all duration-200"
                               >
-                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-purple-500/25 text-[10px]">
+                                <span className="mb-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-[#6366F1]/15 text-[10px]">
                                   ⏱
                                 </span>
-                                <span className="text-sm font-semibold text-gray-900">
+                                <span className="text-sm font-semibold text-[#111827]">
                                   Time Management
                                 </span>
-                                <span className="mt-1 text-xs text-gray-500 leading-relaxed">
+                                <span className="mt-1 text-xs text-[#6B7280] leading-relaxed">
                                   Take control of your schedule and priorities.
                                 </span>
                               </button>
@@ -4466,10 +4435,10 @@ export default function App() {
                             cur === "resources" ? null : "resources",
                           )
                         }
-                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-gray-700 font-semibold tracking-[0.18em] transition-all duration-200 ${
+                        className={`relative inline-flex items-center gap-1 px-3 py-1 rounded-full text-[#111827] font-semibold tracking-[0.18em] transition-all duration-200 ${
                           openDropdown === "resources"
-                            ? "bg-gray-100 text-gray-900"
-                            : "hover:bg-gray-100 hover:text-gray-900"
+                            ? "bg-[#F1F5F9] text-[#111827]"
+                            : "hover:bg-[#F1F5F9] hover:text-[#111827]"
                         }`}
                       >
                         <span className="leading-none">Resources</span>
@@ -4478,14 +4447,14 @@ export default function App() {
                         </span>
                       </button>
                       {openDropdown === "resources" && (
-                        <div className="absolute right-0 mt-4 w-64 rounded-3xl bg-white border border-gray-200 shadow-2xl backdrop-blur-2xl overflow-hidden animate-fade-in">
+                        <div className="absolute right-0 mt-4 w-64 rounded-lg bg-white border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] overflow-hidden animate-fade-in">
                           <div className="py-3">
                             {["Guides", "Tutorials", "Documentation"].map(
                               (item) => (
                                 <button
                                   key={item}
                                   type="button"
-                                  className="w-full text-left px-4 py-2.5 text-[12px] font-medium text-gray-700 hover:bg-gray-100 transition-colors duration-150"
+                                  className="w-full text-left px-4 py-2.5 text-[12px] font-medium text-[#111827] hover:bg-[#F1F5F9] transition-colors duration-150"
                                 >
                                   {item}
                                 </button>
@@ -4501,10 +4470,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleGetStarted}
-                    className="hidden sm:inline-flex group relative px-10 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                    className="hidden sm:inline-flex group relative px-10 py-3 bg-[#6366F1] rounded-lg overflow-hidden transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                    <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                    <span className="relative text-[13px] font-semibold tracking-wide uppercase text-white">
                       Get Started
                     </span>
                   </button>
@@ -4512,51 +4480,51 @@ export default function App() {
                   {/* Mobile hamburger */}
                   <button
                     type="button"
-                    className="sm:hidden inline-flex items-center justify-center rounded-full border border-gray-200 bg-gray-50 w-9 h-9 hover:bg-gray-100 transition-all duration-200"
+                    className="sm:hidden inline-flex items-center justify-center rounded-full border border-[#E5E7EB] bg-[#F8FAFC] w-9 h-9 hover:bg-[#F1F5F9] transition-all duration-200"
                     onClick={() => setIsMobileMenuOpen((v) => !v)}
                   >
                     <span className="sr-only">Toggle navigation</span>
                     <div className="flex flex-col gap-1.5">
-                      <span className="w-4 h-0.5 bg-gray-700 rounded-full" />
-                      <span className="w-4 h-0.5 bg-gray-700 rounded-full" />
+                      <span className="w-4 h-0.5 bg-[#111827] rounded-full" />
+                      <span className="w-4 h-0.5 bg-[#111827] rounded-full" />
                     </div>
                   </button>
                 </div>
 
                 {/* Mobile menu panel */}
                 {isMobileMenuOpen && (
-                  <div className="sm:hidden mt-3 rounded-3xl bg-white border border-gray-200 backdrop-blur-2xl shadow-xl px-4 py-4 space-y-4 text-[11px] tracking-[0.18em] uppercase">
+                  <div className="sm:hidden mt-3 rounded-lg bg-white border border-[#E5E7EB] shadow-[0_4px_12px_rgba(0,0,0,0.08)] px-4 py-4 space-y-4 text-[11px] tracking-[0.18em] uppercase">
                     <div className="space-y-2">
-                      <p className="text-[10px] text-gray-500">Made For</p>
+                      <p className="text-[10px] text-[#6B7280]">Made For</p>
                       <button
                         type="button"
                         onClick={() => scrollToSection(performanceRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg bg-[#F8FAFC] text-[#111827] hover:bg-[#F1F5F9] transition-colors"
                       >
                         Performance
                       </button>
                       <button
                         type="button"
                         onClick={() => scrollToSection(habitRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg bg-[#F8FAFC] text-[#111827] hover:bg-[#F1F5F9] transition-colors"
                       >
                         Habit Building
                       </button>
                       <button
                         type="button"
                         onClick={() => scrollToSection(timeRef)}
-                        className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                        className="w-full text-left px-3 py-2 rounded-lg bg-[#F8FAFC] text-[#111827] hover:bg-[#F1F5F9] transition-colors"
                       >
                         Time Management
                       </button>
                     </div>
                     <div className="space-y-2 pt-2">
-                      <p className="text-[10px] text-gray-500">Resources</p>
+                      <p className="text-[10px] text-[#6B7280]">Resources</p>
                       {["Guides", "Tutorials", "Documentation"].map((item) => (
                         <button
                           key={item}
                           type="button"
-                          className="w-full text-left px-3 py-2 rounded-2xl bg-gray-50 text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="w-full text-left px-3 py-2 rounded-lg bg-[#F8FAFC] text-[#111827] hover:bg-[#F1F5F9] transition-colors"
                         >
                           {item}
                         </button>
@@ -4565,10 +4533,9 @@ export default function App() {
                     <button
                       type="button"
                       onClick={handleGetStarted}
-                      className="w-full mt-3 group relative px-6 py-3 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                      className="w-full mt-3 group relative px-6 py-3 bg-[#6366F1] rounded-lg overflow-hidden transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                     >
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                      <span className="relative text-[10px] font-black tracking-[0.3em] uppercase text-white">
+                      <span className="relative text-[13px] font-semibold tracking-wide uppercase text-white">
                         Get Started
                       </span>
                     </button>
@@ -4595,8 +4562,8 @@ export default function App() {
               }`}
               aria-hidden
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-sky-200/35 via-[#e0f2fe]/25 to-indigo-100/15 focus-zen-mist-overlay" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-white/20 opacity-90" />
+              <div className="absolute inset-0 bg-[#EEF2FF]/60 focus-zen-mist-overlay" />
+              <div className="absolute inset-0 bg-white/40 opacity-90" />
               <div
                 className="absolute w-0 h-0 overflow-visible"
                 style={{
@@ -4616,49 +4583,49 @@ export default function App() {
               </div>
             </div>
           )}
-          <div className="h-screen min-h-0 flex flex-col w-full bg-white text-zinc-800 overflow-hidden">
+          <div className="h-screen min-h-0 flex flex-col w-full bg-white text-[#111827] overflow-hidden">
             {/* ── Global Top Bar ── */}
-            <div className="shrink-0 h-[40px] flex items-center justify-center border-b border-zinc-200/50 bg-white px-4 z-[260]">
+            <div className="shrink-0 h-[40px] flex items-center justify-center border-b border-[#E5E7EB] bg-white px-4 z-[260]">
               <div className="relative w-full max-w-[480px]">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[30px] pl-9 pr-9 bg-zinc-50/80 rounded-md text-[12.5px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-zinc-200/70 hover:border-zinc-300 focus:border-violet-400 focus:ring-1 focus:ring-violet-100 focus:bg-white transition-all" />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-[#6B7280] pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[30px] pl-9 pr-9 bg-[#F8FAFC] rounded-lg text-[13px] text-[#111827] placeholder:text-[#6B7280] outline-none border border-[#E5E7EB] hover:border-[#D1D5DB] focus:border-[#6366F1] focus:ring-1 focus:ring-[#6366F1]/10 focus:bg-white transition-all" />
                 <img src="/favicon.svg" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-[14px] h-[14px] opacity-35" alt="" />
               </div>
             </div>
 
             <div className="flex-1 min-h-0 flex overflow-hidden">
-            {/* ── Icon Rail (far-left, ClickUp style) ── */}
-            <aside className="h-full w-[48px] bg-[#1e1e22] flex flex-col items-center justify-between py-4 z-[250] shrink-0">
+            {/* ── Icon Rail (far-left) ── */}
+            <aside className="h-full w-[48px] bg-[#F8FAFC] flex flex-col items-center justify-between py-4 z-[250] shrink-0 border-r border-[#E5E7EB]">
               <div className="flex flex-col items-center gap-3">
-                <button type="button" onClick={() => handleSidebarNavClick("tasks")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]" style={{ background: activeView === "tasks" ? "rgba(255,255,255,0.1)" : undefined }}>
+                <button type="button" onClick={() => handleSidebarNavClick("tasks")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60" style={{ background: activeView === "tasks" ? "#EEF2FF" : undefined }}>
                   {activeView === "tasks" && <span className="icon-rail-active-pill" />}
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={activeView === "tasks" ? "#e4e4e7" : "none"} stroke={activeView === "tasks" ? "none" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{activeView === "tasks" ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /> : <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />}</svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Home</div></div>
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill={activeView === "tasks" ? "#6366F1" : "none"} stroke={activeView === "tasks" ? "none" : "#6B7280"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">{activeView === "tasks" ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /> : <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />}</svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Home</div></div>
                 </button>
-                <button ref={focusNavButtonRef} type="button" onClick={handleStartFocusSession} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]">
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Focus</div></div>
+                <button ref={focusNavButtonRef} type="button" onClick={handleStartFocusSession} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60">
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Focus</div></div>
                 </button>
-                <button type="button" onClick={() => handleSidebarNavClick("calendar")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]" style={{ background: activeView === "calendar" ? "rgba(255,255,255,0.1)" : undefined }}>
+                <button type="button" onClick={() => handleSidebarNavClick("calendar")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60" style={{ background: activeView === "calendar" ? "#EEF2FF" : undefined }}>
                   {activeView === "calendar" && <span className="icon-rail-active-pill" />}
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "calendar" ? "#e4e4e7" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Calendar</div></div>
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "calendar" ? "#6366F1" : "#6B7280"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Calendar</div></div>
                 </button>
-                <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]" style={{ background: activeView === "analytics" ? "rgba(255,255,255,0.1)" : undefined }}>
+                <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60" style={{ background: activeView === "analytics" ? "#EEF2FF" : undefined }}>
                   {activeView === "analytics" && <span className="icon-rail-active-pill" />}
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "analytics" ? "#e4e4e7" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><polyline points="5 15 10 10 14 14 19 8" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Stats</div></div>
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke={activeView === "analytics" ? "#6366F1" : "#6B7280"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><polyline points="5 15 10 10 14 14 19 8" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Stats</div></div>
                 </button>
               </div>
               <div className="flex flex-col items-center gap-3">
-                <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]">
-                  {hasUnreadNotifications && (<span className="absolute top-1 right-1 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-[#1e1e22]" aria-hidden />)}
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 16v-5a6 6 0 00-12 0v5" /><path d="M5 16h14" /><path d="M10 19a2 2 0 004 0" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Notifications</div></div>
+                <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60">
+                  {hasUnreadNotifications && (<span className="absolute top-1 right-1 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-[#F8FAFC]" aria-hidden />)}
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M18 16v-5a6 6 0 00-12 0v5" /><path d="M5 16h14" /><path d="M10 19a2 2 0 004 0" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Notifications</div></div>
                 </button>
-                <button type="button" onClick={() => {}} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-white/[0.08]">
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-md bg-zinc-900 shadow-lg border border-white/10 px-2.5 py-1 text-[11px] text-zinc-200 whitespace-nowrap">Settings</div></div>
+                <button type="button" onClick={() => {}} className="group relative flex items-center justify-center w-9 h-9 rounded-lg transition-colors duration-150 hover:bg-[#E5E7EB]/60">
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="#6B7280" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+6px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#111827] shadow-sm px-2.5 py-1 text-[11px] text-white whitespace-nowrap">Settings</div></div>
                 </button>
               </div>
             </aside>
@@ -4669,14 +4636,14 @@ export default function App() {
                 id="app-notifications-panel"
                 role="dialog"
                 aria-label="Notifications"
-                className="pointer-events-auto fixed z-[280] w-[min(320px,calc(100vw-16px))] max-h-[min(420px,calc(100vh-24px))] flex flex-col rounded-2xl border border-white/[0.08] bg-[#1e1e22] shadow-[0_16px_48px_rgba(0,0,0,0.55),0_0_0_1px_rgba(0,0,0,0.35)] overflow-hidden"
+                className="pointer-events-auto fixed z-[280] w-[min(320px,calc(100vw-16px))] max-h-[min(420px,calc(100vh-24px))] flex flex-col rounded-lg border border-[#E5E7EB] bg-white shadow-sm overflow-hidden"
                 style={{
                   left: notificationsPanelPos.left,
                   bottom: notificationsPanelPos.bottom,
                 }}
               >
-                <div className="shrink-0 px-4 pt-3.5 pb-2.5 border-b border-white/[0.06]">
-                  <h2 className="text-[13px] font-semibold text-zinc-100 tracking-tight">
+                <div className="shrink-0 px-4 pt-3.5 pb-2.5 border-b border-[#E5E7EB]">
+                  <h2 className="text-[13px] font-semibold text-[#111827] tracking-tight">
                     Notifications
                   </h2>
                 </div>
@@ -4686,10 +4653,10 @@ export default function App() {
                       <div className="text-[28px] mb-3 opacity-90" aria-hidden>
                         📣
                       </div>
-                      <p className="text-[13px] font-semibold text-zinc-100">
+                      <p className="text-[13px] font-semibold text-[#111827]">
                         No notifications
                       </p>
-                      <p className="text-[11px] text-zinc-500 mt-1.5 max-w-[220px] leading-snug">
+                      <p className="text-[11px] text-[#6B7280] mt-1.5 max-w-[220px] leading-snug">
                         Overdue alerts and due-date reminders for tests,
                         projects, and long-term work appear here.
                       </p>
@@ -4699,16 +4666,16 @@ export default function App() {
                       {notificationItems.map((n, idx) => (
                         <li
                           key={n.id}
-                          className="border-b border-white/[0.05] last:border-b-0"
+                          className="border-b border-[#E5E7EB] last:border-b-0"
                         >
                           <div
-                            className={`px-3.5 py-3 hover:bg-white/[0.04] transition-colors rounded-xl mx-1.5 my-1 ${!n.read ? "app-notif-item--unread" : "app-notif-item"}`}
+                            className={`px-3.5 py-3 hover:bg-[#F8FAFC] transition-colors rounded-lg mx-1.5 my-1 ${!n.read ? "app-notif-item--unread" : "app-notif-item"}`}
                             style={{ animationDelay: `${idx * 45}ms` }}
                           >
-                            <p className="text-[15px] leading-snug text-zinc-50 font-semibold tracking-tight">
+                            <p className="text-[13px] leading-snug text-[#111827] font-semibold tracking-tight">
                               {n.message}
                             </p>
-                            <p className="text-[12px] text-zinc-500 mt-2.5 tabular-nums">
+                            <p className="text-[12px] text-[#6B7280] mt-2.5 tabular-nums">
                               {formatDueButtonLabel(n.dueDate)}
                             </p>
                           </div>
@@ -4725,7 +4692,7 @@ export default function App() {
               activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-full w-[300px] bg-white flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-zinc-200/70 ${
+                  className={`h-full w-[300px] bg-[#F8FAFC] flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-[#E5E7EB] ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
@@ -4734,8 +4701,8 @@ export default function App() {
                   <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
                     {/* Home header with + button like ClickUp */}
                     <div className="flex items-center justify-between px-5 pt-5 pb-2">
-                      <h2 className="text-[16px] font-bold text-zinc-900">Home</h2>
-                      <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors" aria-label="Add new">
+                      <h2 className="text-[15px] font-semibold text-[#111827]">Home</h2>
+                      <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="flex items-center justify-center w-6 h-6 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F1F5F9] transition-colors" aria-label="Add new">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
                     </div>
@@ -4750,7 +4717,7 @@ export default function App() {
                         <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
                         <span className="flex-1 text-left">Focus Today</span>
                         {focusForTodayItems.length > 0 && (
-                          <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{focusForTodayItems.length}</span>
+                          <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-[#6366F1] text-white text-[10px] font-semibold flex items-center justify-center px-1">{focusForTodayItems.length}</span>
                         )}
                       </button>
 
@@ -4762,7 +4729,7 @@ export default function App() {
                       >
                         <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
                         <span className="flex-1 text-left">My Tasks</span>
-                        {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-violet-500 text-white text-[10px] font-bold flex items-center justify-center px-1">{total}</span> : null; })()}
+                        {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="shrink-0 min-w-[20px] h-[20px] rounded-full bg-[#6366F1] text-white text-[10px] font-semibold flex items-center justify-center px-1">{total}</span> : null; })()}
                       </button>
 
                       {/* Schedule - calendar icon */}
@@ -4776,8 +4743,8 @@ export default function App() {
 
                     {/* Lists section - TickTick flat style */}
                     <div className="flex items-center justify-between px-4 pt-0.5 pb-1">
-                      <span className="text-[10.5px] font-semibold text-zinc-400 uppercase tracking-wider select-none">Lists</span>
-                      <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="text-zinc-400 hover:text-zinc-600 transition-colors" aria-expanded={userListsSectionExpanded}>
+                      <span className="text-[10.5px] font-semibold text-[#9CA3AF] uppercase tracking-wider select-none">Lists</span>
+                      <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="text-[#9CA3AF] hover:text-[#6B7280] transition-colors" aria-expanded={userListsSectionExpanded}>
                         <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                       </button>
                     </div>
@@ -4785,14 +4752,14 @@ export default function App() {
                       <div className="min-h-0 overflow-hidden">
                         <div className="flex flex-col overflow-y-auto max-h-[280px]">
                           {todayLists.map((list) => (
-                            <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-2.5 py-[7px] px-4 text-[13.5px] transition-colors duration-100 cursor-pointer border-l-[3px] ${selectedListId === list.id ? "border-l-violet-500 bg-violet-50/50 text-zinc-900 font-medium" : "border-l-transparent text-zinc-600 hover:bg-zinc-50"}`}>
+                            <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-2.5 py-[8px] px-4 text-[13px] transition-colors duration-100 cursor-pointer border-l-[3px] ${selectedListId === list.id ? "border-l-[#6366F1] bg-[#EEF2FF] text-[#111827] font-medium" : "border-l-transparent text-[#6B7280] hover:bg-white"}`}>
                               <span className="text-[14px] shrink-0">{list.icon || "📋"}</span>
                               <span className="truncate flex-1">{list.label}</span>
                               {list.color && <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: list.color }} aria-hidden />}
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-400 rounded w-5 h-5 flex items-center justify-center hover:bg-zinc-200/60 text-[10px] shrink-0" aria-label="List menu">•••</button>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-[#9CA3AF] rounded w-5 h-5 flex items-center justify-center hover:bg-[#E5E7EB]/60 text-[10px] shrink-0" aria-label="List menu">•••</button>
                               {openListMenuId === list.id && (
-                                <div ref={listMenuRef} className="absolute right-2 top-full mt-1 w-[140px] rounded-lg bg-white border border-zinc-200 shadow-[0_8px_24px_rgba(0,0,0,0.12)] overflow-hidden z-10">
-                                  <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[12px] text-zinc-600 hover:bg-zinc-50 transition-colors">Delete List</button>
+                                <div ref={listMenuRef} className="absolute right-2 top-full mt-1 w-[140px] rounded-lg bg-white border border-[#E5E7EB] shadow-sm overflow-hidden z-10">
+                                  <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[13px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors">Delete List</button>
                                 </div>
                               )}
                             </div>
@@ -4804,7 +4771,7 @@ export default function App() {
                     <div className="flex-1 min-h-[24px]" />
                   </div>
 
-                  <div className="shrink-0 border-t border-zinc-200/70 px-2 py-2">
+                  <div className="shrink-0 border-t border-[#E5E7EB] px-2 py-2">
                     <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "completed" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setCollapsedCompletedDates({}); setTodayMainMode("completed"); }} className={`sidebar-nav-item w-full ${todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}>
                       <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
                       <span>Completed</span>
@@ -4824,7 +4791,7 @@ export default function App() {
                     setIsTodayPanelCollapsed(false);
                     setIsTodayPanelAnimatingOut(false);
                   }}
-                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-zinc-50 border-r border-zinc-200/70 text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors"
+                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#F8FAFC] border-r border-[#E5E7EB] text-[#6B7280] hover:text-[#111827] hover:bg-white transition-colors"
                   aria-label="Expand lists sidebar"
                   title="Show lists"
                 >
@@ -4844,7 +4811,7 @@ export default function App() {
             {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 min-h-0 h-full flex flex-col bg-zinc-50 ${
+              className={`flex-1 min-h-0 h-full flex flex-col bg-[#F8FAFC] ${
                 activeView === "tasks" &&
                 (todayMainMode === "tasks" || todayMainMode === "completed" || todayMainMode === "focus-today")
                   ? "overflow-hidden"
@@ -4863,23 +4830,23 @@ export default function App() {
                 {activeView === "tasks" && todayMainMode === "focus-today" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     {/* Focus Today header */}
-                    <div className="shrink-0 px-5 pt-2.5 pb-2.5 border-b border-zinc-100">
+                    <div className="shrink-0 px-5 pt-2.5 pb-2.5 border-b border-[#E5E7EB]">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></span>
-                          <h2 className="text-[15px] font-semibold text-zinc-900 leading-none">Focus Today</h2>
+                          <span className="w-5 h-5 rounded-lg bg-[#6366F1] flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></span>
+                          <h2 className="text-[15px] font-semibold text-[#111827] leading-none">Focus Today</h2>
                         </div>
                         {focusForTodayItems.length > 0 && (
-                          <button type="button" onClick={handleFocusForTodayStartSession} className="rounded-md bg-violet-600 hover:bg-violet-700 px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors">Start Focus Session</button>
+                          <button type="button" onClick={handleFocusForTodayStartSession} className="rounded-lg bg-[#6366F1] hover:bg-[#4f46e5] px-3.5 py-1.5 text-[13px] font-semibold text-white transition-colors">Start Focus Session</button>
                         )}
                       </div>
                     </div>
 
                     {/* Table header */}
-                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-zinc-100 bg-zinc-50/30 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">
+                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-[#E5E7EB] bg-[#F8FAFC] text-[10.5px] font-semibold uppercase tracking-wider text-[#6B7280]">
                       <div className="w-[28px] shrink-0" />
                       <div className="flex-1 min-w-0">Name</div>
-                      <div className="w-[120px] shrink-0 text-center">Priority <span className="text-violet-500 font-bold">AI</span></div>
+                      <div className="w-[120px] shrink-0 text-center">Priority <span className="text-[#6366F1] font-semibold">AI</span></div>
                       <div className="w-[120px] shrink-0 text-center">Class</div>
                       <div className="w-[80px] shrink-0 text-center">Time</div>
                     </div>
@@ -4898,8 +4865,8 @@ export default function App() {
                             <circle cx="148" cy="50" r="5" fill="#fbbf24" opacity="0.5" />
                             <circle cx="52" cy="55" r="3.5" fill="#c4b5fd" opacity="0.5" />
                           </svg>
-                          <p className="text-[14px] font-semibold text-zinc-600">No focus items for today</p>
-                          <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
+                          <p className="text-[14px] font-semibold text-[#6B7280]">No focus items for today</p>
+                          <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
                         </div>
                       ) : (
                         <div className="flex flex-col">
@@ -4918,25 +4885,25 @@ export default function App() {
                             const showEstimate = focusEstimatePromptKeys.has(`${pick.listId}:${pick.taskId}`);
                             return (
                               <div key={`${pick.listId}:${pick.taskId}`}>
-                                <button type="button" onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)} className="flex items-center w-full h-[36px] px-6 text-left hover:bg-zinc-50 transition-colors border-b border-zinc-100">
+                                <button type="button" onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)} className="flex items-center w-full h-[36px] px-6 text-left hover:bg-[#F8FAFC] transition-colors border-b border-[#E5E7EB]">
                                   <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                    <span className={`w-[8px] h-[8px] rounded-full ${pick.urgency === "overdue" || pick.urgency === "critical" ? "bg-red-500" : pick.urgency === "soon" ? "bg-orange-400" : "bg-zinc-300"}`} />
+                                    <span className={`w-[8px] h-[8px] rounded-full ${pick.urgency === "overdue" || pick.urgency === "critical" ? "bg-red-500" : pick.urgency === "soon" ? "bg-orange-400" : "bg-[#D1D5DB]"}`} />
                                   </div>
-                                  <div className="flex-1 min-w-0 text-[13px] font-medium text-zinc-800 truncate">{pick.displayTitle}</div>
+                                  <div className="flex-1 min-w-0 text-[13px] font-medium text-[#111827] truncate">{pick.displayTitle}</div>
                                   <div className={`w-[120px] shrink-0 flex items-center justify-center gap-1 text-[12px] ${priorityLabel.color}`}>
                                     <span className="text-[11px]">{priorityLabel.flag}</span>
                                     <span className="font-medium">{priorityLabel.text}</span>
                                   </div>
-                                  <div className="w-[120px] shrink-0 text-center text-[12px] text-zinc-400">{tagLabel}</div>
-                                  <div className="w-[80px] shrink-0 text-center text-[11px] text-zinc-400 tabular-nums">{timeLine}</div>
+                                  <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">{tagLabel}</div>
+                                  <div className="w-[80px] shrink-0 text-center text-[11px] text-[#9CA3AF] tabular-nums">{timeLine}</div>
                                 </button>
                                 {showEstimate && (
                                   <div className="pb-2 pl-14 pr-6 flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
-                                    <span className="text-[10px] text-zinc-400">Est:</span>
+                                    <span className="text-[10px] text-[#9CA3AF]">Est:</span>
                                     {([[15, "15m"], [30, "30m"], [60, "1h"], [120, "2h"]] as const).map(([mins, lab]) => (
-                                      <button key={mins} type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, mins); }} className="rounded-md border border-zinc-200 bg-white px-2 py-0.5 text-[10px] font-medium text-zinc-500 hover:text-zinc-700 hover:border-zinc-300 transition-colors disabled:opacity-40">{lab}</button>
+                                      <button key={mins} type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, mins); }} className="rounded-md border border-[#E5E7EB] bg-white px-2 py-0.5 text-[10px] font-medium text-[#6B7280] hover:text-[#111827] hover:border-[#D1D5DB] transition-colors disabled:opacity-40">{lab}</button>
                                     ))}
-                                    <button type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, "skip"); }} className="text-[10px] text-zinc-400 hover:text-zinc-600 transition-colors disabled:opacity-40">Skip</button>
+                                    <button type="button" disabled={isSimulation} onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleFocusEstimateInline(pick.listId, pick.taskId, "skip"); }} className="text-[10px] text-[#9CA3AF] hover:text-[#6B7280] transition-colors disabled:opacity-40">Skip</button>
                                   </div>
                                 )}
                               </div>
@@ -4948,39 +4915,39 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <header className="shrink-0 flex items-center gap-3 px-5 h-[40px] border-b border-zinc-100">
-                      <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
+                    <header className="shrink-0 flex items-center gap-3 px-5 h-[40px] border-b border-[#E5E7EB]">
+                      <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
                         <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
                       </button>
                       <span className="text-[15px]">✅</span>
-                      <h2 className="text-[15px] font-semibold text-zinc-900 tracking-tight">Completed</h2>
+                      <h2 className="text-[15px] font-semibold text-[#111827] tracking-tight">Completed</h2>
                     </header>
                     <div className="flex-1 min-h-0 overflow-y-auto">
                       {completedGroups.length === 0 ? (
                         <div className="flex flex-col items-center justify-center min-h-[280px]">
                           <svg className="w-[80px] h-[80px] mb-3 opacity-70" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
-                          <p className="text-[14px] font-medium text-zinc-600">No completed tasks yet</p>
-                          <p className="text-[12px] text-zinc-400 mt-0.5">Complete some tasks and they'll show up here</p>
+                          <p className="text-[14px] font-medium text-[#6B7280]">No completed tasks yet</p>
+                          <p className="text-[12px] text-[#9CA3AF] mt-0.5">Complete some tasks and they'll show up here</p>
                         </div>
                       ) : (
                         <div>
                           {completedGroups.map((group) => {
                             const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
                             return (
-                              <div key={group.dateStr} className="border-b border-zinc-100">
-                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 px-5 py-2 text-left hover:bg-zinc-50 transition-colors">
-                                  <svg className={`w-3 h-3 text-zinc-400 transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="flex-1 text-[13px] font-semibold text-zinc-800">{group.label}</span>
-                                  <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{group.items.length}</span>
+                              <div key={group.dateStr} className="border-b border-[#E5E7EB]">
+                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 px-5 py-2 text-left hover:bg-[#F8FAFC] transition-colors">
+                                  <svg className={`w-3 h-3 text-[#9CA3AF] transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                                  <span className="flex-1 text-[13px] font-semibold text-[#111827]">{group.label}</span>
+                                  <span className="text-[11px] text-[#9CA3AF] font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
-                                  <div className="divide-y divide-zinc-50">
+                                  <div className="divide-y divide-[#E5E7EB]">
                                     {group.items.map((item) => (
-                                      <div key={item.key} className="flex items-center gap-2.5 px-5 py-2 pl-12 hover:bg-zinc-50/50 transition-colors">
+                                      <div key={item.key} className="flex items-center gap-2.5 px-5 py-2 pl-12 hover:bg-[#F8FAFC]/50 transition-colors">
                                         <span className="shrink-0 w-[16px] h-[16px] rounded-full bg-emerald-500 flex items-center justify-center"><span className="text-white text-[9px] leading-none">✓</span></span>
-                                        <span className="flex-1 min-w-0 text-[13px] text-zinc-400 line-through truncate">{item.taskName}</span>
-                                        <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">{item.minutes}m</span>
-                                        <span className="shrink-0 text-[10px] text-zinc-400 truncate max-w-[100px]">{item.listLabel}</span>
+                                        <span className="flex-1 min-w-0 text-[13px] text-[#9CA3AF] line-through truncate">{item.taskName}</span>
+                                        <span className="shrink-0 text-[11px] text-[#9CA3AF] tabular-nums">{item.minutes}m</span>
+                                        <span className="shrink-0 text-[10px] text-[#9CA3AF] truncate max-w-[100px]">{item.listLabel}</span>
                                       </div>
                                     ))}
                                   </div>
@@ -4995,10 +4962,10 @@ export default function App() {
                 ) : activeView === "tasks" && todayMainMode === "tasks" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     {/* ── "My Tasks" title + category tabs (ClickUp style) ── */}
-                    <div className="shrink-0 px-5 pt-2.5 pb-0 border-b border-zinc-100">
+                    <div className="shrink-0 px-5 pt-2.5 pb-0 border-b border-[#E5E7EB]">
                       <div className="flex items-center gap-2 mb-1.5">
-                        <span className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
-                        <h2 className="text-[15px] font-semibold text-zinc-900 leading-none">My Tasks</h2>
+                        <span className="w-5 h-5 rounded-lg bg-[#6366F1] flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
+                        <h2 className="text-[15px] font-semibold text-[#111827] leading-none">My Tasks</h2>
                       </div>
                       <div className="flex items-center -ml-1">
                         {[
@@ -5010,21 +4977,20 @@ export default function App() {
                         ].map((tab) => {
                           const isActive = selectedListId === tab.id;
                           return (
-                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1 px-2.5 py-1.5 text-[12.5px] font-medium transition-colors duration-100 ${isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"}`}>
+                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1 px-2.5 py-1.5 text-[13px] font-medium transition-colors duration-100 ${isActive ? "text-[#111827]" : "text-[#6B7280] hover:text-[#111827]"}`}>
                               <span className="text-[11px]">{tab.emoji}</span>
                               <span>{tab.label}</span>
-                              {isActive && <span className="absolute bottom-0 left-1.5 right-1.5 h-[2px] bg-violet-500 rounded-full" />}
+                              {isActive && <span className="absolute bottom-0 left-1.5 right-1.5 h-[2px] bg-[#6366F1] rounded-full" />}
                             </button>
                           );
                         })}
                       </div>
                     </div>
 
-                    {/* ── Table Header (ClickUp style: Name / Priority AI / Class) ── */}
-                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-zinc-100 bg-zinc-50/30 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">
+                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-[#E5E7EB] bg-[#F8FAFC] text-[10.5px] font-semibold uppercase tracking-wider text-[#6B7280]">
                       <div className="w-[28px] shrink-0" />
                       <div className="flex-1 min-w-0">Name</div>
-                      <div className="w-[120px] shrink-0 text-center">Priority <span className="text-violet-500 font-bold">AI</span></div>
+                      <div className="w-[120px] shrink-0 text-center">Priority <span className="text-[#6366F1] font-semibold">AI</span></div>
                       <div className="w-[120px] shrink-0 text-center">Class</div>
                       <div className="w-[32px] shrink-0" />
                     </div>
@@ -5034,7 +5000,7 @@ export default function App() {
                       {completionBurstTier ? (<div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />) : null}
 
                       {!selectedListId ? (
-                        <div className="px-6 py-10 text-zinc-400 text-[14px] text-center">Select a category to view tasks</div>
+                        <div className="px-6 py-10 text-[#9CA3AF] text-[14px] text-center">Select a category to view tasks</div>
                       ) : (() => {
                         const searchQ = taskSearchQuery.toLowerCase().trim();
                         const filtered = searchQ ? visibleTasksForList.filter((t) => t.text.toLowerCase().includes(searchQ)) : visibleTasksForList;
@@ -5058,8 +5024,8 @@ export default function App() {
                                   <path d="M70 45l3-8 3 8-8-5h10z" fill="#fcd34d" opacity="0.5" />
                                   <path d="M140 35l2-6 2 6-6-4h8z" fill="#c4b5fd" opacity="0.4" />
                                 </svg>
-                                <p className="text-[14px] font-semibold text-zinc-600">No upcoming items in this category</p>
-                                <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
+                                <p className="text-[14px] font-semibold text-[#6B7280]">No upcoming items in this category</p>
+                                <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
                               </div>
                             );
                           }
@@ -5077,8 +5043,8 @@ export default function App() {
                                   <circle cx="55" cy="60" r="4" fill="#fbbf24" opacity="0.4" />
                                   <path d="M70 45l3-8 3 8-8-5h10z" fill="#86efac" opacity="0.5" />
                                 </svg>
-                                <p className="text-[14px] font-semibold text-zinc-600">Nothing overdue — nice work!</p>
-                                <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
+                                <p className="text-[14px] font-semibold text-[#6B7280]">Nothing overdue — nice work!</p>
+                                <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
                               </div>
                             );
                           }
@@ -5095,8 +5061,8 @@ export default function App() {
                                 <circle cx="52" cy="55" r="3.5" fill="#c4b5fd" opacity="0.5" />
                                 <path d="M65 40l2.5-7 2.5 7-7-4.5h9z" fill="#fcd34d" opacity="0.4" />
                               </svg>
-                              <p className="text-[14px] font-semibold text-zinc-600">No upcoming items in this category</p>
-                              <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
+                              <p className="text-[14px] font-semibold text-[#6B7280]">No upcoming items in this category</p>
+                              <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
                             </div>
                           );
                         }
@@ -5108,31 +5074,31 @@ export default function App() {
                                 {todoTasks.map((t) => {
                                   const isSelected = selectedTaskId === t.id;
                                   const priorityLabel = (() => {
-                                    if (!t.dueDate) return { text: "Normal", color: "text-zinc-400", flag: "🏳️" };
+                                    if (!t.dueDate) return { text: "Normal", color: "text-[#9CA3AF]", flag: "🏳️" };
                                     const now = new Date(); const due = parseISODate(t.dueDate);
                                     const diff = Math.ceil((due.getTime() - now.getTime()) / 86400000);
                                     if (diff < 0) return { text: "Urgent", color: "text-red-500", flag: "🚩" };
                                     if (diff === 0) return { text: "Urgent", color: "text-red-500", flag: "🚩" };
                                     if (diff <= 2) return { text: "High", color: "text-orange-500", flag: "🔶" };
                                     if (diff <= 5) return { text: "Normal", color: "text-yellow-500", flag: "🟡" };
-                                    return { text: "Low", color: "text-zinc-400", flag: "🏳️" };
+                                    return { text: "Low", color: "text-[#9CA3AF]", flag: "🏳️" };
                                   })();
                                   const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
                                   return (
-                                    <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center h-[36px] px-6 cursor-pointer transition-colors duration-100 border-b border-zinc-100 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-violet-50/60" : "hover:bg-zinc-50"}`}>
+                                    <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center h-[36px] px-6 cursor-pointer transition-colors duration-100 border-b border-[#E5E7EB] ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-[#EEF2FF]" : "hover:bg-[#F8FAFC]"}`}>
                                       <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                        <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); const next = !t.completed; if (!selectedListId) return; if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; } if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); } setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x)); }} className={`btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${t.completed || taskCheckAnimatingId === t.id ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 hover:border-zinc-400"} ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`} aria-label={t.completed ? "Mark incomplete" : "Complete task"}>
+                                        <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); const next = !t.completed; if (!selectedListId) return; if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; } if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); } setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x)); }} className={`btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${t.completed || taskCheckAnimatingId === t.id ? "border-emerald-500 bg-emerald-500" : "border-[#D1D5DB] hover:border-[#9CA3AF]"} ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`} aria-label={t.completed ? "Mark incomplete" : "Complete task"}>
                                           {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (<svg className="w-[9px] h-[9px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) : t.completed ? (<span className="text-white text-[8px] leading-none">✓</span>) : null}
                                         </button>
                                       </div>
-                                      <div className="flex-1 min-w-0 text-[13px] text-zinc-800 truncate">{t.text}</div>
+                                      <div className="flex-1 min-w-0 text-[13px] text-[#111827] truncate">{t.text}</div>
                                       <div className={`w-[120px] shrink-0 flex items-center justify-center gap-1 text-[12px] ${priorityLabel.color}`}>
                                         <span className="text-[11px]">{priorityLabel.flag}</span>
                                         <span className="font-medium">{priorityLabel.text}</span>
                                       </div>
-                                      <div className="w-[120px] shrink-0 text-center text-[12px] text-zinc-400">{classLabel}</div>
+                                      <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">{classLabel}</div>
                                       <div className="w-[32px] shrink-0 flex items-center justify-center">
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); if (selectedTaskId === t.id) setSelectedTaskId(null); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
+                                        <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); if (selectedTaskId === t.id) setSelectedTaskId(null); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F1F5F9] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
                                       </div>
                                     </div>
                                   );
@@ -5142,34 +5108,34 @@ export default function App() {
 
                             {/* Inline Add Task */}
                             {selectedListId !== SYS_LIST_OVERDUE && (
-                              <div className="flex items-center h-[42px] px-5 border-b border-zinc-100 bg-zinc-50/40 hover:bg-zinc-50 transition-colors cursor-text" onClick={() => taskListInputRef.current?.focus()}>
+                              <div className="flex items-center h-[42px] px-5 border-b border-[#E5E7EB] bg-[#F8FAFC] hover:bg-white transition-colors cursor-text" onClick={() => taskListInputRef.current?.focus()}>
                                 <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                  <svg className="w-[13px] h-[13px] text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                                  <svg className="w-[13px] h-[13px] text-[#6366F1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                                 </div>
-                                <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder={taskInputPlaceholder(selectedListId)} disabled={!selectedListId} className={`flex-1 min-w-0 h-full bg-transparent text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none disabled:opacity-50 ${taskInputClearFlash ? "opacity-40" : ""}`} />
+                                <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder={taskInputPlaceholder(selectedListId)} disabled={!selectedListId} className={`flex-1 min-w-0 h-full bg-transparent text-[13px] text-[#111827] placeholder:text-[#6B7280] outline-none disabled:opacity-50 ${taskInputClearFlash ? "opacity-40" : ""}`} />
                               </div>
                             )}
 
                             {doneTasks.length > 0 && (
                               <>
                                 <div className="flex items-center gap-1.5 px-5 pt-3 pb-1">
-                                  <svg className="w-3 h-3 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">Done</span>
-                                  <span className="text-[10.5px] font-medium text-zinc-400 tabular-nums">{doneTasks.length}</span>
+                                  <svg className="w-3 h-3 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wider text-[#9CA3AF]">Done</span>
+                                  <span className="text-[10.5px] font-medium text-[#9CA3AF] tabular-nums">{doneTasks.length}</span>
                                 </div>
                                 <div>
                                   {doneTasks.map((t) => {
                                     const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
                                     return (
-                                      <div key={t.id} className={`group flex items-center h-[36px] px-6 border-b border-zinc-50 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
+                                      <div key={t.id} className={`group flex items-center h-[36px] px-6 border-b border-[#F1F5F9] ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
                                         <div className="w-[28px] shrink-0 flex items-center justify-center">
                                           <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; removeLastCompletedForTaskOnList(t.text, selectedListId); setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: false } : x)); }} className="btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] border-emerald-500 bg-emerald-500 flex items-center justify-center transition-colors disabled:opacity-100" aria-label="Mark incomplete"><span className="text-white text-[8px] leading-none">✓</span></button>
                                         </div>
-                                        <div className="flex-1 min-w-0 text-[13px] text-zinc-400 line-through truncate">{t.text}</div>
-                                        <div className="w-[120px] shrink-0 text-center text-[12px] text-zinc-300">—</div>
-                                        <div className="w-[120px] shrink-0 text-center text-[12px] text-zinc-300">{classLabel}</div>
+                                        <div className="flex-1 min-w-0 text-[13px] text-[#9CA3AF] line-through truncate">{t.text}</div>
+                                        <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">—</div>
+                                        <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">{classLabel}</div>
                                         <div className="w-[32px] shrink-0 flex items-center justify-center">
-                                          <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
+                                          <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F1F5F9] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
                                         </div>
                                       </div>
                                     );
@@ -5223,14 +5189,14 @@ export default function App() {
                         onTaskPick={openTaskFromCalendar}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#09090b] text-zinc-100 antialiased [text-rendering:optimizeLegibility]">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white text-[#111827] [text-rendering:optimizeLegibility]">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
                           <div className="w-full max-w-none mx-auto px-3 sm:px-5 lg:px-6 py-4 pb-10 space-y-2.5">
-                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-zinc-800/50 pb-6 mb-0.5">
+                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-[#E5E7EB] pb-6 mb-0.5">
                               <div>
-                                <h1 className="text-[1.5rem] sm:text-[1.65rem] font-semibold text-zinc-50 tracking-tight flex items-center gap-2.5">
+                                <h1 className="text-[20px] font-semibold text-[#111827] tracking-tight flex items-center gap-2.5">
                                   <span
-                                    className="text-zinc-400 shrink-0"
+                                    className="text-[#6B7280] shrink-0"
                                     aria-hidden
                                   >
                                     <svg
@@ -5251,14 +5217,14 @@ export default function App() {
                                   </span>
                                   Analytics
                                 </h1>
-                                <p className="text-[12px] text-zinc-600 mt-2 max-w-lg leading-relaxed">
+                                <p className="text-[13px] text-[#6B7280] mt-2 max-w-lg leading-relaxed">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800/80 bg-[#0f0f12] px-2.5 py-1 text-[11px] font-medium text-zinc-500 tabular-nums shadow-[0_1px_2px_rgba(0,0,0,0.4)]">
+                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#6B7280] tabular-nums">
                                   <span
-                                    className="h-1 w-1 rounded-full bg-blue-500/65"
+                                    className="h-1 w-1 rounded-full bg-[#6366F1]"
                                     aria-hidden
                                   />
                                   Last 7 days
@@ -5266,16 +5232,16 @@ export default function App() {
                               </div>
                             </header>
 
-                            <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_8px_28px_rgba(0,0,0,0.45)] transition-[background-color] duration-150 hover:bg-[#101014]">
-                              <div className="flex flex-col gap-1.5 p-3 sm:p-4 border-b border-zinc-800/60">
+                            <section className="rounded-lg border border-[#E5E7EB] bg-white transition-[background-color] duration-150">
+                              <div className="flex flex-col gap-1.5 p-3 sm:p-4 border-b border-[#E5E7EB]">
                                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                                   <div className="min-w-0">
-                                    <h2 className="text-[16px] font-semibold text-zinc-50 tracking-tight">
+                                    <h2 className="text-[15px] font-semibold text-[#111827] tracking-tight">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
                                         : "Task Speed"}
                                     </h2>
-                                    <p className="text-[11px] text-zinc-600 mt-0.5 leading-snug">
+                                    <p className="text-[13px] text-[#6B7280] mt-0.5 leading-snug">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
                                         : selectedTaskGraph
@@ -5298,7 +5264,7 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-2xl border border-zinc-700/60 bg-[#161618] px-3.5 py-1.5 text-left font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-[12px] font-semibold text-zinc-100 shadow-[0_8px_24px_rgba(0,0,0,0.35)] outline-none ring-0 transition-all duration-100 hover:border-zinc-600 hover:bg-[#1a1a1d] hover:shadow-[0_12px_32px_rgba(0,0,0,0.4)] focus-visible:border-blue-500/50 focus-visible:ring-2 focus-visible:ring-blue-500/25"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#6366F1] focus-visible:ring-2 focus-visible:ring-[#6366F1]/20"
                                         >
                                           <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
@@ -5310,7 +5276,7 @@ export default function App() {
                                               : "Select task"}
                                           </span>
                                           <svg
-                                            className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ${analyticsTaskPickerOpen ? "rotate-180" : ""}`}
+                                            className={`h-4 w-4 shrink-0 text-[#6B7280] transition-transform duration-200 ${analyticsTaskPickerOpen ? "rotate-180" : ""}`}
                                             viewBox="0 0 24 24"
                                             fill="none"
                                             stroke="currentColor"
@@ -5324,10 +5290,10 @@ export default function App() {
                                         </button>
                                         {analyticsTaskPickerOpen && (
                                           <div
-                                            className="absolute left-0 right-0 top-full z-[401] mt-1.5 overflow-hidden rounded-2xl border border-zinc-700/55 bg-[#18181b]/98 py-1 shadow-[0_22px_55px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-xl"
+                                            className="absolute left-0 right-0 top-full z-[401] mt-1.5 overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-sm"
                                             role="listbox"
                                           >
-                                            <div className="max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain px-1.5 py-0.5 font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
+                                            <div className="max-h-[min(320px,50vh)] overflow-y-auto overscroll-contain px-1.5 py-0.5">
                                               <button
                                                 type="button"
                                                 role="option"
@@ -5338,13 +5304,13 @@ export default function App() {
                                                     false,
                                                   );
                                                 }}
-                                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium tracking-tight transition-colors ${
+                                                className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
-                                                    ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
-                                                    : "text-zinc-400 hover:bg-white/[0.05] hover:text-zinc-200"
+                                                    ? "bg-[#EEF2FF] text-[#111827]"
+                                                    : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                 }`}
                                               >
-                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800/80 text-zinc-500">
+                                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F8FAFC] text-[#6B7280]">
                                                   <svg
                                                     className="h-3.5 w-3.5"
                                                     viewBox="0 0 24 24"
@@ -5391,13 +5357,13 @@ export default function App() {
                                                           false,
                                                         );
                                                       }}
-                                                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[12px] font-medium tracking-tight transition-colors ${
+                                                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                         isSel
-                                                          ? "bg-white/[0.08] text-zinc-50 ring-1 ring-white/10"
-                                                          : "text-zinc-300 hover:bg-white/[0.04] hover:text-zinc-50"
+                                                          ? "bg-[#EEF2FF] text-[#111827]"
+                                                          : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                       }`}
                                                     >
-                                                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-800/70 text-zinc-500">
+                                                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F8FAFC] text-[#6B7280]">
                                                         <svg
                                                           className="h-3.5 w-3.5"
                                                           viewBox="0 0 24 24"
@@ -5424,7 +5390,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-full border border-zinc-700/75 bg-[#0c0c0e] p-1 font-['Plus_Jakarta_Sans',system-ui,sans-serif] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
+                                    <div className="inline-flex h-9 shrink-0 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-1">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -5438,10 +5404,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`rounded-full px-3.5 py-1.5 text-[11px] font-bold tracking-tight antialiased transition-all duration-200 ${
+                                            className={`rounded-lg px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
                                               selectedStat === type
-                                                ? "bg-zinc-100 text-zinc-900 shadow-[0_1px_8px_rgba(0,0,0,0.35)]"
-                                                : "font-semibold text-zinc-500 hover:text-zinc-200"
+                                                ? "bg-white text-[#111827] shadow-sm"
+                                                : "text-[#6B7280] hover:text-[#111827]"
                                             }`}
                                           >
                                             {type}
@@ -5455,7 +5421,7 @@ export default function App() {
 
                               <div className="p-3 sm:p-4 pt-2">
                                 <div className="flex gap-2">
-                                  <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-zinc-500 w-12 sm:w-14 text-right leading-none">
+                                    <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-[#6B7280] w-12 sm:w-14 text-right leading-none">
                                     {analyticsYTickValues.map((v, i) => (
                                       <span key={`y-${i}-${v}`}>
                                         {formatAnalyticsYTick(v)}
@@ -5471,7 +5437,7 @@ export default function App() {
                                     {analyticsChartHover !== null &&
                                       currentData[analyticsChartHover] && (
                                         <div
-                                          className="pointer-events-none absolute z-30 rounded-lg border border-zinc-700/90 bg-zinc-950/98 px-2.5 py-1.5 text-[10px] shadow-[0_4px_20px_rgba(0,0,0,0.55)]"
+                                          className="pointer-events-none absolute z-30 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[10px] shadow-sm"
                                           style={{
                                             left: `${
                                               (analyticsChartHover /
@@ -5485,13 +5451,13 @@ export default function App() {
                                             transform: "translateX(-50%)",
                                           }}
                                         >
-                                          <div className="font-medium text-zinc-200">
+                                          <div className="font-medium text-[#111827]">
                                             {
                                               currentData[analyticsChartHover]
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-blue-400/95 mt-0.5">
+                                          <div className="tabular-nums text-[#6366F1] mt-0.5">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -5539,12 +5505,12 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#3b82f6"
-                                            stopOpacity="0.12"
+                                            stopColor="#6366F1"
+                                            stopOpacity="0.1"
                                           />
                                           <stop
                                             offset="100%"
-                                            stopColor="#09090b"
+                                            stopColor="#ffffff"
                                             stopOpacity="0"
                                           />
                                         </linearGradient>
@@ -5556,8 +5522,8 @@ export default function App() {
                                           y1={analyticsYTickToSvgY(gv)}
                                           x2="100"
                                           y2={analyticsYTickToSvgY(gv)}
-                                          stroke="#3f3f46"
-                                          strokeOpacity={0.45}
+                                          stroke="#E5E7EB"
+                                          strokeOpacity={0.8}
                                           strokeWidth="0.14"
                                           vectorEffect="non-scaling-stroke"
                                         />
@@ -5575,7 +5541,7 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#5b9fff"
+                                        stroke="#6366F1"
                                         strokeWidth="0.5"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
@@ -5596,10 +5562,10 @@ export default function App() {
                                           }
                                           fill={
                                             analyticsChartHover === i
-                                              ? "#93c5fd"
-                                              : "#3b82f6"
+                                              ? "#818CF8"
+                                              : "#6366F1"
                                           }
-                                          stroke="#0c1420"
+                                          stroke="#ffffff"
                                           strokeWidth="0.22"
                                           className="transition-all duration-100"
                                           vectorEffect="non-scaling-stroke"
@@ -5608,7 +5574,7 @@ export default function App() {
                                     </svg>
                                   </div>
                                 </div>
-                                <div className="mt-1 flex justify-between gap-1.5 pl-14 sm:pl-[3.75rem] pr-0 text-[10px] text-zinc-600/85 tabular-nums">
+                                <div className="mt-1 flex justify-between gap-1.5 pl-14 sm:pl-[3.75rem] pr-0 text-[10px] text-[#6B7280] tabular-nums">
                                   {analyticsGraphXLabels.map((lab) => (
                                     <span
                                       key={lab.key}
@@ -5623,12 +5589,12 @@ export default function App() {
                             </section>
 
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pt-0.5">
-                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014]">
-                                <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-zinc-800/60">
-                                  <h2 className="text-[14px] font-semibold text-zinc-100">
+                              <section className="rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-3.5">
+                                <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-[#E5E7EB]">
+                                  <h2 className="text-[15px] font-semibold text-[#111827]">
                                     Discipline
                                   </h2>
-                                  <span className="text-[10px] font-medium text-zinc-600 tabular-nums">
+                                  <span className="text-[10px] font-medium text-[#6B7280] tabular-nums">
                                     {getCurrentMonthName()}
                                   </span>
                                 </div>
@@ -5638,7 +5604,7 @@ export default function App() {
                                     (day, i) => (
                                       <div
                                         key={i}
-                                        className="text-[9px] font-medium text-zinc-600 text-center pb-0.5"
+                                        className="text-[9px] font-medium text-[#6B7280] text-center pb-0.5"
                                       >
                                         {day}
                                       </div>
@@ -5665,29 +5631,29 @@ export default function App() {
                                           {day.symbol || "⬜"}
                                         </span>
                                         {day.date && (
-                                          <div className="absolute bottom-full left-1/2 z-[300] mb-1.5 w-[9.5rem] -translate-x-1/2 rounded-md border border-zinc-700/90 bg-zinc-950/98 p-2.5 text-[10px] text-zinc-300 opacity-0 shadow-lg transition-opacity duration-100 pointer-events-none group-hover:opacity-100">
-                                            <div className="font-medium border-b border-zinc-800 pb-1.5 mb-1.5 text-zinc-100 text-[10px]">
+                                          <div className="absolute bottom-full left-1/2 z-[300] mb-1.5 w-[9.5rem] -translate-x-1/2 rounded-lg border border-[#E5E7EB] bg-white p-2.5 text-[10px] text-[#6B7280] opacity-0 shadow-sm transition-opacity duration-100 pointer-events-none group-hover:opacity-100">
+                                            <div className="font-medium border-b border-[#E5E7EB] pb-1.5 mb-1.5 text-[#111827] text-[10px]">
                                               {day.date}
                                             </div>
-                                            <div className="flex justify-between gap-2 text-zinc-500">
+                                            <div className="flex justify-between gap-2 text-[#6B7280]">
                                               <span>Minutes</span>
-                                              <span className="text-zinc-200 tabular-nums font-medium">
+                                              <span className="text-[#111827] tabular-nums font-medium">
                                                 {mins}
                                               </span>
                                             </div>
-                                            <div className="flex justify-between gap-2 text-zinc-500 mt-1">
+                                            <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
                                               <span>Tasks</span>
-                                              <span className="text-zinc-200 tabular-nums font-medium">
+                                              <span className="text-[#111827] tabular-nums font-medium">
                                                 {day.tasksCompleted}
                                               </span>
                                             </div>
-                                            <div className="flex justify-between gap-2 text-zinc-500 mt-1">
+                                            <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
                                               <span>Integrity</span>
-                                              <span className="text-zinc-200 tabular-nums font-medium">
+                                              <span className="text-[#111827] tabular-nums font-medium">
                                                 {day.focusIntegrity.toFixed(0)}%
                                               </span>
                                             </div>
-                                            <div className="mt-1.5 flex justify-between border-t border-zinc-800 pt-1.5 text-blue-400/85 text-[10px]">
+                                            <div className="mt-1.5 flex justify-between border-t border-[#E5E7EB] pt-1.5 text-[#6366F1] text-[10px]">
                                               <span>Grade</span>
                                               <span>{day.symbol}</span>
                                             </div>
@@ -5699,20 +5665,20 @@ export default function App() {
                                 </div>
                               </section>
 
-                              <section className="rounded-xl border border-zinc-800/70 bg-[#0f0f12] p-3 sm:p-3.5 shadow-[0_1px_0_rgba(255,255,255,0.035)_inset,0_6px_24px_rgba(0,0,0,0.4)] transition-[background-color] duration-150 hover:bg-[#101014] font-['Plus_Jakarta_Sans',system-ui,sans-serif]">
-                                <h2 className="text-[13px] font-bold text-zinc-100 mb-2.5 pb-2 border-b border-zinc-800/60 tracking-tight">
+                              <section className="rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-3.5">
+                                <h2 className="text-[15px] font-semibold text-[#111827] mb-2.5 pb-2 border-b border-[#E5E7EB] tracking-tight">
                                   Performance
                                 </h2>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-2xl border border-zinc-800/70 bg-gradient-to-b from-zinc-900/45 to-zinc-950/90 px-2.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-all duration-150 hover:border-zinc-700/80 hover:shadow-[0_8px_24px_rgba(0,0,0,0.35)] sm:px-3 sm:py-3"
+                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-2.5 transition-all duration-150 hover:bg-white sm:px-3 sm:py-3"
                                     >
-                                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-zinc-500 leading-snug line-clamp-2">
+                                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6B7280] leading-snug line-clamp-2">
                                         {stat.label}
                                       </p>
-                                      <p className="text-[15px] sm:text-base font-bold tabular-nums tracking-tight text-zinc-50 leading-none">
+                                      <p className="text-[15px] sm:text-base font-semibold tabular-nums tracking-tight text-[#111827] leading-none">
                                         {stat.val}
                                       </p>
                                     </div>
@@ -5725,7 +5691,7 @@ export default function App() {
                       </div>
                     ) : (
                       <div className="flex items-center justify-center h-full pt-8">
-                        <p className="text-sm md:text-base text-gray-500">
+                        <p className="text-sm md:text-base text-[#6B7280]">
                           {activeView === "notifications" &&
                             "Notifications Center"}
                           {activeView === "settings" && "Settings"}
@@ -5740,7 +5706,7 @@ export default function App() {
 
             {isFocusSessionActive && (
               <div
-                className={`flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-gradient-to-b from-gray-50 via-white to-gray-100 text-gray-900 transition-[filter] duration-300 ease-out ${
+                className={`flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-white text-[#111827] transition-[filter] duration-300 ease-out ${
                   focusRootShake ? "micro-focus-shake" : ""
                 }`}
               >
@@ -5750,10 +5716,6 @@ export default function App() {
                 />
                 <div
                   className="pointer-events-none absolute inset-0 z-0"
-                  style={{
-                    background:
-                      "radial-gradient(circle at 50% 18%, rgba(59, 130, 246, 0.14), transparent 42%)",
-                  }}
                 />
                 <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
                   <div
@@ -5764,20 +5726,20 @@ export default function App() {
                     <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
                       <div className="flex w-full flex-shrink-0 flex-col items-center gap-6 px-4 pb-4 pt-16 sm:gap-8">
                   {warning && (
-              <div className="fixed top-24 bg-blue-600 text-white px-8 py-2 rounded-full z-[100] animate-pulse text-[10px] font-bold tracking-widest uppercase shadow-xl">
+              <div className="fixed top-24 bg-[#6366F1] text-white px-8 py-2 rounded-lg z-[100] animate-pulse text-[13px] font-semibold tracking-wide uppercase shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                 {warning}
               </div>
             )}
             {floatingTime && (
               <div
                 key={floatingTime.id}
-                className="fixed top-1/2 text-6xl font-black text-blue-400 animate-float-fade z-[300] drop-shadow-[0_0_20px_rgba(59,130,246,0.5)]"
+                className="fixed top-1/2 text-6xl font-semibold text-[#6366F1] animate-float-fade z-[300] drop-shadow-[0_0_12px_rgba(99,102,241,0.2)]"
               >
                 {floatingTime.text}
               </div>
             )}
             {stayLockedHint && (
-              <div className="fixed bottom-28 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-gray-200/80 bg-white/90 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-600 shadow-lg backdrop-blur-sm transition-opacity duration-200 ease-out">
+              <div className="fixed bottom-28 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-[#E5E7EB]/80 bg-white/90 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[#6B7280] shadow-[0_4px_12px_rgba(0,0,0,0.08)] backdrop-blur-sm transition-opacity duration-200 ease-out">
                 Stay locked in.
               </div>
             )}
@@ -5791,14 +5753,14 @@ export default function App() {
                     : "opacity-100"
               }`}
             >
-              <h1 className="text-4xl font-semibold tracking-tight text-gray-900">
-                Hello <span className="text-blue-600">User</span>.
+              <h1 className="text-4xl font-semibold tracking-tight text-[#111827]">
+                Hello <span className="text-[#6366F1]">User</span>.
               </h1>
-              <p className="text-lg text-gray-500 font-light italic">
+              <p className="text-lg text-[#6B7280] font-light italic">
                 {randomGreeting}
               </p>
               <div
-                className={`text-[10px] tracking-[0.3em] uppercase text-gray-500 inline-flex items-center justify-center gap-1 ${
+                className={`text-[10px] tracking-[0.3em] uppercase text-[#6B7280] inline-flex items-center justify-center gap-1 ${
                   streakMicro === "up"
                     ? "micro-streak-up"
                     : streakMicro === "down"
@@ -5811,31 +5773,31 @@ export default function App() {
 
               {!isSimulation && (
                 <div className="pt-6 flex justify-center">
-                  <div className="bg-white border border-gray-200 rounded-[32px] p-8 flex gap-12 shadow-lg relative">
+                  <div className="bg-white border border-[#E5E7EB] rounded-lg p-8 flex gap-12 relative">
                     <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold">
                         YESTERDAY
                       </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter text-gray-900">
+                      <div className="text-3xl font-mono font-semibold tracking-tighter text-[#111827]">
                         {yesterdayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-gray-500 uppercase">
+                        <span className="text-[10px] text-[#6B7280] uppercase">
                           MIN
                         </span>
                       </div>
                     </div>
                     <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-gray-500 font-black">
+                      <div className="text-[9px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold">
                         TODAY
                       </div>
-                      <div className="text-3xl font-mono font-bold tracking-tighter text-blue-600">
+                      <div className="text-3xl font-mono font-semibold tracking-tighter text-[#6366F1]">
                         {todayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-blue-600/80 uppercase">
+                        <span className="text-[10px] text-[#6366F1]/80 uppercase">
                           MIN
                         </span>
                       </div>
                     </div>
                     <div
-                      className={`flex items-end pb-1 text-[10px] font-black uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
+                      className={`flex items-end pb-1 text-[10px] font-semibold uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
                     >
                       <span className="mr-1">
                         {parseInt(improvementDelta) >= 0 ? "▲" : "▼"}
@@ -5870,13 +5832,7 @@ export default function App() {
                   cx="180"
                   cy="180"
                   r={RADIUS}
-                  stroke={
-                    auraColor === "37, 99, 235"
-                      ? "#3b82f6"
-                      : auraColor === "168, 85, 247"
-                        ? "#a855f7"
-                        : "#ef4444"
-                  }
+                  stroke="#6366F1"
                   strokeWidth="12"
                   fill="none"
                   strokeDasharray={CIRCUMFERENCE}
@@ -5888,11 +5844,11 @@ export default function App() {
                 />
               </svg>
               <div
-                className={`relative z-[2] w-80 h-80 rounded-[56px] bg-white backdrop-blur-3xl border border-gray-200 flex flex-col items-center justify-center shadow-2xl transition-all duration-700 overflow-hidden ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
+                className={`relative z-[2] w-80 h-80 rounded-lg bg-white border border-[#E5E7EB] flex flex-col items-center justify-center shadow-sm transition-all duration-700 overflow-hidden ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
               >
                 <>
                   <div
-                    className={`text-7xl font-mono tracking-tighter text-gray-900`}
+                    className={`text-7xl font-mono tracking-tighter text-[#111827]`}
                   >
                     {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                       2,
@@ -5903,7 +5859,7 @@ export default function App() {
 
                   {running && (
                     <div
-                      className={`mt-2 text-[10px] tracking-[0.2em] font-black uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-125 animate-glitch" : "text-blue-400/60 opacity-100"}`}
+                      className={`mt-2 text-[10px] tracking-[0.2em] font-semibold uppercase transition-all duration-300 ${isViolating ? "text-red-500 scale-105" : "text-[#9CA3AF] opacity-100"}`}
                     >
                       Focus Integrity: {integrityScore}%
                     </div>
@@ -5917,14 +5873,14 @@ export default function App() {
                           setSeconds((s) => s + 900);
                           setInitialSeconds((s) => s + 900);
                         }}
-                        className="px-8 py-2 bg-gray-100 border border-gray-200 rounded-full text-[10px] tracking-widest uppercase text-gray-700 transition hover:bg-gray-200"
+                        className="px-8 py-2 bg-[#F1F5F9] border border-[#E5E7EB] rounded-lg text-[13px] tracking-wide uppercase text-[#111827] transition hover:bg-[#E5E7EB]"
                       >
                         +15 MIN
                       </button>
                       {seconds > 0 && (
                         <button
                           onClick={startTimer}
-                          className="px-8 py-2 bg-gray-900 text-white rounded-full text-[10px] tracking-widest uppercase font-bold transition hover:scale-105"
+                          className="px-8 py-2 bg-[#6366F1] text-white rounded-lg text-[13px] tracking-wide uppercase font-semibold transition hover:bg-[#4f46e5]"
                         >
                           START
                         </button>
@@ -5965,7 +5921,7 @@ export default function App() {
                       placeholder={
                         isSimulation ? "Simulating input..." : "Next objective..."
                       }
-                      className={`flex-1 px-6 py-4 rounded-[24px] bg-white border border-gray-200 text-gray-900 outline-none text-sm focus:border-blue-400 transition-all duration-200 ease-out placeholder-gray-400 ${
+                      className={`flex-1 px-6 py-4 rounded-lg bg-white border border-[#E5E7EB] text-[#111827] outline-none text-[13px] focus:border-[#6366F1] transition-all duration-200 ease-out placeholder-[#6B7280] ${
                         taskInputClearFlash ? "opacity-50" : ""
                       }`}
                     />
@@ -5975,7 +5931,7 @@ export default function App() {
                       onClick={() =>
                         addTaskFromFocusBar({ fromButtonClick: true })
                       }
-                      className="btn-press-instant px-8 bg-gray-900 text-white rounded-[24px] font-black text-[10px] tracking-widest uppercase shrink-0 active:bg-gray-800"
+                      className="btn-press-instant px-8 bg-[#6366F1] text-white rounded-lg font-semibold text-[13px] tracking-wide uppercase shrink-0 active:bg-[#4f46e5]"
                     >
                       ADD
                     </button>
@@ -5985,7 +5941,7 @@ export default function App() {
                       {taskInputLiveHints.map((hint, hi) => (
                         <p
                           key={hi}
-                          className="text-[11px] leading-snug text-gray-500 micro-hint-in"
+                          className="text-[11px] leading-snug text-[#6B7280] micro-hint-in"
                           style={{ animationDelay: `${hi * 40}ms` }}
                         >
                           {hint}
@@ -5997,7 +5953,7 @@ export default function App() {
 
                 <div className="flex flex-col gap-3 w-full max-w-xl mx-auto">
                   {focusSessionEntries.length === 0 ? (
-                    <p className="text-center text-sm text-gray-500 py-2">
+                    <p className="text-center text-sm text-[#6B7280] py-2">
                       No tasks in session
                     </p>
                   ) : (
@@ -6020,7 +5976,7 @@ export default function App() {
                       .map(({ entry, t }) => (
                         <div
                           key={`${entry.listId}-${entry.taskId}`}
-                          className={`flex items-center justify-between gap-3 p-4 rounded-[28px] bg-white border border-gray-200 transition-all duration-300 ${
+                          className={`flex items-center justify-between gap-3 p-4 rounded-lg bg-white border border-[#E5E7EB] transition-all duration-300 ${
                             t.removing
                               ? "opacity-0 translate-x-12"
                               : "opacity-100"
@@ -6031,7 +5987,7 @@ export default function App() {
                           }`}
                         >
                           <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-gray-400" />
+                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#9CA3AF]" />
                             <span className="text-base text-gray-800 truncate">
                               {getFocusSessionDisplayLabel(entry.listId, t.text)}
                             </span>
@@ -6042,7 +5998,7 @@ export default function App() {
                             onClick={() =>
                               completeFocusTask(entry.listId, entry.taskId)
                             }
-                            className="w-7 h-7 shrink-0 rounded-full border border-gray-300 hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-gray-300 disabled:hover:bg-transparent"
+                            className="w-7 h-7 shrink-0 rounded-full border border-[#D1D5DB] hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-[#D1D5DB] disabled:hover:bg-transparent"
                             title="Mark complete"
                           />
                         </div>
@@ -6060,8 +6016,8 @@ export default function App() {
                       focusImmerseIntro ? "opacity-[0.88]" : "opacity-100"
                     }`}
                   >
-                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[1.25rem] border border-[#2a2a2a] border-l-[3px] border-l-zinc-500/80 bg-[#0a0a0b] shadow-[-10px_0_40px_-12px_rgba(0,0,0,0.85)] sm:rounded-[1.5rem]">
-                      <div className="shrink-0 border-b border-[#2a2a2a] bg-[#0c0c0d] px-3 py-2.5 sm:px-3.5">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#E5E7EB] border-l-[3px] border-l-[#6366F1]/40 bg-[#F8FAFC] sm:rounded-lg">
+                      <div className="shrink-0 border-b border-[#E5E7EB] bg-white px-3 py-2.5 sm:px-3.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 flex-1 items-center gap-2">
                             <span
@@ -6070,12 +6026,12 @@ export default function App() {
                             >
                               🧩
                             </span>
-                            <h2 className="min-w-0 truncate font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-zinc-100">
+                            <h2 className="min-w-0 truncate text-[15px] font-semibold leading-7 tracking-normal text-[#111827]">
                               Constructor
                             </h2>
                           </div>
                           <div
-                            className="shrink-0 p-1.5 text-zinc-500"
+                            className="shrink-0 p-1.5 text-[#6B7280]"
                             aria-hidden
                           >
                             <svg
@@ -6092,7 +6048,7 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0b] px-2 py-2 sm:px-2.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#F8FAFC] px-2 py-2 sm:px-2.5">
                           <div className="flex flex-col">
                             {focusSidebarSections.map((section, secIdx) => {
                               const expanded =
@@ -6100,7 +6056,7 @@ export default function App() {
                               return (
                                 <div
                                   key={section.listId}
-                                  className={`border-b border-[#2a2a2a] last:border-b-0 ${secIdx === 0 ? "pt-0" : ""}`}
+                                  className={`border-b border-[#E5E7EB] last:border-b-0 ${secIdx === 0 ? "pt-0" : ""}`}
                                 >
                                   <button
                                     type="button"
@@ -6112,20 +6068,20 @@ export default function App() {
                                           !prev[section.listId],
                                       }))
                                     }
-                                    className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white/[0.04] active:bg-white/[0.06]"
+                                    className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white active:bg-[#EEF2FF]"
                                   >
                                     <TaskSystemNavIcon
                                       listId={section.listId}
-                                      className="h-5 w-5 shrink-0 text-zinc-400"
+                                      className="h-5 w-5 shrink-0 text-[#9CA3AF]"
                                     />
-                                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-zinc-200">
+                                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#111827]">
                                       {section.label}
                                     </span>
-                                    <span className="shrink-0 tabular-nums text-[12px] font-medium text-zinc-500">
+                                    <span className="shrink-0 tabular-nums text-[12px] font-medium text-[#6B7280]">
                                       {section.tasks.length}
                                     </span>
                                     <svg
-                                      className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${expanded ? "rotate-90" : ""}`}
+                                      className={`h-4 w-4 shrink-0 text-[#6B7280] transition-transform duration-200 ease-out ${expanded ? "rotate-90" : ""}`}
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -6153,16 +6109,16 @@ export default function App() {
                                                 section.listId,
                                               );
                                             }}
-                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-zinc-600/90 bg-[#0f0f10] py-1.5 font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-[11px] font-semibold text-zinc-300 transition hover:border-emerald-500/35 hover:bg-emerald-950/30 active:scale-[0.99]"
+                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#E5E7EB] bg-white py-1.5 text-[11px] font-semibold text-[#6B7280] transition hover:border-[#6366F1]/40 hover:bg-[#EEF2FF] active:scale-[0.99]"
                                           >
-                                            <span className="text-[12px] font-bold text-emerald-400/90">
+                                            <span className="text-[12px] font-semibold text-[#6366F1]">
                                               +
                                             </span>
                                             Add all {section.label} tasks
                                           </button>
                                         )}
                                         {section.tasks.length === 0 ? (
-                                          <p className="py-4 text-center text-[11px] text-zinc-500">
+                                          <p className="py-4 text-center text-[11px] text-[#6B7280]">
                                             No tasks here
                                           </p>
                                         ) : (
@@ -6190,17 +6146,17 @@ export default function App() {
                                                         task.id,
                                                       )
                                                     }
-                                                    className={`group flex w-full items-start gap-2.5 rounded-[11px] border px-2.5 py-2 text-left transition active:scale-[0.99] ${
+                                                    className={`group flex w-full items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.99] ${
                                                       inSession
-                                                        ? "cursor-default border-emerald-500/30 bg-emerald-950/50"
-                                                        : "border-[#2a2a2a] bg-[#121213] hover:border-zinc-600 hover:bg-[#161618]"
+                                                        ? "cursor-default border-[#6366F1]/30 bg-[#EEF2FF]"
+                                                        : "border-[#E5E7EB] bg-white hover:border-[#D1D5DB] hover:bg-[#F8FAFC]"
                                                     }`}
                                                   >
                                                     <span
-                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-[13px] font-semibold leading-none transition-colors ${
+                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 text-[13px] font-semibold leading-none transition-colors ${
                                                         inSession
-                                                          ? "border-emerald-500 bg-emerald-500 text-white"
-                                                          : "border-zinc-600 bg-[#0a0a0b] text-zinc-400 group-hover:border-sky-500/60 group-hover:text-sky-300"
+                                                          ? "border-[#6366F1] bg-[#6366F1] text-white"
+                                                          : "border-[#E5E7EB] bg-white text-[#6B7280] group-hover:border-[#6366F1]/60 group-hover:text-[#6366F1]"
                                                       }`}
                                                       aria-hidden
                                                     >
@@ -6222,16 +6178,16 @@ export default function App() {
                                                     </span>
                                                     <span className="min-w-0 flex-1">
                                                       <span
-                                                        className={`block font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-[13px] leading-snug ${
+                                                        className={`block text-[13px] leading-snug ${
                                                           inSession
-                                                            ? "text-zinc-400"
-                                                            : "text-zinc-200"
+                                                            ? "text-[#6B7280]"
+                                                            : "text-[#111827]"
                                                         }`}
                                                       >
                                                         {task.text}
                                                       </span>
                                                       {inSession && (
-                                                        <span className="mt-0.5 block text-[10px] font-medium text-emerald-400/90">
+                                                        <span className="mt-0.5 block text-[10px] font-medium text-[#6366F1]">
                                                           In your session
                                                         </span>
                                                       )}
@@ -6267,13 +6223,13 @@ export default function App() {
                       onClick={dismissFocusFinale}
                     />
                     <div
-                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-gray-200/80 bg-white/95 px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.12)] pointer-events-auto text-center font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-[#E5E7EB]/80 bg-white/95 px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.12)] pointer-events-auto text-center font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
                       onClick={(e) => e.stopPropagation()}
                       role="presentation"
                     >
                       <h2
                         id="focus-finale-title"
-                        className={`text-[1.65rem] font-semibold tracking-tight text-gray-900 transition-all duration-500 ease-out ${
+                        className={`text-[1.65rem] font-semibold tracking-tight text-[#111827] transition-all duration-500 ease-out ${
                           focusFinalePhase >= 2
                             ? "opacity-100 translate-y-0"
                             : "opacity-0 translate-y-3"
@@ -6287,7 +6243,7 @@ export default function App() {
                         }`}
                       >
                         <div
-                          className={`flex items-baseline justify-between gap-3 border-b border-gray-100 pb-4 transition-all duration-500 ease-out ${
+                          className={`flex items-baseline justify-between gap-3 border-b border-[#E5E7EB] pb-4 transition-all duration-500 ease-out ${
                             focusFinalePhase >= 3
                               ? "opacity-100 translate-y-0"
                               : "opacity-0 translate-y-4"
@@ -6297,15 +6253,15 @@ export default function App() {
                               focusFinalePhase >= 3 ? "0ms" : "0ms",
                           }}
                         >
-                          <span className="text-[13px] font-medium text-gray-500">
+                          <span className="text-[13px] font-medium text-[#6B7280]">
                             🎯 Focus integrity
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
                             {focusFinaleSnapshot.integrity}%
                           </span>
                         </div>
                         <div
-                          className={`flex items-baseline justify-between gap-3 border-b border-gray-100 pb-4 transition-all duration-500 ease-out ${
+                          className={`flex items-baseline justify-between gap-3 border-b border-[#E5E7EB] pb-4 transition-all duration-500 ease-out ${
                             focusFinalePhase >= 3
                               ? "opacity-100 translate-y-0"
                               : "opacity-0 translate-y-4"
@@ -6315,10 +6271,10 @@ export default function App() {
                               focusFinalePhase >= 3 ? "120ms" : "0ms",
                           }}
                         >
-                          <span className="text-[13px] font-medium text-gray-500">
+                          <span className="text-[13px] font-medium text-[#6B7280]">
                             ⏱ Time in focus
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
                             {(() => {
                               const s = focusFinaleSnapshot.elapsedSecs;
                               const m = Math.floor(s / 60);
@@ -6339,15 +6295,15 @@ export default function App() {
                               focusFinalePhase >= 3 ? "240ms" : "0ms",
                           }}
                         >
-                          <span className="text-[13px] font-medium text-gray-500">
+                          <span className="text-[13px] font-medium text-[#6B7280]">
                             ✓ Tasks completed
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-gray-900">
+                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
                             {focusFinaleSnapshot.tasksDone}
                           </span>
                         </div>
                       </div>
-                      <p className="mt-8 text-[11px] text-gray-400">
+                      <p className="mt-8 text-[11px] text-[#9CA3AF]">
                         Tap outside to continue
                       </p>
                     </div>
@@ -6360,7 +6316,7 @@ export default function App() {
 
           {isAddListModalOpen && (
             <div
-              className="fixed inset-0 z-[600] flex items-center justify-center p-4 sm:p-6 bg-black/65 backdrop-blur-[1px]"
+              className="fixed inset-0 z-[600] flex items-center justify-center p-4 sm:p-6 bg-black/30 backdrop-blur-[1px]"
               role="dialog"
               aria-modal="true"
               aria-labelledby="add-list-title"
@@ -6370,21 +6326,21 @@ export default function App() {
               }}
             >
               <div
-                className="w-full max-w-[720px] rounded-2xl overflow-hidden shadow-2xl flex flex-col sm:flex-row border border-zinc-700/60 bg-[#2d2d2d]"
+                className="w-full max-w-[720px] rounded-lg overflow-hidden shadow-sm flex flex-col sm:flex-row border border-[#E5E7EB] bg-white"
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Left: form (TickTick Add List) */}
                 <div className="flex-1 min-w-0 p-6 sm:p-8 flex flex-col gap-6">
                   <h2
                     id="add-list-title"
-                    className="text-lg font-semibold text-zinc-100 tracking-tight"
+                    className="text-[15px] font-semibold text-[#111827] tracking-tight"
                   >
                     Add List
                   </h2>
 
                   <div>
-                    <div className="flex items-stretch rounded-lg overflow-hidden border border-zinc-600/80 bg-[#1f1f1f] focus-within:border-blue-500/70 transition-colors">
-                      <span className="pl-3 pr-1 flex items-center text-zinc-500 text-lg select-none">
+                    <div className="flex items-stretch rounded-lg overflow-hidden border border-[#E5E7EB] bg-white focus-within:border-[#6366F1] transition-colors">
+                      <span className="pl-3 pr-1 flex items-center text-[#6B7280] text-lg select-none">
                         ≡
                       </span>
                       <input
@@ -6392,13 +6348,13 @@ export default function App() {
                         value={newListName}
                         onChange={(e) => setNewListName(e.target.value)}
                         placeholder="Name"
-                        className="flex-1 min-w-0 py-3 pr-3 bg-transparent text-[15px] text-zinc-100 placeholder:text-zinc-500 outline-none"
+                        className="flex-1 min-w-0 py-3 pr-3 bg-transparent text-[13px] text-[#111827] placeholder:text-[#6B7280] outline-none"
                       />
                     </div>
                   </div>
 
                   <div>
-                    <p className="text-[13px] text-zinc-400 mb-3">List Color</p>
+                    <p className="text-[13px] text-[#6B7280] mb-3">List Color</p>
                     <div className="flex flex-wrap items-center gap-2.5">
                       {LIST_COLOR_SWATCHES.map((c, i) => {
                         const selected = newListColor === c;
@@ -6407,11 +6363,11 @@ export default function App() {
                             key={i}
                             type="button"
                             onClick={() => setNewListColor(c)}
-                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500/80 ${
+                            className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1]/60 ${
                               c === null
-                                ? "border-2 border-dashed border-zinc-500 bg-[#1a1a1a]"
+                                ? "border-2 border-dashed border-[#D1D5DB] bg-[#F8FAFC]"
                                 : "border-2 border-transparent"
-                            } ${selected ? "ring-2 ring-offset-2 ring-offset-[#2d2d2d] ring-blue-500" : ""}`}
+                            } ${selected ? "ring-2 ring-offset-2 ring-offset-white ring-[#6366F1]" : ""}`}
                             style={
                               c
                                 ? {
@@ -6425,7 +6381,7 @@ export default function App() {
                             aria-label={c === null ? "No color" : `Color ${c}`}
                           >
                             {c === null && (
-                              <span className="text-zinc-500 text-xs">—</span>
+                              <span className="text-[#6B7280] text-xs">—</span>
                             )}
                           </button>
                         );
@@ -6440,7 +6396,7 @@ export default function App() {
                         setIsAddListModalOpen(false);
                         setNewListName("");
                       }}
-                      className="text-[14px] text-zinc-400 hover:text-zinc-200 transition-colors py-2"
+                      className="text-[13px] text-[#6B7280] hover:text-[#111827] transition-colors py-2"
                     >
                       Cancel
                     </button>
@@ -6464,7 +6420,7 @@ export default function App() {
                         setNewListColor("#eab308");
                         setOpenListMenuId(null);
                       }}
-                      className="ml-auto rounded-full px-8 py-2.5 text-[14px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-95"
+                      className="ml-auto rounded-lg px-8 py-2.5 text-[13px] font-semibold text-white disabled:opacity-40 disabled:cursor-not-allowed transition-opacity hover:opacity-95"
                       style={{ backgroundColor: TT_ACCENT_BLUE }}
                     >
                       Add
@@ -6473,22 +6429,22 @@ export default function App() {
                 </div>
 
                 {/* Right: live preview */}
-                <div className="w-full sm:w-[300px] shrink-0 border-t sm:border-t-0 sm:border-l border-zinc-800 bg-[#1a1a1a] p-6 flex flex-col relative">
+                <div className="w-full sm:w-[300px] shrink-0 border-t sm:border-t-0 sm:border-l border-[#E5E7EB] bg-[#F8FAFC] p-6 flex flex-col relative">
                   <button
                     type="button"
                     onClick={() => {
                       setIsAddListModalOpen(false);
                       setNewListName("");
                     }}
-                    className="absolute top-4 right-4 w-8 h-8 rounded-lg text-zinc-500 hover:text-zinc-200 hover:bg-white/5 flex items-center justify-center transition-colors"
+                    className="absolute top-4 right-4 w-8 h-8 rounded-lg text-[#6B7280] hover:text-[#111827] hover:bg-white flex items-center justify-center transition-colors"
                     aria-label="Close"
                   >
                     ✕
                   </button>
-                  <div className="mt-6 flex-1 flex flex-col rounded-xl border border-zinc-800/80 bg-[#141414] overflow-hidden">
-                    <div className="px-4 py-3 border-b border-zinc-800/80 flex items-center gap-2">
-                      <span className="text-zinc-500">{DEFAULT_LIST_ICON}</span>
-                      <span className="text-[15px] text-zinc-100 font-medium truncate">
+                  <div className="mt-6 flex-1 flex flex-col rounded-lg border border-[#E5E7EB] bg-white overflow-hidden">
+                    <div className="px-4 py-3 border-b border-[#E5E7EB] flex items-center gap-2">
+                      <span className="text-[#6B7280]">{DEFAULT_LIST_ICON}</span>
+                      <span className="text-[13px] text-[#111827] font-medium truncate">
                         {newListName.trim() || "Name"}
                       </span>
                       <span
@@ -6504,10 +6460,10 @@ export default function App() {
                       {["Task title", "Task title"].map((label, idx) => (
                         <div
                           key={idx}
-                          className="flex items-center gap-2.5 rounded-lg px-2 py-2 bg-[#1c1c1c]/80"
+                          className="flex items-center gap-2.5 rounded-lg px-2 py-2 bg-[#F8FAFC]"
                         >
-                          <span className="w-[18px] h-[18px] rounded-full border-2 border-zinc-600 shrink-0" />
-                          <span className="text-[13px] text-zinc-400 truncate">
+                          <span className="w-[18px] h-[18px] rounded-full border-2 border-[#E5E7EB] shrink-0" />
+                          <span className="text-[13px] text-[#6B7280] truncate">
                             {label}
                           </span>
                           <span
@@ -6531,12 +6487,12 @@ export default function App() {
 
           {!isSimulation && focusSessionDialog?.kind === "quit" && (
             <div
-              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/30 backdrop-blur-[2px]"
               onClick={() => setFocusSessionDialog(null)}
               role="presentation"
             >
               <div
-                className="w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/60 bg-[#2d2d2d] p-6"
+                className="w-full max-w-[400px] rounded-lg overflow-hidden shadow-sm border border-[#E5E7EB] bg-white p-6"
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
@@ -6544,11 +6500,11 @@ export default function App() {
               >
                 <h3
                   id="focus-quit-title"
-                  className="text-lg font-semibold text-zinc-100 mb-2"
+                  className="text-[15px] font-semibold text-[#111827] mb-2"
                 >
                   Quit Session?
                 </h3>
-                <p className="text-sm text-zinc-400 mb-6">
+                <p className="text-[13px] text-[#6B7280] mb-6">
                   You&apos;ll leave the focus session. Integrity up to now can
                   still be saved; task time for incomplete work won&apos;t be
                   logged.
@@ -6561,14 +6517,14 @@ export default function App() {
                         confirmFocusQuitYes(focusSessionDialog.pending);
                       }
                     }}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
+                    className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
                   >
                     Yes
                   </button>
                   <button
                     type="button"
                     onClick={() => setFocusSessionDialog(null)}
-                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+                    className="px-5 py-2 rounded-lg text-[13px] font-semibold bg-[#6366F1] text-white hover:bg-[#4f46e5] transition-colors"
                   >
                     No
                   </button>
@@ -6579,12 +6535,12 @@ export default function App() {
 
           {!isSimulation && focusSessionDialog?.kind === "reset" && (
             <div
-              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/55 backdrop-blur-[2px]"
+              className="fixed inset-0 z-[700] flex items-center justify-center p-4 bg-black/30 backdrop-blur-[2px]"
               onClick={() => setFocusSessionDialog(null)}
               role="presentation"
             >
               <div
-                className="w-full max-w-[400px] rounded-2xl overflow-hidden shadow-2xl border border-zinc-700/60 bg-[#2d2d2d] p-6"
+                className="w-full max-w-[400px] rounded-lg overflow-hidden shadow-sm border border-[#E5E7EB] bg-white p-6"
                 onClick={(e) => e.stopPropagation()}
                 role="dialog"
                 aria-modal="true"
@@ -6592,25 +6548,25 @@ export default function App() {
               >
                 <h3
                   id="focus-reset-title"
-                  className="text-lg font-semibold text-zinc-100 mb-2"
+                  className="text-[15px] font-semibold text-[#111827] mb-2"
                 >
                   Reset Session?
                 </h3>
-                <p className="text-sm text-zinc-400 mb-6">
+                <p className="text-[13px] text-[#6B7280] mb-6">
                   Restart the timer and integrity tracking from the beginning.
                 </p>
                 <div className="flex items-center justify-end gap-3">
                   <button
                     type="button"
                     onClick={handleResetSessionConfirm}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-zinc-300 hover:bg-white/5 transition-colors"
+                    className="px-4 py-2 rounded-lg text-[13px] font-medium text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
                   >
                     Yes
                   </button>
                   <button
                     type="button"
                     onClick={() => setFocusSessionDialog(null)}
-                    className="px-5 py-2 rounded-xl text-sm font-semibold bg-blue-600 text-white hover:bg-blue-500 transition-colors shadow-lg shadow-blue-500/20"
+                    className="px-5 py-2 rounded-lg text-[13px] font-semibold bg-[#6366F1] text-white hover:bg-[#4f46e5] transition-colors"
                   >
                     No
                   </button>
@@ -6630,19 +6586,17 @@ export default function App() {
             <div
               className="pointer-events-none absolute inset-0 -z-10"
               style={{
-                background:
-                  "radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 30%), rgba(59, 130, 246, 0.14), transparent 40%)",
                 transition: "background 0.18s ease-out",
               }}
             />
             <div className="mx-auto max-w-6xl grid grid-cols-1 gap-16 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] items-start">
               {/* Left: Hero copy + feature sections (full width on mobile) */}
               <div className="space-y-16 w-full max-w-xl">
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
+                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-[#6366F1]">
                   Productivity App
                 </p>
                 <div className="space-y-4 animate-fade-in">
-                  <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-gray-900">
+                  <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight text-[#111827]">
                     {heroVariant.lines.length === 1 ? (
                       heroVariant.lines[0]
                     ) : (
@@ -6652,13 +6606,13 @@ export default function App() {
                       </>
                     )}
                   </h1>
-                  <p className="text-base md:text-lg text-gray-700 leading-relaxed mt-1 max-w-xl">
+                  <p className="text-base md:text-lg text-[#6B7280] leading-relaxed mt-1 max-w-xl">
                     Tunnel Vision{" "}
-                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                    <span className="font-semibold text-[#6366F1]">
                       times your tasks
                     </span>{" "}
                     and{" "}
-                    <span className="font-semibold bg-gradient-to-r from-blue-600 to-indigo-500 bg-clip-text text-transparent">
+                    <span className="font-semibold text-[#6366F1]">
                       measures your focus
                     </span>{" "}
                     so you can take accountability.
@@ -6668,10 +6622,9 @@ export default function App() {
                   <button
                     type="button"
                     onClick={handleGetStarted}
-                    className="group relative px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                    className="group relative px-14 py-5 bg-[#6366F1] rounded-lg overflow-hidden transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                    <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                    <span className="relative text-white font-semibold tracking-wide text-[13px] uppercase">
                       Get started
                     </span>
                   </button>
@@ -6686,7 +6639,7 @@ export default function App() {
                         behavior: "smooth",
                       })
                     }
-                    className="flex flex-col items-center gap-1 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 rounded-full p-2"
+                    className="flex flex-col items-center gap-1 text-[#9CA3AF] hover:text-[#6B7280] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 rounded-full p-2"
                     aria-label="Scroll to content"
                   >
                     <span className="text-[10px] uppercase tracking-widest font-medium">
@@ -6708,39 +6661,39 @@ export default function App() {
 
                 {/* Mobile only: main interactive demo (with typing) below hero */}
                 <div className="lg:hidden w-full max-w-[520px] mx-auto pt-8">
-                  <div className="rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
+                  <div className="rounded-lg border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-4 md:p-6">
                     <div className="flex items-center justify-between mb-4 px-1">
                       <div className="flex gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
                         <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                       </div>
-                      <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                      <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280]">
                         Tunnel Vision · Demo
                       </span>
                       <span className="w-8" />
                     </div>
-                    <div className="h-[440px] overflow-hidden rounded-2xl bg-gray-100 border border-gray-200">
+                    <div className="h-[440px] overflow-hidden rounded-lg bg-[#F8FAFC] border border-[#E5E7EB]">
                       <div className="w-full px-5 py-5 space-y-4">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.25em] text-blue-600">
+                            <p className="text-xs uppercase tracking-[0.25em] text-[#6366F1]">
                               Today
                             </p>
-                            <h3 className="text-2xl font-semibold tracking-tight text-gray-900">
-                              Hello <span className="text-blue-600">Alex</span>.
+                            <h3 className="text-2xl font-semibold tracking-tight text-[#111827]">
+                              Hello <span className="text-[#6366F1]">Alex</span>.
                             </h3>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-[#6B7280] mt-1">
                               Ready to beat yesterday?
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#6B7280]">
                               Streak
                             </p>
-                            <p className="text-xl font-mono font-bold text-gray-900">
+                            <p className="text-xl font-mono font-bold text-[#111827]">
                               3
-                              <span className="text-[10px] text-gray-500 ml-1">
+                              <span className="text-[10px] text-[#6B7280] ml-1">
                                 days
                               </span>
                             </p>
@@ -6748,8 +6701,8 @@ export default function App() {
                         </div>
                         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
                           <div className="relative flex items-center justify-center">
-                            <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
-                              <span className="font-mono text-lg text-gray-900">
+                            <div className="w-24 h-24 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center">
+                              <span className="font-mono text-lg text-[#111827]">
                                 {String(Math.floor(demoSeconds / 60)).padStart(
                                   2,
                                   "0",
@@ -6758,12 +6711,12 @@ export default function App() {
                               </span>
                             </div>
                           </div>
-                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="flex gap-2 p-2 border-b border-gray-100">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
+                          <div className="rounded-lg bg-white border border-[#E5E7EB] overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-[#E5E7EB]">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB] text-[12px] text-[#6B7280] font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">
+                                    <span className="text-[#111827]">
                                       {demoInputText}
                                     </span>
                                     <span className="demo-cursor-blink ml-0.5 align-middle">
@@ -6774,26 +6727,26 @@ export default function App() {
                                   "Add task..."
                                 )}
                               </div>
-                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                              <div className="px-3 py-2 rounded-lg bg-[#6366F1] text-[11px] font-semibold text-white">
                                 Add
                               </div>
                             </div>
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-[#E5E7EB]">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={`mobile-${task}`}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-50/80 text-gray-900"
-                                      : "text-gray-700"
+                                      ? "bg-[#EEF2FF]/80 text-[#111827]"
+                                      : "text-[#111827]"
                                   }`}
                                 >
                                   <span className="tracking-tight">{task}</span>
-                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-[#D1D5DB] bg-white flex-shrink-0" />
                                 </div>
                               ))}
                               {demoTasks.length === 0 && (
-                                <div className="px-3 py-4 text-center text-[12px] text-gray-400 font-sans">
+                                <div className="px-3 py-4 text-center text-[12px] text-[#9CA3AF] font-sans">
                                   Tasks you add will appear here
                                 </div>
                               )}
@@ -6815,43 +6768,43 @@ export default function App() {
                     <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-400/80">
                       Declutter your thoughts.
                     </p>
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
+                    <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#111827]">
                       Step 1
                     </h2>
-                    <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
+                    <p className="text-lg md:text-xl text-[#6B7280] leading-relaxed max-w-xl">
                       Brain dump tasks like emails, meetings, homework, or
                       chores. Start a timer and see if you can PR.
                     </p>
                     {/* Mobile: static Step 1 preview */}
-                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
+                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-lg border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-4 overflow-hidden">
                       <div className="flex items-center justify-between mb-3 px-1">
                         <div className="flex gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
                           <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                         </div>
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280]">
                           Tunnel Vision
                         </span>
                         <span className="w-8" />
                       </div>
-                      <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4 space-y-4">
+                      <div className="rounded-lg bg-[#F8FAFC] border border-[#E5E7EB] p-4 space-y-4">
                         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
-                          <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
-                            <span className="font-mono text-lg text-gray-900">
+                          <div className="w-24 h-24 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center">
+                            <span className="font-mono text-lg text-[#111827]">
                               25:00
                             </span>
                           </div>
-                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="flex gap-2 p-2 border-b border-gray-100">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
+                          <div className="rounded-lg bg-white border border-[#E5E7EB] overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-[#E5E7EB]">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB] text-[12px] text-[#6B7280] font-sans">
                                 Add task...
                               </div>
-                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                              <div className="px-3 py-2 rounded-lg bg-[#6366F1] text-[11px] font-semibold text-white">
                                 Add
                               </div>
                             </div>
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-[#E5E7EB]">
                               {[
                                 "calculus homework",
                                 "take bins down",
@@ -6861,12 +6814,12 @@ export default function App() {
                                   key={task}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-50/80 text-gray-900"
-                                      : "text-gray-700"
+                                      ? "bg-[#EEF2FF]/80 text-[#111827]"
+                                      : "text-[#111827]"
                                   }`}
                                 >
                                   <span className="tracking-tight">{task}</span>
-                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-[#D1D5DB] bg-white flex-shrink-0" />
                                 </div>
                               ))}
                             </div>
@@ -6881,46 +6834,46 @@ export default function App() {
                     ref={feature2Ref}
                     className="space-y-5 min-h-0 lg:min-h-[160vh] flex flex-col justify-center"
                   >
-                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-blue-600">
+                    <p className="text-lg md:text-xl font-semibold tracking-[0.2em] uppercase text-[#6366F1]">
                       Make improvement a priority.
                     </p>
-                    <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-gray-900">
+                    <h2 className="text-4xl md:text-5xl font-semibold tracking-tight text-[#111827]">
                       Step 2
                     </h2>
-                    <p className="text-lg md:text-xl text-gray-600 leading-relaxed max-w-xl">
+                    <p className="text-lg md:text-xl text-[#6B7280] leading-relaxed max-w-xl">
                       Use Tunnel Vision's graphs to view your productivity over
                       weeks and set goals for yourself in the future.
                     </p>
                     {/* Mobile: static Step 2 preview (focus mode) */}
-                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-3xl border border-gray-200 bg-white shadow-xl p-4 overflow-hidden">
+                    <div className="lg:hidden w-full max-w-[520px] mt-8 rounded-lg border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-4 overflow-hidden">
                       <div className="flex items-center justify-between mb-3 px-1">
                         <div className="flex gap-1.5">
                           <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
                           <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
                           <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                         </div>
-                        <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                        <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280]">
                           Tunnel Vision
                         </span>
                         <span className="w-8" />
                       </div>
-                      <div className="rounded-2xl bg-gray-100 border border-gray-200 p-4">
-                        <div className="text-[10px] uppercase tracking-[0.3em] text-gray-500 mb-3">
+                      <div className="rounded-lg bg-[#F8FAFC] border border-[#E5E7EB] p-4">
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-[#6B7280] mb-3">
                           Focus mode · Live
                         </div>
-                        <div className="rounded-[32px] bg-gradient-to-b from-blue-50 to-white border border-blue-200 shadow-lg px-6 py-8 space-y-4">
+                        <div className="rounded-lg bg-white border border-[#E5E7EB] px-6 py-8 space-y-4">
                           <div className="flex flex-col items-center gap-1">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-[#6366F1]">
                               Deep work session
                             </div>
-                            <div className="text-4xl font-mono tracking-tight text-gray-900">
+                            <div className="text-4xl font-mono tracking-tight text-[#111827]">
                               24:32
                             </div>
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-[#6366F1]">
                               Focus integrity: 96.4%
                             </div>
                           </div>
-                          <div className="divide-y divide-gray-100 rounded-2xl bg-white border border-gray-200 overflow-hidden">
+                          <div className="divide-y divide-[#E5E7EB] rounded-lg bg-white border border-[#E5E7EB] overflow-hidden">
                             {[
                               "calculus homework",
                               "take bins down",
@@ -6930,21 +6883,21 @@ export default function App() {
                                 key={task}
                                 className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                   index === 0
-                                    ? "bg-blue-50 text-gray-900"
-                                    : "text-gray-700"
+                                    ? "bg-[#EEF2FF] text-[#111827]"
+                                    : "text-[#111827]"
                                 }`}
                               >
                                 <div className="flex items-center gap-2.5">
                                   <span
                                     className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                       index === 0
-                                        ? "bg-blue-500"
-                                        : "bg-gray-400"
+                                        ? "bg-[#6366F1]"
+                                        : "bg-[#9CA3AF]"
                                     }`}
                                   />
                                   <span className="tracking-tight">{task}</span>
                                 </div>
-                                <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                <span className="w-4 h-4 rounded-md border border-[#D1D5DB] bg-white flex-shrink-0" />
                               </div>
                             ))}
                           </div>
@@ -6959,14 +6912,14 @@ export default function App() {
 
               {/* Right: Sticky app preview container (desktop only) */}
               <div className="hidden lg:flex justify-center md:justify-end md:sticky md:top-24 md:self-start">
-                <div className="w-full max-w-[520px] rounded-3xl border border-gray-200 bg-white shadow-xl p-4 md:p-6">
+                <div className="w-full max-w-[520px] rounded-lg border border-[#E5E7EB] bg-white shadow-[0_4px_12px_rgba(0,0,0,0.08)] p-4 md:p-6">
                   <div className="flex items-center justify-between mb-4 px-1">
                     <div className="flex gap-1.5">
                       <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
                       <span className="w-2.5 h-2.5 rounded-full bg-yellow-400/80" />
                       <span className="w-2.5 h-2.5 rounded-full bg-emerald-400/80" />
                     </div>
-                    <span className="text-[10px] uppercase tracking-[0.2em] text-gray-500">
+                    <span className="text-[10px] uppercase tracking-[0.2em] text-[#6B7280]">
                       Tunnel Vision · Demo
                     </span>
                     <span className="w-8" />
@@ -6975,7 +6928,7 @@ export default function App() {
                   {/* Scrollable simulated app */}
                   <div
                     ref={previewScrollRef}
-                    className="h-[440px] overflow-hidden rounded-2xl bg-gray-100 border border-gray-200"
+                    className="h-[440px] overflow-hidden rounded-lg bg-[#F8FAFC] border border-[#E5E7EB]"
                   >
                     <div
                       className="min-h-full w-full px-5 py-5 space-y-10 will-change-transform"
@@ -6991,23 +6944,23 @@ export default function App() {
                       >
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="text-xs uppercase tracking-[0.25em] text-blue-600">
+                            <p className="text-xs uppercase tracking-[0.25em] text-[#6366F1]">
                               Today
                             </p>
-                            <h3 className="text-2xl font-semibold tracking-tight text-gray-900">
-                              Hello <span className="text-blue-600">Alex</span>.
+                            <h3 className="text-2xl font-semibold tracking-tight text-[#111827]">
+                              Hello <span className="text-[#6366F1]">Alex</span>.
                             </h3>
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-[#6B7280] mt-1">
                               Ready to beat yesterday?
                             </p>
                           </div>
                           <div className="text-right">
-                            <p className="text-[10px] uppercase tracking-[0.22em] text-gray-500">
+                            <p className="text-[10px] uppercase tracking-[0.22em] text-[#6B7280]">
                               Streak
                             </p>
-                            <p className="text-xl font-mono font-bold text-gray-900">
+                            <p className="text-xl font-mono font-bold text-[#111827]">
                               3
-                              <span className="text-[10px] text-gray-500 ml-1">
+                              <span className="text-[10px] text-[#6B7280] ml-1">
                                 days
                               </span>
                             </p>
@@ -7017,8 +6970,8 @@ export default function App() {
                         {/* Demo timer + tasks card (Todoist-style list) */}
                         <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-4 items-start">
                           <div className="relative flex items-center justify-center">
-                            <div className="w-24 h-24 rounded-2xl bg-white border border-gray-200 flex items-center justify-center shadow-md">
-                              <span className="font-mono text-lg text-gray-900">
+                            <div className="w-24 h-24 rounded-lg bg-white border border-[#E5E7EB] flex items-center justify-center">
+                              <span className="font-mono text-lg text-[#111827]">
                                 {String(Math.floor(demoSeconds / 60)).padStart(
                                   2,
                                   "0",
@@ -7028,12 +6981,12 @@ export default function App() {
                             </div>
                           </div>
 
-                          <div className="rounded-2xl bg-white border border-gray-200 shadow-sm overflow-hidden">
-                            <div className="flex gap-2 p-2 border-b border-gray-100">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-gray-50 border border-gray-200 text-[12px] text-gray-500 font-sans">
+                          <div className="rounded-lg bg-white border border-[#E5E7EB] overflow-hidden">
+                            <div className="flex gap-2 p-2 border-b border-[#E5E7EB]">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-[#F8FAFC] border border-[#E5E7EB] text-[12px] text-[#6B7280] font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">
+                                    <span className="text-[#111827]">
                                       {demoInputText}
                                     </span>
                                     <span className="demo-cursor-blink ml-0.5 align-middle">
@@ -7044,26 +6997,26 @@ export default function App() {
                                   "Add task..."
                                 )}
                               </div>
-                              <div className="px-3 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                              <div className="px-3 py-2 rounded-lg bg-[#6366F1] text-[11px] font-semibold text-white">
                                 Add
                               </div>
                             </div>
-                            <div className="divide-y divide-gray-100">
+                            <div className="divide-y divide-[#E5E7EB]">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={task}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-50/80 text-gray-900"
-                                      : "text-gray-700"
+                                      ? "bg-[#EEF2FF]/80 text-[#111827]"
+                                      : "text-[#111827]"
                                   }`}
                                 >
                                   <span className="tracking-tight">{task}</span>
-                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-[#D1D5DB] bg-white flex-shrink-0" />
                                 </div>
                               ))}
                               {demoTasks.length === 0 && (
-                                <div className="px-3 py-4 text-center text-[12px] text-gray-400 font-sans">
+                                <div className="px-3 py-4 text-center text-[12px] text-[#9CA3AF] font-sans">
                                   Tasks you add will appear here
                                 </div>
                               )}
@@ -7077,32 +7030,32 @@ export default function App() {
                         className="space-y-4 pt-6"
                         style={{ opacity: focusOpacity }}
                       >
-                        <div className="text-[10px] uppercase tracking-[0.3em] text-gray-500">
+                        <div className="text-[10px] uppercase tracking-[0.3em] text-[#6B7280]">
                           Focus mode · Live
                         </div>
-                        <div className="rounded-[32px] bg-gradient-to-b from-blue-50 to-white border border-blue-200 shadow-lg px-8 py-10 space-y-6">
+                        <div className="rounded-lg bg-white border border-[#E5E7EB] px-8 py-10 space-y-6">
                           <div className="flex flex-col items-center gap-2">
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-[#6366F1]">
                               Deep work session
                             </div>
-                            <div className="text-5xl md:text-6xl font-mono tracking-tight text-gray-900">
+                            <div className="text-5xl md:text-6xl font-mono tracking-tight text-[#111827]">
                               {String(Math.floor(demoSeconds / 60)).padStart(
                                 2,
                                 "0",
                               )}
                               :{String(demoSeconds % 60).padStart(2, "0")}
                             </div>
-                            <div className="text-[10px] uppercase tracking-[0.3em] text-blue-600">
+                            <div className="text-[10px] uppercase tracking-[0.3em] text-[#6366F1]">
                               Focus integrity: 96.4%
                             </div>
                           </div>
 
                           <div className="space-y-3">
                             <div className="flex gap-2">
-                              <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-gray-200 text-[12px] text-gray-500 font-sans">
+                              <div className="flex-1 px-3 py-2 rounded-xl bg-white border border-[#E5E7EB] text-[12px] text-[#6B7280] font-sans">
                                 {demoInputText ? (
                                   <>
-                                    <span className="text-gray-700">
+                                    <span className="text-[#111827]">
                                       {demoInputText}
                                     </span>
                                     <span className="demo-cursor-blink ml-0.5 align-middle">
@@ -7113,33 +7066,33 @@ export default function App() {
                                   "Add task..."
                                 )}
                               </div>
-                              <button className="px-4 py-2 rounded-xl bg-gray-900 text-[11px] font-semibold text-white shadow-sm">
+                              <button className="px-4 py-2 rounded-lg bg-[#6366F1] text-[11px] font-semibold text-white">
                                 Add
                               </button>
                             </div>
-                            <div className="divide-y divide-gray-100 rounded-2xl bg-white border border-gray-200 overflow-hidden shadow-sm">
+                            <div className="divide-y divide-[#E5E7EB] rounded-lg bg-white border border-[#E5E7EB] overflow-hidden">
                               {demoTasks.map((task, index) => (
                                 <div
                                   key={`focus-${task}`}
                                   className={`flex items-center justify-between px-3 py-2.5 text-[13px] font-sans ${
                                     index === 0
-                                      ? "bg-blue-50 text-gray-900"
-                                      : "text-gray-700"
+                                      ? "bg-[#EEF2FF] text-[#111827]"
+                                      : "text-[#111827]"
                                   }`}
                                 >
                                   <div className="flex items-center gap-2.5">
                                     <span
                                       className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${
                                         index === 0
-                                          ? "bg-blue-500"
-                                          : "bg-gray-400"
+                                          ? "bg-[#6366F1]"
+                                          : "bg-[#9CA3AF]"
                                       }`}
                                     />
                                     <span className="tracking-tight">
                                       {task}
                                     </span>
                                   </div>
-                                  <span className="w-4 h-4 rounded-md border border-gray-300 bg-white flex-shrink-0" />
+                                  <span className="w-4 h-4 rounded-md border border-[#D1D5DB] bg-white flex-shrink-0" />
                                 </div>
                               ))}
                             </div>
@@ -7153,10 +7106,10 @@ export default function App() {
                         style={{ opacity: analyticsOpacity }}
                       >
                         <div className="flex items-center justify-between">
-                          <h3 className="text-xs uppercase tracking-[0.3em] text-gray-500">
+                          <h3 className="text-xs uppercase tracking-[0.3em] text-[#6B7280]">
                             Performance dashboard
                           </h3>
-                          <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
+                          <span className="text-[10px] text-[#6366F1] uppercase tracking-[0.2em]">
                             Weekly view
                           </span>
                         </div>
@@ -7173,24 +7126,24 @@ export default function App() {
                           ].map(({ label, value }) => (
                             <div
                               key={label}
-                              className="rounded-2xl bg-white border border-gray-200 px-3 py-3 space-y-1"
+                              className="rounded-lg bg-white border border-[#E5E7EB] px-3 py-3 space-y-1"
                             >
-                              <p className="text-[9px] uppercase tracking-[0.2em] text-gray-500">
+                              <p className="text-[9px] uppercase tracking-[0.2em] text-[#6B7280]">
                                 {label}
                               </p>
-                              <p className="text-sm font-mono font-bold text-gray-900">
+                              <p className="text-sm font-mono font-bold text-[#111827]">
                                 {value}
                               </p>
                             </div>
                           ))}
                         </div>
 
-                        <div className="rounded-3xl bg-white border border-gray-200 p-4 space-y-3">
+                        <div className="rounded-lg bg-white border border-[#E5E7EB] p-4 space-y-3">
                           <div className="flex items-center justify-between">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                            <p className="text-[10px] uppercase tracking-[0.25em] text-[#6B7280]">
                               Discipline log
                             </p>
-                            <span className="text-[10px] text-blue-600 uppercase tracking-[0.2em]">
+                            <span className="text-[10px] text-[#6366F1] uppercase tracking-[0.2em]">
                               Month view
                             </span>
                           </div>
@@ -7198,26 +7151,26 @@ export default function App() {
                             {Array.from({ length: 21 }).map((_, i) => (
                               <div
                                 key={i}
-                                className={`aspect-square rounded-md border border-gray-200 ${
+                                className={`aspect-square rounded-md border border-[#E5E7EB] ${
                                   i % 5 === 0
-                                    ? "bg-blue-500"
+                                    ? "bg-[#6366F1]"
                                     : i % 3 === 0
                                       ? "bg-blue-300"
-                                      : "bg-gray-100"
+                                      : "bg-[#F1F5F9]"
                                 }`}
                               />
                             ))}
                           </div>
                         </div>
 
-                        <div className="rounded-3xl bg-white border border-gray-200 p-4 space-y-2">
-                          <p className="text-[10px] uppercase tracking-[0.25em] text-gray-500">
+                        <div className="rounded-lg bg-white border border-[#E5E7EB] p-4 space-y-2">
+                          <p className="text-[10px] uppercase tracking-[0.25em] text-[#6B7280]">
                             Focus integrity trend
                           </p>
-                          <div className="h-24 rounded-2xl bg-gradient-to-tr from-blue-200 via-blue-100 to-transparent border border-blue-200 relative overflow-hidden">
-                            <div className="absolute inset-x-6 bottom-3 h-12 border-t border-gray-200" />
+                          <div className="h-24 rounded-lg bg-[#EEF2FF] border border-[#E5E7EB] relative overflow-hidden">
+                            <div className="absolute inset-x-6 bottom-3 h-12 border-t border-[#E5E7EB]" />
                             <div className="absolute inset-3">
-                              <div className="h-full w-full rounded-xl border border-gray-200 bg-white/60" />
+                              <div className="h-full w-full rounded-xl border border-[#E5E7EB] bg-white/60" />
                             </div>
                           </div>
                         </div>
@@ -7232,24 +7185,24 @@ export default function App() {
 
         {/* Work mode selection modal */}
         {!isSimulation && isWorkModeModalOpen && (
-          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/40 backdrop-blur-sm">
-            <div className="workmode-modal-enter w-full max-w-md mx-4 rounded-3xl bg-white/90 border border-gray-200 shadow-[0_24px_60px_rgba(15,23,42,0.45)] p-6">
+          <div className="fixed inset-0 z-[600] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+            <div className="workmode-modal-enter w-full max-w-md mx-4 rounded-lg bg-white border border-[#E5E7EB] shadow-sm p-6">
               <div className="mb-4">
-                <p className="text-[10px] uppercase tracking-[0.3em] text-blue-600 mb-2">
+                <p className="text-[10px] uppercase tracking-[0.3em] text-[#6366F1] mb-2">
                   Working Mode
                 </p>
-                <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                <h2 className="text-[15px] font-semibold tracking-tight text-[#111827]">
                   How will you work on this task?
                 </h2>
                 {pendingWorkModeTaskTitle ? (
                   <p
-                    className="mt-3 font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-gray-900 line-clamp-3"
+                    className="mt-3 font-['Plus_Jakarta_Sans',system-ui,sans-serif] text-xl font-semibold leading-7 tracking-normal text-[#111827] line-clamp-3"
                     title={pendingWorkModeTaskTitle}
                   >
                     {pendingWorkModeTaskTitle}
                   </p>
                 ) : null}
-                <p className="mt-2 text-sm text-gray-500">
+                <p className="mt-2 text-sm text-[#6B7280]">
                   Choose where you&apos;ll focus so Tunnel Vision can score your
                   integrity fairly.
                 </p>
@@ -7288,7 +7241,7 @@ export default function App() {
                     }
                     advanceWorkModePromptQueue();
                   }}
-                  className="group relative flex flex-col items-start gap-1 rounded-2xl border border-blue-500/70 bg-gradient-to-br from-blue-600 via-blue-500 to-blue-700 px-4 py-3 text-left text-sm font-medium text-white shadow-[0_18px_40px_rgba(37,99,235,0.55)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(37,99,235,0.7)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="group relative flex flex-col items-start gap-1 rounded-lg border border-[#6366F1] bg-[#6366F1] px-4 py-3 text-left text-[13px] font-medium text-white transition-transform duration-150 hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 >
                   <span className="text-[11px] uppercase tracking-[0.22em] opacity-70">
                     Recommended
@@ -7296,7 +7249,7 @@ export default function App() {
                   <span className="text-sm font-semibold">
                     Work inside Tunnel Vision
                   </span>
-                  <span className="text-[11px] text-blue-100/90">
+                  <span className="text-[11px] text-white/80">
                     Stay in this tab. Leaving will lower focus integrity.
                   </span>
                 </button>
@@ -7333,15 +7286,15 @@ export default function App() {
                     }
                     advanceWorkModePromptQueue();
                   }}
-                  className="group flex flex-col items-start gap-1 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-left text-sm font-medium text-gray-900 shadow-[0_18px_40px_rgba(15,23,42,0.18)] transition-transform duration-150 hover:-translate-y-0.5 hover:shadow-[0_22px_55px_rgba(15,23,42,0.26)] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                  className="group flex flex-col items-start gap-1 rounded-lg border border-[#E5E7EB] bg-white px-4 py-3 text-left text-[13px] font-medium text-[#111827] transition-transform duration-150 hover:-translate-y-0.5 hover:bg-[#F8FAFC] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6366F1] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                 >
-                  <span className="text-[11px] uppercase tracking-[0.22em] text-gray-400">
+                  <span className="text-[11px] uppercase tracking-[0.22em] text-[#9CA3AF]">
                     Flexible
                   </span>
                   <span className="text-sm font-semibold">
                     Work in another tab/app
                   </span>
-                  <span className="text-[11px] text-gray-500">
+                  <span className="text-[11px] text-[#6B7280]">
                     You can switch tabs freely. Integrity won&apos;t be
                     penalized.
                   </span>
@@ -7359,23 +7312,22 @@ export default function App() {
                 ref={performanceRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
+                <p className="text-[13px] font-semibold tracking-[0.25em] uppercase text-[#6366F1]">
                   Performance
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111827]">
                   Track your task performance.
                 </h2>
-                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
+                <p className="text-[13px] md:text-base text-[#6B7280] max-w-2xl leading-relaxed">
                   Use Tunnel Vision to bring out your competitive edge. How many
                   tasks can you complete before the timer runs out?
                 </p>
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  className="mt-4 px-14 py-5 bg-[#6366F1] rounded-lg transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                  <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  <span className="text-white font-semibold tracking-wide text-[13px] uppercase">
                     Get started
                   </span>
                 </button>
@@ -7385,13 +7337,13 @@ export default function App() {
                 ref={habitRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
+                <p className="text-[13px] font-semibold tracking-[0.25em] uppercase text-[#6366F1]">
                   Habit Building
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111827]">
                   Fix your habits before it's too late.
                 </h2>
-                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
+                <p className="text-[13px] md:text-base text-[#6B7280] max-w-2xl leading-relaxed">
                   Tunnel Vision should become your go-to task manager. Brain
                   dump all your tasks right as you get home and hit deadlines
                   without breaking a sweat.
@@ -7399,10 +7351,9 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  className="mt-4 px-14 py-5 bg-[#6366F1] rounded-lg transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                  <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  <span className="text-white font-semibold tracking-wide text-[13px] uppercase">
                     Get started
                   </span>
                 </button>
@@ -7412,22 +7363,21 @@ export default function App() {
                 ref={timeRef}
                 className="space-y-6 text-left pt-12 min-h-[130vh] flex flex-col justify-center"
               >
-                <p className="text-xs font-semibold tracking-[0.25em] uppercase text-blue-600">
+                <p className="text-[13px] font-semibold tracking-[0.25em] uppercase text-[#6366F1]">
                   Time Management
                 </p>
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-gray-900">
+                <h2 className="text-3xl md:text-4xl font-semibold tracking-tight text-[#111827]">
                   Own your schedule.
                 </h2>
-                <p className="text-sm md:text-base text-gray-600 max-w-2xl leading-relaxed">
+                <p className="text-[13px] md:text-base text-[#6B7280] max-w-2xl leading-relaxed">
                   Organize your tasks between most urgent and least urgent.
                 </p>
                 <button
                   type="button"
                   onClick={handleGetStarted}
-                  className="group relative mt-4 px-14 py-5 bg-blue-600 rounded-full overflow-hidden transition-all duration-500 hover:scale-110 active:scale-95 shadow-[0_0_40px_rgba(37,99,235,0.4)] animate-breathing"
+                  className="mt-4 px-14 py-5 bg-[#6366F1] rounded-lg transition-all duration-200 hover:bg-[#4f46e5] active:scale-[0.97]"
                 >
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-in-out" />
-                  <span className="relative text-white font-black tracking-[0.3em] text-xs uppercase">
+                  <span className="text-white font-semibold tracking-wide text-[13px] uppercase">
                     Get started
                   </span>
                 </button>
@@ -7438,22 +7388,22 @@ export default function App() {
 
         {(deleteUndoToast || taskDoneToast) && (
           <div
-            className="fixed bottom-6 left-1/2 z-[620] flex w-[min(100vw-1.5rem,420px)] -translate-x-1/2 flex-col items-stretch gap-2 font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
+            className="fixed bottom-6 left-1/2 z-[620] flex w-[min(100vw-1.5rem,420px)] -translate-x-1/2 flex-col items-stretch gap-2 font-['Inter',system-ui,sans-serif]"
             role="region"
             aria-label="Notifications"
           >
             {deleteUndoToast && (
               <div
-                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-2xl border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-lg border border-[#E5E7EB] bg-white px-4 py-2.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
                 role="status"
               >
-                <span className="text-[13px] font-medium text-zinc-100 microcopy-in">
+                <span className="text-[13px] font-medium text-[#111827] microcopy-in">
                   Task deleted — Undo
                 </span>
                 <button
                   type="button"
                   onClick={undoDeleteTaskToast}
-                  className="btn-press-instant shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-amber-400 transition hover:bg-white/[0.06] hover:text-amber-300"
+                  className="btn-press-instant shrink-0 rounded-lg px-3 py-1.5 text-[12px] font-semibold text-[#6366F1] transition hover:bg-[#F8FAFC]"
                 >
                   Undo
                 </button>
@@ -7461,16 +7411,16 @@ export default function App() {
             )}
             {taskDoneToast && (
               <div
-                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-full border border-white/[0.12] bg-[#2a2a2a] px-4 py-2.5 shadow-[0_12px_40px_rgba(0,0,0,0.55)]"
+                className="micro-snackbar-in flex items-center justify-between gap-3 rounded-lg border border-[#E5E7EB] bg-white px-4 py-2.5 shadow-[0_4px_12px_rgba(0,0,0,0.08)]"
                 role="status"
               >
-                <span className="text-[13px] font-medium text-zinc-100 microcopy-in whitespace-nowrap">
+                <span className="text-[13px] font-medium text-[#111827] microcopy-in whitespace-nowrap">
                   Locked in.
                 </span>
                 <button
                   type="button"
                   onClick={undoTaskCompletionToast}
-                  className="btn-press-instant flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-amber-500 transition hover:bg-white/[0.06] hover:text-amber-400"
+                  className="btn-press-instant flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-[#6366F1] transition hover:bg-[#F8FAFC]"
                   aria-label="Undo complete task"
                   title="Undo"
                 >
@@ -7499,7 +7449,7 @@ export default function App() {
             role="status"
             aria-live="polite"
           >
-            <p className="microcopy-in rounded-full border border-white/[0.08] bg-zinc-900/90 px-3 py-1.5 text-center text-[12px] font-medium text-zinc-300 shadow-lg backdrop-blur-sm">
+            <p className="microcopy-in rounded-lg border border-[#E5E7EB] bg-white px-3 py-1.5 text-center text-[12px] font-medium text-[#6B7280] shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
               {microRewardMsg}
             </p>
           </div>
@@ -7539,32 +7489,17 @@ html { scroll-behavior: smooth; }
   animation: task-reappear 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }
 .focus-finale-timer-wrap {
-  filter: drop-shadow(0 0 22px rgba(234, 179, 8, 0.42))
-    drop-shadow(0 0 48px rgba(250, 204, 21, 0.22));
+  filter: drop-shadow(0 0 12px rgba(99, 102, 241, 0.15));
 }
 .focus-finale-timer-card {
   box-shadow:
-    0 0 0 1px rgba(234, 179, 8, 0.18),
-    0 20px 50px rgba(234, 179, 8, 0.12),
-    0 0 36px rgba(250, 204, 21, 0.18);
+    0 0 0 1px rgba(99, 102, 241, 0.12),
+    0 8px 24px rgba(0, 0, 0, 0.06);
 }
 .focus-finale-streamers-ring {
-  opacity: 0.92;
+  opacity: 0.6;
   overflow: hidden;
-  background-image:
-    linear-gradient(125deg, transparent 40%, rgba(234, 179, 8, 0.14) 50%, transparent 60%),
-    linear-gradient(210deg, transparent 35%, rgba(250, 204, 21, 0.12) 48%, transparent 58%),
-    repeating-linear-gradient(
-      90deg,
-      transparent 0 28px,
-      rgba(234, 179, 8, 0.09) 28px 29px
-    );
-  background-size: 200% 200%, 180% 180%, 100px 100%;
-  animation: focus-finale-streamer-move 2.8s linear infinite;
-}
-@keyframes focus-finale-streamer-move {
-  0% { background-position: 0% 0%, 100% 0%, 0 0; }
-  100% { background-position: 100% 80%, 0% 100%, 100px 36px; }
+  background: rgba(99, 102, 241, 0.04);
 }
 ::-webkit-scrollbar { width: 6px; }
 `}</style>
