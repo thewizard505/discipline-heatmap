@@ -44,6 +44,8 @@ type Task = {
   completed?: boolean;
   /** YYYY-MM-DD — Today list sets to current day; Tests/Projects/Long-Term via picker */
   dueDate?: string | null;
+  /** Todoist-style priority: 1 = highest; default 4 */
+  priority?: 1 | 2 | 3 | 4;
   /** User-provided quick estimate (Focus for today), minutes */
   estimatedMinutes?: number | null;
   /** User skipped or answered inline estimate prompt — do not ask again */
@@ -551,9 +553,21 @@ function parseISODate(iso: string): Date {
   return new Date(yy, mm - 1, dd);
 }
 
+function addDaysFromToday(days: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return toISODate(d);
+}
+
 function formatDueButtonLabel(iso: string): string {
   const d = parseISODate(iso);
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
+function formatDueChipLabel(iso: string | null, todayIso: string): string {
+  if (!iso) return "Due date";
+  if (iso === todayIso) return "Today";
+  return formatDueButtonLabel(iso);
 }
 
 /** Overdue row: “Yesterday” when due was calendar yesterday, else short date */
@@ -731,6 +745,99 @@ function MiniDueDatePopover({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+type TaskPriorityLevel = 1 | 2 | 3 | 4;
+
+function priorityCheckboxRingClass(p: TaskPriorityLevel | undefined): string {
+  switch (p ?? 4) {
+    case 1:
+      return "border-[#d1453c] bg-[#fcf4f4]";
+    case 2:
+      return "border-[#eb8a0a] bg-[#fff8f0]";
+    case 3:
+      return "border-[#246fe0] bg-[#f4f8ff]";
+    default:
+      return "border-[#d1d5db] bg-white";
+  }
+}
+
+function PriorityPickerPopover({
+  open,
+  anchor,
+  selected,
+  onSelect,
+  onClose,
+}: {
+  open: boolean;
+  anchor: DOMRect | null;
+  selected: TaskPriorityLevel;
+  onSelect: (p: TaskPriorityLevel) => void;
+  onClose: () => void;
+}) {
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const el = document.getElementById("priority-picker-popover");
+      if (el && !el.contains(e.target as Node)) onClose();
+    };
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [open, onClose]);
+
+  if (!open || !anchor) return null;
+  const top = Math.min(anchor.bottom + 6, window.innerHeight - 220);
+  const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 210));
+
+  const rows: { p: TaskPriorityLevel; label: string; stroke: string }[] = [
+    { p: 1, label: "Priority 1", stroke: "#d1453c" },
+    { p: 2, label: "Priority 2", stroke: "#eb8a0a" },
+    { p: 3, label: "Priority 3", stroke: "#246fe0" },
+    { p: 4, label: "Priority 4", stroke: "#9ca3af" },
+  ];
+
+  return (
+    <div
+      id="priority-picker-popover"
+      className="fixed w-[200px] rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_8px_24px_rgba(0,0,0,0.12)] z-[540]"
+      style={{ top, left }}
+      role="listbox"
+      aria-label="Priority"
+    >
+      {rows.map((r) => (
+        <button
+          key={r.p}
+          type="button"
+          role="option"
+          aria-selected={selected === r.p}
+          onClick={() => onSelect(r.p)}
+          className="w-full flex items-center gap-2.5 px-3 py-2 text-left text-[13px] text-[#202020] hover:bg-[#F8FAFC] transition-colors"
+        >
+          <svg
+            className="h-4 w-4 shrink-0"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={r.stroke}
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+            <line x1="4" y1="22" x2="4" y2="15" />
+          </svg>
+          <span className="flex-1 min-w-0">{r.label}</span>
+          {selected === r.p ? (
+            <span className="text-[#db4c3f] text-[14px]" aria-hidden>
+              ✓
+            </span>
+          ) : (
+            <span className="w-4 shrink-0" aria-hidden />
+          )}
+        </button>
+      ))}
     </div>
   );
 }
@@ -1697,6 +1804,22 @@ const MOTION_PREF_STORAGE_KEY = "tunnelvision_motion_tier_v1";
 
 function TaskListSkeletonRows() { return null; }
 
+function normalizeLoadedTask(t: Task): Task {
+  const raw = (t as Task & { priority?: number }).priority;
+  const priority: 1 | 2 | 3 | 4 =
+    raw === 1 || raw === 2 || raw === 3 || raw === 4 ? raw : 4;
+  return { ...t, priority };
+}
+
+function normalizeTasksRecord(rec: Record<string, Task[]>): Record<string, Task[]> {
+  const out: Record<string, Task[]> = {};
+  for (const k of Object.keys(rec)) {
+    const arr = rec[k];
+    out[k] = Array.isArray(arr) ? arr.map(normalizeLoadedTask) : [];
+  }
+  return out;
+}
+
 function loadTasksByListIdFromStorage(): Record<string, Task[]> {
   if (typeof window === "undefined") return {};
   try {
@@ -1704,7 +1827,10 @@ function loadTasksByListIdFromStorage(): Record<string, Task[]> {
     if (!raw) return { [SYS_LIST_INBOX]: [] };
     const p = JSON.parse(raw) as Record<string, Task[]>;
     if (!p || typeof p !== "object") return { [SYS_LIST_INBOX]: [] };
-    return { ...p, [SYS_LIST_INBOX]: p[SYS_LIST_INBOX] ?? [] };
+    return normalizeTasksRecord({
+      ...p,
+      [SYS_LIST_INBOX]: p[SYS_LIST_INBOX] ?? [],
+    });
   } catch {
     return { [SYS_LIST_INBOX]: [] };
   }
@@ -2086,6 +2212,41 @@ export default function App() {
     anchor: DOMRect;
   }>(null);
 
+  const [composerDuePopover, setComposerDuePopover] = useState<null | {
+    anchor: DOMRect;
+  }>(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [composerTitle, setComposerTitle] = useState("");
+  const [composerDescription, setComposerDescription] = useState("");
+  const [composerDue, setComposerDue] = useState<string | null>(null);
+  const [composerPriority, setComposerPriority] =
+    useState<TaskPriorityLevel>(4);
+  const [composerPriorityOpen, setComposerPriorityOpen] = useState(false);
+  const [composerPriorityAnchor, setComposerPriorityAnchor] =
+    useState<DOMRect | null>(null);
+
+  const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
+  const [editDraftTitle, setEditDraftTitle] = useState("");
+  const [editDraftDescription, setEditDraftDescription] = useState("");
+  const [editDraftDue, setEditDraftDue] = useState<string | null>(null);
+  const [editDraftPriority, setEditDraftPriority] =
+    useState<TaskPriorityLevel>(4);
+  const [editDraftDuePopover, setEditDraftDuePopover] = useState<null | {
+    anchor: DOMRect;
+  }>(null);
+  const [editDraftPriorityOpen, setEditDraftPriorityOpen] = useState(false);
+  const [editDraftPriorityAnchor, setEditDraftPriorityAnchor] =
+    useState<DOMRect | null>(null);
+
+  const [taskDetailModalId, setTaskDetailModalId] = useState<number | null>(
+    null,
+  );
+
+  const [draggingTaskId, setDraggingTaskId] = useState<number | null>(null);
+  const [dropBeforeTaskId, setDropBeforeTaskId] = useState<number | null>(null);
+  const [dragOverPostpone, setDragOverPostpone] = useState(false);
+  const skipRowClickRef = useRef(false);
+
   const [todayMainMode, setTodayMainMode] = useState<
     "tasks" | "completed" | "search"
   >("tasks");
@@ -2212,6 +2373,35 @@ export default function App() {
     if (selectedTaskId == null) return null;
     return tasks.find((t) => t.id === selectedTaskId) ?? null;
   }, [selectedTaskId, tasks]);
+
+  const taskDetailModalTask = useMemo(() => {
+    if (taskDetailModalId == null) return null;
+    return tasks.find((t) => t.id === taskDetailModalId) ?? null;
+  }, [taskDetailModalId, tasks]);
+
+  const categoryLabelForSelectedList = useMemo(() => {
+    if (!selectedListId) return "—";
+    return (
+      selectedList?.label ??
+      SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
+      "—"
+    );
+  }, [selectedListId, selectedList]);
+
+  const todoistEmptyDayMessage = useMemo(() => {
+    const h = new Date().getHours();
+    const disp = name?.trim() || "User";
+    if (h < 12) {
+      return {
+        title: `Enjoy your free day, ${disp}!`,
+        variant: "morning" as const,
+      };
+    }
+    return {
+      title: `Enjoy the rest of your day, ${disp}!`,
+      variant: "evening" as const,
+    };
+  }, [name]);
 
   const tasksByDueDate = useMemo(() => {
     if (isSimulation) return {};
@@ -3004,6 +3194,21 @@ export default function App() {
   }, [selectedTaskId]);
 
   useEffect(() => {
+    setQuickAddOpen(false);
+    setComposerDuePopover(null);
+    setComposerPriorityOpen(false);
+    setComposerPriorityAnchor(null);
+    setEditingTaskId(null);
+    setEditDraftDuePopover(null);
+    setEditDraftPriorityOpen(false);
+    setEditDraftPriorityAnchor(null);
+    setTaskDetailModalId(null);
+    setDraggingTaskId(null);
+    setDropBeforeTaskId(null);
+    setDragOverPostpone(false);
+  }, [selectedListId]);
+
+  useEffect(() => {
     if (selectedTaskId == null) return;
     const stillVisible = tasks.some(
       (t) => t.id === selectedTaskId && !t.removing,
@@ -3654,6 +3859,7 @@ export default function App() {
       workMode: "inside",
       completed: false,
       dueDate,
+      priority: 4,
     };
     const flushAdd = () => {
       setTasks((prev) => [...prev, newTask]);
@@ -3679,6 +3885,171 @@ export default function App() {
       return;
     }
     flushAdd();
+  };
+
+  const cancelQuickAddComposer = () => {
+    setQuickAddOpen(false);
+    setComposerDuePopover(null);
+    setComposerPriorityOpen(false);
+    setComposerPriorityAnchor(null);
+  };
+
+  const openQuickAddComposer = () => {
+    if (!selectedListId || selectedListId === SYS_LIST_OVERDUE) return;
+    setQuickAddOpen(true);
+    setComposerTitle("");
+    setComposerDescription("");
+    if (
+      selectedListId === SYS_LIST_TODAY ||
+      selectedListId === SYS_LIST_INBOX
+    ) {
+      setComposerDue(toISODate(new Date()));
+    } else if (DUE_DATE_PICKER_LIST_IDS.has(selectedListId)) {
+      setComposerDue(null);
+    } else {
+      setComposerDue(null);
+    }
+    setComposerPriority(4);
+  };
+
+  const submitQuickAddComposer = () => {
+    if (!selectedListId || selectedListId === SYS_LIST_OVERDUE) return;
+    const trimmed = composerTitle.trim();
+    if (!trimmed) {
+      flashInvalidInput("list");
+      return;
+    }
+    const id = Date.now();
+    let dueDate: string | null = null;
+    if (
+      selectedListId === SYS_LIST_TODAY ||
+      selectedListId === SYS_LIST_INBOX
+    ) {
+      dueDate = toISODate(new Date());
+    } else if (DUE_DATE_PICKER_LIST_IDS.has(selectedListId)) {
+      dueDate = composerDue;
+    }
+    const newTask: Task = {
+      id,
+      text: trimmed,
+      description: composerDescription.trim(),
+      removing: false,
+      createdAt: Date.now(),
+      workMode: "inside",
+      completed: false,
+      dueDate,
+      priority: composerPriority,
+    };
+    const flushAdd = () => {
+      setTasks((prev) => [...prev, newTask]);
+      setSelectedTaskId(id);
+      setNewListTaskAnimId(id);
+      window.setTimeout(() => setNewListTaskAnimId(null), 280);
+      cancelQuickAddComposer();
+    };
+    const wasEmptyFirst =
+      visibleTasksForList.length === 0 && !allElasticListTasksComplete;
+    triggerTaskInputPress();
+    if (wasEmptyFirst) {
+      setListEmptyExit(true);
+      window.setTimeout(() => {
+        flushAdd();
+        setListEmptyExit(false);
+        setListFirstTaskEnter(true);
+        window.setTimeout(() => setListFirstTaskEnter(false), 300);
+      }, 170);
+      return;
+    }
+    flushAdd();
+  };
+
+  const cancelEditDraft = () => {
+    setEditingTaskId(null);
+    setEditDraftDuePopover(null);
+    setEditDraftPriorityOpen(false);
+    setEditDraftPriorityAnchor(null);
+  };
+
+  const saveEditDraft = () => {
+    if (editingTaskId == null || !selectedListId) return;
+    const trimmed = editDraftTitle.trim();
+    if (!trimmed) return;
+    const dueLocked = selectedListId === SYS_LIST_TODAY;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id !== editingTaskId) return t;
+        const nextDue = dueLocked ? toISODate(new Date()) : editDraftDue;
+        return {
+          ...t,
+          text: trimmed,
+          description: editDraftDescription.trim(),
+          dueDate: nextDue,
+          priority: editDraftPriority,
+        };
+      }),
+    );
+    cancelEditDraft();
+  };
+
+  const startEditTask = (t: Task) => {
+    if (selectedListId === SYS_LIST_OVERDUE) return;
+    setTaskDetailModalId(null);
+    setEditingTaskId(t.id);
+    setEditDraftTitle(t.text);
+    setEditDraftDescription(t.description ?? "");
+    setEditDraftDue(
+      selectedListId === SYS_LIST_TODAY
+        ? toISODate(new Date())
+        : t.dueDate ?? null,
+    );
+    setEditDraftPriority((t.priority ?? 4) as TaskPriorityLevel);
+  };
+
+  const applyTodoTaskOrder = (orderedTodos: Task[]) => {
+    const done = tasks.filter((t) => t.completed);
+    setTasks([...orderedTodos, ...done]);
+  };
+
+  const handleReorderDrop = (draggedId: number, beforeId: number | null) => {
+    const todoOnly = tasks.filter((t) => !t.completed);
+    const ids = todoOnly.map((t) => t.id);
+    const from = ids.indexOf(draggedId);
+    if (from === -1) return;
+    const filtered = ids.filter((id) => id !== draggedId);
+    let insertAt = beforeId == null ? filtered.length : filtered.indexOf(beforeId);
+    if (insertAt < 0) insertAt = filtered.length;
+    const nextIds = [...filtered.slice(0, insertAt), draggedId, ...filtered.slice(insertAt)];
+    const byId = new Map(todoOnly.map((t) => [t.id, t]));
+    const nextTodos = nextIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
+    applyTodoTaskOrder(nextTodos);
+    setDraggingTaskId(null);
+    setDropBeforeTaskId(null);
+  };
+
+  const handlePostponeDropOnZone = (taskId: number) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task || !selectedListId) return;
+    const tomorrow = addDaysFromToday(1);
+    if (selectedListId === SYS_LIST_TODAY) {
+      setTasksByListId((prev) => {
+        const todayArr = [...(prev[SYS_LIST_TODAY] ?? [])].filter(
+          (x) => x.id !== taskId,
+        );
+        const moved: Task = { ...task, dueDate: tomorrow };
+        const inboxArr = [...(prev[SYS_LIST_INBOX] ?? []), moved];
+        return { ...prev, [SYS_LIST_TODAY]: todayArr, [SYS_LIST_INBOX]: inboxArr };
+      });
+      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+    } else {
+      setTasks((prev) =>
+        prev.map((t) =>
+          t.id === taskId ? { ...t, dueDate: tomorrow } : t,
+        ),
+      );
+    }
+    setDraggingTaskId(null);
+    setDragOverPostpone(false);
+    setDropBeforeTaskId(null);
   };
 
   const resetAllData = () => {
@@ -4056,6 +4427,7 @@ export default function App() {
       workMode: "inside",
       completed: false,
       dueDate,
+      priority: 4,
     };
     setTasksByListId((prev) => ({
       ...prev,
@@ -5103,13 +5475,13 @@ export default function App() {
 
             {/* ── Main content column ── */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Top bar (search; notifications live in sidebar) */}
-              <div className="relative z-[260] flex h-[52px] shrink-0 items-center gap-3 border-b border-[#E5E7EB] bg-white px-5">
+              {/* Top bar — centered Todoist-style pill search */}
+              <div className="relative z-[260] flex h-[56px] shrink-0 items-center justify-center border-b border-[#E5E7EB] bg-[#FAFAFA] px-4">
                 {!isFocusSessionActive && sidebarCollapsed ? (
                   <button
                     type="button"
                     onClick={() => setSidebarCollapsed(false)}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F5F5F5]"
+                    className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0]"
                     aria-label="Expand sidebar"
                     title="Expand sidebar"
                   >
@@ -5119,14 +5491,26 @@ export default function App() {
                     </svg>
                   </button>
                 ) : null}
-                <div className="relative max-w-[480px] flex-1">
-                  <svg className="pointer-events-none absolute left-3.5 top-1/2 h-[15px] w-[15px] -translate-y-1/2 text-[#9CA3AF]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                <div className="relative w-full max-w-[520px] px-2">
+                  <svg
+                    className="pointer-events-none absolute left-4 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-[#5C5C5C]"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                  </svg>
                   <input
                     ref={taskSearchInputRef}
                     value={taskSearchQuery}
                     onChange={(e) => setTaskSearchQuery(e.target.value)}
                     placeholder="Search..."
-                    className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8FAFC] pl-10 pr-4 text-[14px] text-[#111827] outline-none transition-all placeholder:text-[#9CA3AF] hover:border-[#D1D5DB] focus:border-[#6366F1] focus:bg-white focus:ring-1 focus:ring-[#6366F1]/10"
+                    className="h-10 w-full rounded-full border border-[#E5E7EB] bg-white pl-11 pr-4 text-[14px] text-[#202020] shadow-sm outline-none transition-all placeholder:text-[#9CA3AF] hover:border-[#D1D5DB] focus:border-[#C8C8C8] focus:shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
                   />
                 </div>
               </div>
@@ -5257,32 +5641,69 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" &&
                   (todayMainMode === "tasks" || todayMainMode === "search") ? (
-                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <div className="shrink-0 border-b border-[#E5E7EB] px-5 py-3">
-                      <div className="flex items-center gap-2.5">
-                        {selectedListId ? (
-                          <SidebarPrimaryListIcon listId={selectedListId} active className="h-5 w-5 shrink-0" />
-                        ) : null}
-                        <h2 className="text-[15px] font-semibold leading-tight tracking-tight text-[#111827]">
-                          {todayMainMode === "search"
-                            ? "Search"
-                            : selectedList?.label ??
-                              SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
-                              "Tasks"}
-                        </h2>
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
+                    <header className="shrink-0 px-8 pt-8 pb-2 bg-[#FAFAFA]">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                            {todayMainMode === "search"
+                              ? "Search"
+                              : selectedList?.label ??
+                                SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
+                                "Tasks"}
+                          </h1>
+                          {selectedListId ? (
+                            <p className="mt-1 flex items-center gap-1.5 text-[13px] text-[#808080]">
+                              <svg className="w-3.5 h-3.5 text-[#B0B0B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                                <path d="M22 4L12 14.01l-3-3" />
+                              </svg>
+                              <span>
+                                {(() => {
+                                  const searchQ = taskSearchQuery.toLowerCase().trim();
+                                  const filtered = searchQ
+                                    ? visibleTasksForList.filter((t) =>
+                                        t.text.toLowerCase().includes(searchQ),
+                                      )
+                                    : visibleTasksForList;
+                                  const n = filtered.filter((t) => !t.completed).length;
+                                  return `${n} ${n === 1 ? "task" : "tasks"}`;
+                                })()}
+                              </span>
+                            </p>
+                          ) : null}
+                        </div>
+                        <div className="hidden sm:flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+                              <rect x="3" y="4" width="18" height="18" rx="2" />
+                              <path d="M16 2v4M8 2v4M3 10h18" />
+                            </svg>
+                            Connect calendar
+                          </button>
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
+                          >
+                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+                              <line x1="8" y1="6" x2="21" y2="6" />
+                              <line x1="8" y1="12" x2="21" y2="12" />
+                              <line x1="8" y1="18" x2="21" y2="18" />
+                              <line x1="3" y1="6" x2="3.01" y2="6" />
+                              <line x1="3" y1="12" x2="3.01" y2="12" />
+                              <line x1="3" y1="18" x2="3.01" y2="18" />
+                            </svg>
+                            Display
+                          </button>
+                        </div>
                       </div>
-                    </div>
-
-                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-[#E5E7EB] bg-[#F8FAFC] text-[10.5px] font-semibold uppercase tracking-wider text-[#6B7280]">
-                      <div className="w-[28px] shrink-0" />
-                      <div className="flex-1 min-w-0">Name</div>
-                      <div className="w-[120px] shrink-0 text-center">Priority <span className="text-[#6366F1] font-semibold">AI</span></div>
-                      <div className="w-[120px] shrink-0 text-center">Class</div>
-                      <div className="w-[32px] shrink-0" />
-                    </div>
+                    </header>
 
                     {/* ── Task List ── */}
-                    <div className="relative flex-1 min-h-0 overflow-y-auto">
+                    <div className="relative flex-1 min-h-0 overflow-y-auto px-8 pb-8">
                       {completionBurstTier ? (<div className={`pointer-events-none absolute inset-0 z-[1] rounded-lg micro-completion-burst--${completionBurstTier}`} aria-hidden />) : null}
 
                       {!selectedListId ? (
@@ -5294,40 +5715,56 @@ export default function App() {
                         const doneTasks = filtered.filter((t) => t.completed);
 
                         if (filtered.length === 0) {
-                          if (allElasticListTasksComplete) {
+                          if (todayMainMode === "search" && searchQ) {
                             return (
-                              <div className="flex flex-col items-center justify-center min-h-[280px]">
-                                <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none">
-                                  <circle cx="100" cy="100" r="80" fill="#f8fafc" />
-                                  <circle cx="100" cy="85" r="35" fill="#e0e7ff" />
-                                  <circle cx="85" cy="78" r="4" fill="#818cf8" />
-                                  <circle cx="115" cy="78" r="4" fill="#818cf8" />
-                                  <path d="M88 92c0 0 5 7 12 7s12-7 12-7" stroke="#818cf8" strokeWidth="2.5" strokeLinecap="round" />
-                                  <path d="M60 130c0 0 15-10 40-10s40 10 40 10" stroke="#c7d2fe" strokeWidth="3" strokeLinecap="round" />
-                                  <circle cx="145" cy="55" r="6" fill="#fbbf24" opacity="0.6" />
-                                  <circle cx="55" cy="60" r="4" fill="#fbbf24" opacity="0.4" />
-                                  <circle cx="160" cy="80" r="3" fill="#c4b5fd" opacity="0.5" />
-                                  <path d="M70 45l3-8 3 8-8-5h10z" fill="#fcd34d" opacity="0.5" />
-                                  <path d="M140 35l2-6 2 6-6-4h8z" fill="#c4b5fd" opacity="0.4" />
-                                </svg>
-                                <p className="text-[14px] font-semibold text-[#6B7280]">No upcoming items in this category</p>
-                                <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
+                              <div className="flex min-h-[200px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
+                                No tasks match your search.
+                              </div>
+                            );
+                          }
+                          if (allElasticListTasksComplete) {
+                            const ev = todoistEmptyDayMessage.variant;
+                            return (
+                              <div
+                                className={`flex flex-col items-center justify-center min-h-[320px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
+                              >
+                                {ev === "morning" ? (
+                                  <svg className="w-[200px] h-[140px] mb-6" viewBox="0 0 220 150" fill="none" aria-hidden>
+                                    <ellipse cx="110" cy="120" rx="90" ry="18" fill="#E0F2FE" opacity="0.8" />
+                                    <circle cx="170" cy="38" r="22" fill="#FDE68A" />
+                                    <path d="M40 95 Q110 45 180 95" stroke="#BAE6FD" strokeWidth="3" fill="none" strokeLinecap="round" />
+                                    <rect x="85" y="72" width="50" height="38" rx="6" fill="#E0F2FE" stroke="#7DD3FC" strokeWidth="1.5" />
+                                    <ellipse cx="110" cy="68" rx="28" ry="10" fill="#FEF3C7" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-[200px] h-[140px] mb-6" viewBox="0 0 220 150" fill="none" aria-hidden>
+                                    <rect width="220" height="150" fill="#1e1b4b" opacity="0.04" rx="12" />
+                                    <circle cx="110" cy="55" r="3" fill="#C4B5FD" />
+                                    <circle cx="95" cy="48" r="2" fill="#C4B5FD" opacity="0.7" />
+                                    <circle cx="125" cy="48" r="2" fill="#C4B5FD" opacity="0.7" />
+                                    <path d="M75 100 Q110 75 145 100" stroke="#A78BFA" strokeWidth="2" fill="none" opacity="0.5" />
+                                    <rect x="88" y="88" width="44" height="32" rx="5" fill="#312E81" fillOpacity="0.08" />
+                                  </svg>
+                                )}
+                                <p className="text-[16px] font-bold text-[#202020] text-center max-w-md">
+                                  {todoistEmptyDayMessage.title}
+                                </p>
+                                <p className="text-[13px] text-[#808080] mt-2 text-center max-w-sm">
+                                  You&apos;re all caught up in this view.
+                                </p>
                               </div>
                             );
                           }
                           if (selectedListId === SYS_LIST_OVERDUE) {
                             return (
                               <div className="flex flex-col items-center justify-center min-h-[280px]">
-                                <svg className="w-[100px] h-[100px] mb-4" viewBox="0 0 200 200" fill="none">
+                                <svg className="w-[100px] h-[100px] mb-4" viewBox="0 0 200 200" fill="none" aria-hidden>
                                   <circle cx="100" cy="100" r="80" fill="#f0fdf4" />
                                   <circle cx="100" cy="85" r="35" fill="#dcfce7" />
                                   <circle cx="85" cy="78" r="4" fill="#22c55e" />
                                   <circle cx="115" cy="78" r="4" fill="#22c55e" />
                                   <path d="M88 92c0 0 5 7 12 7s12-7 12-7" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" />
                                   <path d="M60 130c0 0 15-10 40-10s40 10 40 10" stroke="#bbf7d0" strokeWidth="3" strokeLinecap="round" />
-                                  <circle cx="145" cy="55" r="6" fill="#fbbf24" opacity="0.6" />
-                                  <circle cx="55" cy="60" r="4" fill="#fbbf24" opacity="0.4" />
-                                  <path d="M70 45l3-8 3 8-8-5h10z" fill="#86efac" opacity="0.5" />
                                 </svg>
                                 <p className="text-[14px] font-semibold text-[#6B7280]">Nothing overdue — nice work!</p>
                                 <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
@@ -5336,16 +5773,13 @@ export default function App() {
                           }
                           return (
                             <div className={`flex flex-col items-center justify-center min-h-[280px] ${listEmptyExit ? "micro-empty-out" : ""}`}>
-                              <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none">
+                              <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none" aria-hidden>
                                 <circle cx="100" cy="100" r="80" fill="#faf5ff" />
                                 <circle cx="100" cy="85" r="35" fill="#ede9fe" />
                                 <circle cx="90" cy="80" r="3" fill="#8b5cf6" />
                                 <circle cx="110" cy="80" r="3" fill="#8b5cf6" />
                                 <path d="M93 95 a8 5 0 0 0 14 0" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" />
                                 <rect x="75" y="110" width="50" height="30" rx="8" fill="#ede9fe" />
-                                <circle cx="148" cy="50" r="5" fill="#fbbf24" opacity="0.5" />
-                                <circle cx="52" cy="55" r="3.5" fill="#c4b5fd" opacity="0.5" />
-                                <path d="M65 40l2.5-7 2.5 7-7-4.5h9z" fill="#fcd34d" opacity="0.4" />
                               </svg>
                               <p className="text-[14px] font-semibold text-[#6B7280]">No upcoming items in this category</p>
                               <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
@@ -5354,53 +5788,411 @@ export default function App() {
                         }
 
                         return (
-                          <div className="flex flex-col">
-                            {todoTasks.length > 0 && (
-                              <div className={listFirstTaskEnter ? "micro-list-shell-in" : ""}>
+                          <div className="flex flex-col max-w-[820px]">
+                            {selectedListId !== SYS_LIST_OVERDUE && (
+                              <>
+                                {quickAddOpen ? (
+                                  <div className="rounded-lg border border-[#E5E7EB] bg-white p-3 shadow-sm mb-4">
+                                    <input
+                                      value={composerTitle}
+                                      onChange={(e) => setComposerTitle(e.target.value)}
+                                      placeholder="Confirm catering by Fri at noon"
+                                      className="w-full border-0 bg-transparent p-0 text-[15px] font-semibold text-[#202020] placeholder:text-[#B0B0B0] outline-none"
+                                    />
+                                    <textarea
+                                      value={composerDescription}
+                                      onChange={(e) => setComposerDescription(e.target.value)}
+                                      placeholder="Description"
+                                      rows={2}
+                                      className="mt-2 w-full resize-none border-0 bg-transparent p-0 text-[13px] text-[#202020] placeholder:text-[#B0B0B0] outline-none"
+                                    />
+                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                      {selectedListId === SYS_LIST_TODAY ? (
+                                        <span className="inline-flex items-center gap-1 rounded-md bg-[#E8F5E9] px-2 py-1 text-[12px] font-medium text-[#058527]">
+                                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                                            <path d="M16 2v4M8 2v4M3 10h18" />
+                                          </svg>
+                                          Today
+                                        </span>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={(e) =>
+                                            setComposerDuePopover({
+                                              anchor: e.currentTarget.getBoundingClientRect(),
+                                            })
+                                          }
+                                          className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[12px] font-medium transition-colors ${
+                                            composerDue
+                                              ? "border-transparent bg-[#E8F5E9] text-[#058527]"
+                                              : "border-[#E5E7EB] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                          }`}
+                                        >
+                                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                                            <path d="M16 2v4M8 2v4M3 10h18" />
+                                          </svg>
+                                          {formatDueChipLabel(composerDue, calendarDay)}
+                                          {composerDue &&
+                                          selectedListId &&
+                                          DUE_DATE_PICKER_LIST_IDS.has(selectedListId) ? (
+                                            <span
+                                              role="button"
+                                              tabIndex={0}
+                                              onClick={(ev) => {
+                                                ev.stopPropagation();
+                                                setComposerDue(null);
+                                              }}
+                                              className="ml-0.5 text-[#6B7280] hover:text-[#202020]"
+                                            >
+                                              ×
+                                            </span>
+                                          ) : null}
+                                        </button>
+                                      )}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          setComposerPriorityAnchor(
+                                            e.currentTarget.getBoundingClientRect(),
+                                          );
+                                          setComposerPriorityOpen(true);
+                                        }}
+                                        className="inline-flex items-center gap-1 rounded-md border border-[#E5E7EB] px-2 py-1 text-[12px] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                      >
+                                        <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                          <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                                          <line x1="4" y1="22" x2="4" y2="15" />
+                                        </svg>
+                                        Priority
+                                      </button>
+                                    </div>
+                                    <div className="mt-4 flex justify-end gap-2 border-t border-[#F1F5F9] pt-3">
+                                      <button
+                                        type="button"
+                                        onClick={cancelQuickAddComposer}
+                                        className="rounded-md px-3 py-1.5 text-[13px] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                      >
+                                        Cancel
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={submitQuickAddComposer}
+                                        className="rounded-md bg-[#db4c3f] px-4 py-1.5 text-[13px] font-semibold text-white hover:opacity-95"
+                                      >
+                                        Add task
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={openQuickAddComposer}
+                                    className="mb-4 flex items-center gap-2 py-0.5 text-left text-[14px] text-[#db4c3f] hover:opacity-90"
+                                  >
+                                    <span className="text-[20px] font-light leading-none">+</span>
+                                    Add task
+                                  </button>
+                                )}
+                              </>
+                            )}
+
+                            <div
+                              className={`overflow-hidden rounded-lg border border-[#E5E7EB] bg-white ${listFirstTaskEnter ? "micro-list-shell-in" : ""}`}
+                            >
                                 {todoTasks.map((t) => {
-                                  const isSelected = selectedTaskId === t.id;
-                                  const priorityLabel = (() => {
-                                    if (!t.dueDate) return { text: "Normal", color: "text-[#9CA3AF]", flag: "🏳️" };
-                                    const now = new Date(); const due = parseISODate(t.dueDate);
-                                    const diff = Math.ceil((due.getTime() - now.getTime()) / 86400000);
-                                    if (diff < 0) return { text: "Urgent", color: "text-red-500", flag: "🚩" };
-                                    if (diff === 0) return { text: "Urgent", color: "text-red-500", flag: "🚩" };
-                                    if (diff <= 2) return { text: "High", color: "text-orange-500", flag: "🔶" };
-                                    if (diff <= 5) return { text: "Normal", color: "text-yellow-500", flag: "🟡" };
-                                    return { text: "Low", color: "text-[#9CA3AF]", flag: "🏳️" };
-                                  })();
+                                  const isSelected = taskDetailModalId === t.id;
                                   const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
+                                  const listReadOnly = selectedListId === SYS_LIST_OVERDUE;
+                                  if (editingTaskId === t.id && !listReadOnly) {
+                                    return (
+                                      <div key={t.id} className="border-b border-[#E5E7EB] bg-white p-3">
+                                        <input
+                                          value={editDraftTitle}
+                                          onChange={(e) => setEditDraftTitle(e.target.value)}
+                                          className="w-full border-0 bg-transparent p-0 text-[15px] font-semibold text-[#202020] outline-none"
+                                        />
+                                        <textarea
+                                          value={editDraftDescription}
+                                          onChange={(e) => setEditDraftDescription(e.target.value)}
+                                          placeholder="Description"
+                                          rows={2}
+                                          className="mt-2 w-full resize-none border-0 bg-transparent p-0 text-[13px] text-[#202020] outline-none"
+                                        />
+                                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                                          {selectedListId === SYS_LIST_TODAY ? (
+                                            <span className="inline-flex items-center gap-1 rounded-md bg-[#E8F5E9] px-2 py-1 text-[12px] font-medium text-[#058527]">
+                                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                                <rect x="3" y="4" width="18" height="18" rx="2" />
+                                                <path d="M16 2v4M8 2v4M3 10h18" />
+                                              </svg>
+                                              Today
+                                            </span>
+                                          ) : (
+                                            <button
+                                              type="button"
+                                              onClick={(e) =>
+                                                setEditDraftDuePopover({
+                                                  anchor: e.currentTarget.getBoundingClientRect(),
+                                                })
+                                              }
+                                              className={`inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[12px] font-medium ${
+                                                editDraftDue
+                                                  ? "border-transparent bg-[#E8F5E9] text-[#058527]"
+                                                  : "border-[#E5E7EB] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                              }`}
+                                            >
+                                              <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                                <rect x="3" y="4" width="18" height="18" rx="2" />
+                                                <path d="M16 2v4M8 2v4M3 10h18" />
+                                              </svg>
+                                              {formatDueChipLabel(editDraftDue, calendarDay)}
+                                              {editDraftDue &&
+                                              selectedListId &&
+                                              DUE_DATE_PICKER_LIST_IDS.has(selectedListId) ? (
+                                                <span
+                                                  role="button"
+                                                  tabIndex={0}
+                                                  onClick={(ev) => {
+                                                    ev.stopPropagation();
+                                                    setEditDraftDue(null);
+                                                  }}
+                                                  className="ml-0.5 text-[#6B7280] hover:text-[#202020]"
+                                                >
+                                                  ×
+                                                </span>
+                                              ) : null}
+                                            </button>
+                                          )}
+                                          <button
+                                            type="button"
+                                            onClick={(e) => {
+                                              setEditDraftPriorityAnchor(
+                                                e.currentTarget.getBoundingClientRect(),
+                                              );
+                                              setEditDraftPriorityOpen(true);
+                                            }}
+                                            className="inline-flex items-center gap-1 rounded-md border border-[#E5E7EB] px-2 py-1 text-[12px] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                          >
+                                            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                              <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
+                                              <line x1="4" y1="22" x2="4" y2="15" />
+                                            </svg>
+                                            Priority {editDraftPriority}
+                                          </button>
+                                        </div>
+                                        <div className="mt-4 flex justify-end gap-2 border-t border-[#F1F5F9] pt-3">
+                                          <button
+                                            type="button"
+                                            onClick={cancelEditDraft}
+                                            className="rounded-md px-3 py-1.5 text-[13px] text-[#6B7280] hover:bg-[#FAFAFA]"
+                                          >
+                                            Cancel
+                                          </button>
+                                          <button
+                                            type="button"
+                                            onClick={saveEditDraft}
+                                            className="rounded-md bg-[#db4c3f] px-4 py-1.5 text-[13px] font-semibold text-white hover:opacity-95"
+                                          >
+                                            Save
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  const pr = (t.priority ?? 4) as TaskPriorityLevel;
+                                  const ring =
+                                    t.completed || taskCheckAnimatingId === t.id
+                                      ? "border-emerald-500 bg-emerald-500"
+                                      : priorityCheckboxRingClass(pr);
                                   return (
-                                    <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center h-[36px] px-6 cursor-pointer transition-colors duration-100 border-b border-[#E5E7EB] ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-[#EEF2FF]" : "hover:bg-[#F8FAFC]"}`}>
-                                      <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                        <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); const next = !t.completed; if (!selectedListId) return; if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; } if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); } setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x)); }} className={`btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${t.completed || taskCheckAnimatingId === t.id ? "border-emerald-500 bg-emerald-500" : "border-[#D1D5DB] hover:border-[#9CA3AF]"} ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`} aria-label={t.completed ? "Mark incomplete" : "Complete task"}>
-                                          {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (<svg className="w-[9px] h-[9px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) : t.completed ? (<span className="text-white text-[8px] leading-none">✓</span>) : null}
+                                    <div
+                                      key={t.id}
+                                      role="button"
+                                      tabIndex={0}
+                                      onDragOver={(e) => {
+                                        if (draggingTaskId == null || draggingTaskId === t.id) return;
+                                        e.preventDefault();
+                                        setDropBeforeTaskId(t.id);
+                                      }}
+                                      onDrop={(e) => {
+                                        e.preventDefault();
+                                        if (draggingTaskId == null) return;
+                                        handleReorderDrop(draggingTaskId, t.id);
+                                      }}
+                                      onClick={() => {
+                                        if (skipRowClickRef.current) return;
+                                        setSelectedTaskId(t.id);
+                                        setTaskDetailModalId(t.id);
+                                      }}
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                          setTaskDetailModalId(t.id);
+                                        }
+                                      }}
+                                      className={`group relative flex min-h-[44px] cursor-pointer items-center gap-2 border-b border-[#E5E7EB] px-3 py-2 transition-colors duration-100 last:border-b-0 ${
+                                        taskRowExitingId === t.id ? "pointer-events-none opacity-0" : ""
+                                      } ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${
+                                        draggingTaskId === t.id ? "z-10 shadow-[0_8px_24px_rgba(0,0,0,0.12)]" : ""
+                                      } ${isSelected ? "bg-[#FAFAFA]" : "hover:bg-[#FAFAFA]"}`}
+                                    >
+                                      {dropBeforeTaskId === t.id && draggingTaskId !== t.id ? (
+                                        <div className="pointer-events-none absolute -top-px left-0 right-0 z-[2] flex h-0.5 items-center bg-[#db4c3f]">
+                                          <span className="absolute -left-0.5 h-2 w-2 rounded-full bg-[#db4c3f]" />
+                                        </div>
+                                      ) : null}
+                                      {!listReadOnly ? (
+                                        <button
+                                          type="button"
+                                          draggable={editingTaskId !== t.id}
+                                          onDragStart={(e) => {
+                                            e.stopPropagation();
+                                            setDraggingTaskId(t.id);
+                                            e.dataTransfer.effectAllowed = "move";
+                                            e.dataTransfer.setData("text/plain", String(t.id));
+                                          }}
+                                          onDragEnd={() => {
+                                            setDraggingTaskId(null);
+                                            setDropBeforeTaskId(null);
+                                            setDragOverPostpone(false);
+                                            skipRowClickRef.current = true;
+                                            window.setTimeout(() => {
+                                              skipRowClickRef.current = false;
+                                            }, 0);
+                                          }}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="cursor-grab text-[#C4C4C4] opacity-0 transition-opacity hover:text-[#9CA3AF] group-hover:opacity-100 active:cursor-grabbing"
+                                          aria-label="Reorder"
+                                        >
+                                          <span className="grid grid-cols-2 gap-0.5" aria-hidden>
+                                            {[0, 1, 2, 3, 4, 5].map((i) => (
+                                              <span key={i} className="h-1 w-1 rounded-full bg-current" />
+                                            ))}
+                                          </span>
+                                        </button>
+                                      ) : (
+                                        <span className="w-4 shrink-0" aria-hidden />
+                                      )}
+                                      <div className="flex shrink-0 items-center justify-center">
+                                        <button
+                                          type="button"
+                                          disabled={taskCheckAnimatingId === t.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            const next = !t.completed;
+                                            if (!selectedListId) return;
+                                            if (next && listUsesElasticComplete) {
+                                              scheduleElasticListTaskComplete(
+                                                t,
+                                                selectedListId,
+                                                selectedList?.label ?? "",
+                                              );
+                                              return;
+                                            }
+                                            if (next) {
+                                              appendCompletedActivity(
+                                                t.text,
+                                                0,
+                                                selectedListId,
+                                                selectedList?.label ?? "",
+                                              );
+                                            } else {
+                                              removeLastCompletedForTaskOnList(
+                                                t.text,
+                                                selectedListId,
+                                              );
+                                            }
+                                            setTasks((prev) =>
+                                              prev.map((x) =>
+                                                x.id === t.id ? { ...x, completed: next } : x,
+                                              ),
+                                            );
+                                          }}
+                                          className={`btn-press-instant flex h-[18px] w-[18px] items-center justify-center rounded-full border-[2px] transition-colors disabled:opacity-100 ${ring} ${
+                                            taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""
+                                          }`}
+                                          aria-label={t.completed ? "Mark incomplete" : "Complete task"}
+                                        >
+                                          {listUsesElasticComplete &&
+                                          taskCheckAnimatingId === t.id ? (
+                                            <svg className="h-[9px] w-[9px]" viewBox="0 0 12 12" fill="none" aria-hidden>
+                                              <path
+                                                className="elastic-check-path-draw"
+                                                d="M2.5 6.2 L5 8.8 L9.5 3.5"
+                                                stroke="white"
+                                                strokeWidth="2"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                              />
+                                            </svg>
+                                          ) : t.completed ? (
+                                            <span className="text-[8px] leading-none text-white">✓</span>
+                                          ) : null}
                                         </button>
                                       </div>
-                                      <div className="flex-1 min-w-0 text-[13px] text-[#111827] truncate">{t.text}</div>
-                                      <div className={`w-[120px] shrink-0 flex items-center justify-center gap-1 text-[12px] ${priorityLabel.color}`}>
-                                        <span className="text-[11px]">{priorityLabel.flag}</span>
-                                        <span className="font-medium">{priorityLabel.text}</span>
+                                      <div className="min-w-0 flex-1">
+                                        <div className="text-[14px] font-medium leading-snug text-[#202020]">
+                                          {t.text}
+                                        </div>
+                                        {t.description ? (
+                                          <div className="mt-0.5 text-[12px] leading-snug text-[#808080]">
+                                            {t.description}
+                                          </div>
+                                        ) : null}
                                       </div>
-                                      <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">{classLabel}</div>
-                                      <div className="w-[32px] shrink-0 flex items-center justify-center">
-                                        <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); if (selectedTaskId === t.id) setSelectedTaskId(null); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F1F5F9] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
+                                      <div className="hidden shrink-0 items-center gap-1 text-[12px] text-[#9CA3AF] sm:flex">
+                                        <span className="max-w-[120px] truncate">{classLabel}</span>
                                       </div>
+                                      {!listReadOnly ? (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            startEditTask(t);
+                                          }}
+                                          className="shrink-0 rounded-md p-1.5 text-[#9CA3AF] opacity-0 transition-opacity hover:bg-[#F1F5F9] hover:text-[#6B7280] group-hover:opacity-100"
+                                          aria-label="Edit task"
+                                        >
+                                          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                            <path d="M12 20h9" />
+                                            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+                                          </svg>
+                                        </button>
+                                      ) : null}
                                     </div>
                                   );
                                 })}
-                              </div>
-                            )}
+                            </div>
 
-                            {/* Inline Add Task */}
-                            {selectedListId !== SYS_LIST_OVERDUE && (
-                              <div className="flex items-center h-[42px] px-5 border-b border-[#E5E7EB] bg-[#F8FAFC] hover:bg-white transition-colors cursor-text" onClick={() => taskListInputRef.current?.focus()}>
-                                <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                  <svg className="w-[13px] h-[13px] text-[#6366F1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                                </div>
-                                <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder={taskInputPlaceholder(selectedListId)} disabled={!selectedListId} className={`flex-1 min-w-0 h-full bg-transparent text-[13px] text-[#111827] placeholder:text-[#6B7280] outline-none disabled:opacity-50 ${taskInputClearFlash ? "opacity-40" : ""}`} />
+                            {selectedListId && draggingTaskId !== null ? (
+                              <div
+                                onDragOver={(e) => {
+                                  e.preventDefault();
+                                  setDragOverPostpone(true);
+                                }}
+                                onDragLeave={() => setDragOverPostpone(false)}
+                                onDrop={(e) => {
+                                  e.preventDefault();
+                                  const id = parseInt(e.dataTransfer.getData("text/plain"), 10);
+                                  if (!Number.isFinite(id)) return;
+                                  handlePostponeDropOnZone(id);
+                                }}
+                                className={`mt-4 flex min-h-[72px] items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 text-[13px] transition-colors ${
+                                  dragOverPostpone
+                                    ? "border-[#db4c3f] bg-[#fff5f5]"
+                                    : "border-[#D1D5DB] bg-[#FAFAFA] text-[#6B7280]"
+                                }`}
+                              >
+                                <svg className="h-5 w-5 text-[#db4c3f]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                  <path d="M23 4v6h-6" />
+                                  <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
+                                </svg>
+                                <span>
+                                  Drop to postpone: <strong className="text-[#202020]">Tomorrow</strong>
+                                </span>
                               </div>
-                            )}
+                            ) : null}
 
                             {doneTasks.length > 0 && (
                               <>
@@ -5440,6 +6232,125 @@ export default function App() {
                       onSelect={(iso) => { const tid = dueDatePopover?.taskId; if (tid == null) return; setTasks((prev) => prev.map((x) => x.id === tid ? { ...x, dueDate: iso } : x)); setDueDatePopover(null); }}
                       onClose={() => setDueDatePopover(null)}
                     />
+                    <MiniDueDatePopover
+                      open={composerDuePopover !== null}
+                      anchor={composerDuePopover?.anchor ?? null}
+                      selectedIso={composerDue}
+                      onSelect={(iso) => {
+                        setComposerDue(iso);
+                        setComposerDuePopover(null);
+                      }}
+                      onClose={() => setComposerDuePopover(null)}
+                    />
+                    <MiniDueDatePopover
+                      open={editDraftDuePopover !== null}
+                      anchor={editDraftDuePopover?.anchor ?? null}
+                      selectedIso={editDraftDue}
+                      onSelect={(iso) => {
+                        setEditDraftDue(iso);
+                        setEditDraftDuePopover(null);
+                      }}
+                      onClose={() => setEditDraftDuePopover(null)}
+                    />
+                    <PriorityPickerPopover
+                      open={composerPriorityOpen}
+                      anchor={composerPriorityAnchor}
+                      selected={composerPriority}
+                      onSelect={(p) => {
+                        setComposerPriority(p);
+                        setComposerPriorityOpen(false);
+                      }}
+                      onClose={() => setComposerPriorityOpen(false)}
+                    />
+                    <PriorityPickerPopover
+                      open={editDraftPriorityOpen}
+                      anchor={editDraftPriorityAnchor}
+                      selected={editDraftPriority}
+                      onSelect={(p) => {
+                        setEditDraftPriority(p);
+                        setEditDraftPriorityOpen(false);
+                      }}
+                      onClose={() => setEditDraftPriorityOpen(false)}
+                    />
+                    {taskDetailModalId != null && taskDetailModalTask ? (
+                      <div
+                        className="fixed inset-0 z-[600] flex items-center justify-center bg-black/25 p-4 font-['Inter',system-ui,sans-serif]"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label="Task details"
+                        onClick={() => setTaskDetailModalId(null)}
+                      >
+                        <div
+                          className="relative flex max-h-[min(90vh,640px)] w-full max-w-[760px] flex-col overflow-hidden rounded-xl bg-white shadow-[0_16px_48px_rgba(0,0,0,0.18)] sm:flex-row"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex min-h-0 min-w-0 flex-1 flex-col border-b border-[#E5E7EB] sm:border-b-0 sm:border-r">
+                            <div className="flex items-center justify-between border-b border-[#E5E7EB] px-4 py-3">
+                              <div className="flex items-center gap-2 text-[12px] text-[#6B7280]">
+                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+                                  <path d="M22 12h-6l-2 3h-6l-2-3H2" />
+                                  <path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" />
+                                </svg>
+                                <span>{categoryLabelForSelectedList}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setTaskDetailModalId(null)}
+                                className="rounded-md p-1.5 text-[#9CA3AF] hover:bg-[#F3F4F6] hover:text-[#6B7280]"
+                                aria-label="Close"
+                              >
+                                <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                  <path d="M18 6L6 18M6 6l12 12" />
+                                </svg>
+                              </button>
+                            </div>
+                            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+                              <div className="flex gap-3">
+                                <button
+                                  type="button"
+                                  className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 ${priorityCheckboxRingClass((taskDetailModalTask.priority ?? 4) as TaskPriorityLevel)}`}
+                                  aria-hidden
+                                />
+                                <div>
+                                  <h2 className="text-[18px] font-semibold leading-snug text-[#202020]">
+                                    {taskDetailModalTask.text}
+                                  </h2>
+                                  <p className="mt-3 text-[13px] leading-relaxed text-[#6B7280]">
+                                    {taskDetailModalTask.description || (
+                                      <span className="text-[#B0B0B0]">Description</span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="w-full shrink-0 border-t border-[#E5E7EB] bg-[#FAFAFA] px-5 py-4 sm:w-[240px] sm:border-t-0">
+                            <div className="space-y-5 text-[13px]">
+                              <div>
+                                <p className="text-[11px] font-medium uppercase tracking-wide text-[#9CA3AF]">
+                                  Project
+                                </p>
+                                <p className="mt-1 font-medium text-[#202020]">{categoryLabelForSelectedList}</p>
+                              </div>
+                              <div>
+                                <p className="text-[11px] font-medium uppercase tracking-wide text-[#9CA3AF]">
+                                  Date
+                                </p>
+                                <p className="mt-1 flex items-center gap-1.5 font-medium text-[#058527]">
+                                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                    <rect x="3" y="4" width="18" height="18" rx="2" />
+                                    <path d="M16 2v4M8 2v4M3 10h18" />
+                                  </svg>
+                                  {taskDetailModalTask.dueDate
+                                    ? formatDueChipLabel(taskDetailModalTask.dueDate, calendarDay)
+                                    : "No date"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 ) : (
                   <div
