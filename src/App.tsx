@@ -5022,9 +5022,7 @@ export default function App() {
                       </button>
                     </nav>
 
-                    <div className="h-4" />
-
-                    <div className="sidebar-section-label sidebar-section-label--tools mb-1.5 px-0">Tools</div>
+                    <div className="sidebar-section-label sidebar-section-label--tools mt-8 mb-1.5 px-0">Tools</div>
                     <nav className="flex flex-col gap-px" aria-label="Tools">
                       <button
                         ref={focusNavButtonRef}
