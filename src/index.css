@@ -48,25 +48,98 @@
   animation: focus-session-start-aura-breathe 3.6s ease-in-out infinite;
 }
 
-/* Subtle glow aura around Focus (dartboard) nav icon in the icon rail */
+/* ===== Icon Rail — sidebar system ===== */
+
+/* Active pill indicator on the left edge of the icon rail */
+.icon-rail-active-pill {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 18px;
+  border-radius: 0 4px 4px 0;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.9) 0%, rgba(99, 102, 241, 0.7) 100%);
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.35);
+  transition: opacity 150ms ease-out;
+}
+
+/* Subtle hover glow behind icon rail buttons */
+.icon-rail-btn::after {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  border-radius: 12px;
+  opacity: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.06) 0%, transparent 70%);
+  transition: opacity 180ms ease-out;
+  pointer-events: none;
+  z-index: 0;
+}
+.icon-rail-btn:hover::after {
+  opacity: 1;
+}
+
+/* Focus (dartboard) nav icon breathing glow */
 @keyframes focus-nav-icon-glow-pulse {
-  0%, 100% { opacity: 0.55; transform: scale(0.92); }
-  50% { opacity: 1; transform: scale(1.06); }
+  0%, 100% { opacity: 0.45; transform: scale(0.94); }
+  50% { opacity: 0.85; transform: scale(1.04); }
 }
 .focus-nav-icon-glow {
   position: absolute;
-  inset: -6px;
-  border-radius: 10px;
+  inset: -7px;
+  border-radius: 14px;
   pointer-events: none;
   z-index: 0;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(96, 165, 250, 0.22) 0%,
-    rgba(59, 130, 246, 0.08) 50%,
-    transparent 75%
+    rgba(139, 92, 246, 0.18) 0%,
+    rgba(99, 102, 241, 0.07) 50%,
+    transparent 78%
   );
-  filter: blur(6px);
-  animation: focus-nav-icon-glow-pulse 3s ease-in-out infinite;
+  filter: blur(7px);
+  animation: focus-nav-icon-glow-pulse 3.2s ease-in-out infinite;
+}
+
+/* ===== Main sidebar — nav item styles ===== */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 12px;
+  font-size: 13px;
+  border-radius: 8px;
+  transition: background-color 150ms ease-out, color 150ms ease-out;
+  color: rgba(161, 161, 170, 1); /* zinc-400 */
+  cursor: pointer;
+  position: relative;
+}
+.sidebar-nav-item:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(228, 228, 231, 1); /* zinc-200 */
+}
+.sidebar-nav-item--active {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(250, 250, 250, 1); /* zinc-50 */
+  font-weight: 500;
+}
+.sidebar-nav-item--active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 60%;
+  border-radius: 0 3px 3px 0;
+  background: rgba(139, 92, 246, 0.6);
+}
+
+/* Section divider line */
+.sidebar-section-divider {
+  height: 1px;
+  margin: 8px 14px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .focus-session-start-aura-soft {

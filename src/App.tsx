@@ -4611,32 +4611,95 @@ export default function App() {
             </div>
           )}
           <div className="h-screen min-h-0 flex w-full bg-black text-zinc-200 overflow-hidden">
-            {/* Primary sidebar — icon rail (ClickUp / TickTick style) */}
-            <aside className="h-screen w-[52px] bg-[#141414] border-r border-[#1f1f1f] flex flex-col items-center justify-between py-3 z-[250] shrink-0">
-              <nav className="flex flex-col items-center gap-2.5">
-                <button type="button" onClick={() => handleSidebarNavClick("tasks")} className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 ${activeView === "tasks" ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-500 hover:bg-[#222] hover:text-zinc-200"}`}>
-                  <svg className="w-[18px] h-[18px] relative z-[1]" viewBox="0 0 24 24" fill={activeView === "tasks" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={activeView === "tasks" ? "0" : "1.7"} strokeLinecap="round" strokeLinejoin="round">{activeView === "tasks" ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" /> : <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />}</svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#1e1e22] shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Home</div></div>
+            {/* ── Icon Rail (far-left) ── */}
+            <aside className="h-screen w-[56px] bg-[#111113] flex flex-col items-center justify-between py-4 z-[250] shrink-0 shadow-[1px_0_0_rgba(255,255,255,0.04)]">
+              <div className="flex flex-col items-center gap-1.5">
+                {/* Home */}
+                <button
+                  type="button"
+                  onClick={() => handleSidebarNavClick("tasks")}
+                  className="icon-rail-btn group relative flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-150"
+                  style={{ background: activeView === "tasks" ? "rgba(255,255,255,0.07)" : undefined }}
+                >
+                  {activeView === "tasks" && <span className="icon-rail-active-pill" />}
+                  <svg className="w-[19px] h-[19px] relative z-[1]" viewBox="0 0 24 24" fill={activeView === "tasks" ? "currentColor" : "none"} stroke="currentColor" strokeWidth={activeView === "tasks" ? "0" : "1.6"} strokeLinecap="round" strokeLinejoin="round" style={{ color: activeView === "tasks" ? "#e4e4e7" : "#71717a" }}>
+                    {activeView === "tasks"
+                      ? <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+                      : <path d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 01-1 1" />}
+                  </svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[2]">
+                    <div className="rounded-lg bg-[#1c1c20] shadow-[0_8px_24px_rgba(0,0,0,0.55)] border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Home</div>
+                  </div>
                 </button>
-                <button ref={focusNavButtonRef} type="button" onClick={handleStartFocusSession} className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-[#222] hover:text-zinc-200 transition-all duration-150">
+
+                {/* Focus */}
+                <button
+                  ref={focusNavButtonRef}
+                  type="button"
+                  onClick={handleStartFocusSession}
+                  className="icon-rail-btn group relative flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-150"
+                >
                   <div className="focus-nav-icon-glow" />
-                  <svg className="w-[18px] h-[18px] relative z-[1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#1e1e22] shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Focus</div></div>
+                  <svg className="w-[19px] h-[19px] relative z-[1]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[2]">
+                    <div className="rounded-lg bg-[#1c1c20] shadow-[0_8px_24px_rgba(0,0,0,0.55)] border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Focus</div>
+                  </div>
                 </button>
-                <button type="button" onClick={() => handleSidebarNavClick("calendar")} className={`group relative flex items-center justify-center w-9 h-9 rounded-lg transition-all duration-150 ${activeView === "calendar" ? "bg-[#2c2c2c] text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]" : "text-zinc-500 hover:bg-[#222] hover:text-zinc-200"}`}>
-                  <svg className="w-[18px] h-[18px] relative z-[1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#1e1e22] shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Calendar</div></div>
+
+                {/* Calendar */}
+                <button
+                  type="button"
+                  onClick={() => handleSidebarNavClick("calendar")}
+                  className="icon-rail-btn group relative flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-150"
+                  style={{ background: activeView === "calendar" ? "rgba(255,255,255,0.07)" : undefined }}
+                >
+                  {activeView === "calendar" && <span className="icon-rail-active-pill" />}
+                  <svg className="w-[19px] h-[19px] relative z-[1]" viewBox="0 0 24 24" fill="none" stroke={activeView === "calendar" ? "#e4e4e7" : "#71717a"} strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[2]">
+                    <div className="rounded-lg bg-[#1c1c20] shadow-[0_8px_24px_rgba(0,0,0,0.55)] border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Calendar</div>
+                  </div>
                 </button>
-              </nav>
-              <div className="flex flex-col items-center gap-2.5">
-                <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-[#222] hover:text-zinc-200 transition-all duration-150">
-                  {hasUnreadNotifications && (<span className="absolute top-1 right-1 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[1.5px] ring-[#141414]" aria-hidden />)}
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M18 16v-5a6 6 0 00-12 0v5" /><path d="M5 16h14" /><path d="M10 19a2 2 0 004 0" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#1e1e22] shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Notifications</div></div>
+              </div>
+
+              {/* Bottom icons */}
+              <div className="flex flex-col items-center gap-1.5">
+                {/* Notifications */}
+                <button
+                  ref={notificationsButtonRef}
+                  type="button"
+                  onClick={handleNotificationsButtonClick}
+                  aria-expanded={notificationsPanelOpen}
+                  aria-haspopup="dialog"
+                  aria-label="Notifications"
+                  className="icon-rail-btn group relative flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-150"
+                >
+                  {hasUnreadNotifications && (
+                    <span className="absolute top-1.5 right-1.5 z-[1] h-[7px] w-[7px] rounded-full bg-red-500 ring-[2px] ring-[#111113]" aria-hidden />
+                  )}
+                  <svg className="w-[19px] h-[19px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M18 16v-5a6 6 0 00-12 0v5" /><path d="M5 16h14" /><path d="M10 19a2 2 0 004 0" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[2]">
+                    <div className="rounded-lg bg-[#1c1c20] shadow-[0_8px_24px_rgba(0,0,0,0.55)] border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Notifications</div>
+                  </div>
                 </button>
-                <button type="button" onClick={() => {}} className="group relative flex items-center justify-center w-9 h-9 rounded-lg text-zinc-500 hover:bg-[#222] hover:text-zinc-200 transition-all duration-150">
-                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" /></svg>
-                  <div className="pointer-events-none absolute left-[calc(100%+10px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-[2]"><div className="rounded-lg bg-[#1e1e22] shadow-[0_4px_12px_rgba(0,0,0,0.5)] border border-white/[0.06] px-2.5 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Settings</div></div>
+
+                {/* Settings */}
+                <button
+                  type="button"
+                  onClick={() => {}}
+                  className="icon-rail-btn group relative flex items-center justify-center w-10 h-10 rounded-[10px] transition-all duration-150"
+                >
+                  <svg className="w-[19px] h-[19px]" viewBox="0 0 24 24" fill="none" stroke="#71717a" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+                  </svg>
+                  <div className="pointer-events-none absolute left-[calc(100%+8px)] top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-150 z-[2]">
+                    <div className="rounded-lg bg-[#1c1c20] shadow-[0_8px_24px_rgba(0,0,0,0.55)] border border-white/[0.06] px-3 py-1.5 text-[11px] font-medium text-zinc-200 whitespace-nowrap">Settings</div>
+                  </div>
                 </button>
               </div>
             </aside>
@@ -4698,84 +4761,129 @@ export default function App() {
               </div>
             )}
 
-            {/* Second sidebar: Tasks panel (only when Tasks view is active) */}
+            {/* ── Main Sidebar ── */}
             {!isSimulation &&
               activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-screen w-[232px] bg-[#161616] border-r border-[#1e1e1e] flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 ${
+                  className={`h-screen w-[240px] bg-[#151517] flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 shadow-[1px_0_0_rgba(255,255,255,0.035)] ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
                   }`}
                 >
-                  <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-                    {/* ClickUp-style "Home" title header */}
-                    <div className="flex items-center justify-between px-4 pt-4 pb-2">
-                      <h2 className="text-[15px] font-semibold text-zinc-100 tracking-tight">Home</h2>
-                      <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="w-6 h-6 rounded-md hover:bg-white/[0.08] flex items-center justify-center text-zinc-500 hover:text-zinc-300 transition-colors" aria-label="Add new">
-                        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                      </button>
+                  <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
+                    {/* Header — "Home" title (no add button) */}
+                    <div className="px-4 pt-5 pb-3">
+                      <h2 className="text-[14px] font-semibold text-zinc-100 tracking-[-0.01em]">Home</h2>
                     </div>
 
-                    <nav className="flex flex-col gap-0.5 px-2" aria-label="Core navigation">
-                      <button type="button" onClick={() => handleSelectList(SYS_LIST_TODAY)} className={`flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] rounded-lg transition-all duration-100 ${selectedListId === SYS_LIST_TODAY ? "bg-[#252525] text-zinc-50 font-medium" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"}`}>
-                        <TaskSystemNavIcon listId={SYS_LIST_TODAY} className={`w-[16px] h-[16px] shrink-0 ${selectedListId === SYS_LIST_TODAY ? "text-zinc-100" : ""}`} />
+                    {/* ─── MAIN ─── */}
+                    <nav className="flex flex-col gap-px px-2.5" aria-label="Main navigation">
+                      {/* Today — most prominent item */}
+                      <button
+                        type="button"
+                        onClick={() => handleSelectList(SYS_LIST_TODAY)}
+                        className={`sidebar-nav-item ${selectedListId === SYS_LIST_TODAY && todayMainMode !== "completed" ? "sidebar-nav-item--active" : ""}`}
+                      >
+                        <TaskSystemNavIcon listId={SYS_LIST_TODAY} className={`w-[17px] h-[17px] shrink-0 transition-colors duration-150 ${selectedListId === SYS_LIST_TODAY && todayMainMode !== "completed" ? "text-zinc-100" : "text-zinc-500"}`} />
                         <span className="flex-1 text-left">Today</span>
-                        <span className="text-[10px] tabular-nums text-zinc-500">{dailyTaskProgress.done}/{dailyTaskProgress.done + dailyTaskProgress.open}</span>
+                        <span className="text-[10px] tabular-nums text-zinc-500/80 font-medium">{dailyTaskProgress.done}/{dailyTaskProgress.done + dailyTaskProgress.open}</span>
                       </button>
-                      <button type="button" onClick={() => setMyTasksDropdownOpen((v: boolean) => !v)} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 rounded-lg transition-colors duration-100">
-                        <svg className={`w-3 h-3 shrink-0 text-zinc-500 transition-transform duration-150 ${myTasksDropdownOpen ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+
+                      {/* My Tasks (collapsible) */}
+                      <button
+                        type="button"
+                        onClick={() => setMyTasksDropdownOpen((v: boolean) => !v)}
+                        className="sidebar-nav-item"
+                      >
+                        <svg className={`w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150 ${myTasksDropdownOpen ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                         <span>My Tasks</span>
                       </button>
                       {myTasksDropdownOpen && (
-                        <div className="flex flex-col gap-0.5 ml-3">
+                        <div className="flex flex-col gap-px ml-4 pl-2.5 border-l border-white/[0.04]">
                           {TASK_CATEGORY_LISTS.map((list) => (
-                            <button key={list.id} type="button" onClick={() => handleSelectList(list.id)} className={`flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] rounded-lg transition-all duration-100 ${selectedListId === list.id ? "bg-[#252525] text-zinc-50 font-medium" : "text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200"}`}>
-                              <TaskSystemNavIcon listId={list.id} className={`w-[16px] h-[16px] shrink-0 ${selectedListId === list.id ? "text-zinc-100" : ""}`} />
+                            <button
+                              key={list.id}
+                              type="button"
+                              onClick={() => handleSelectList(list.id)}
+                              className={`sidebar-nav-item ${selectedListId === list.id ? "sidebar-nav-item--active" : ""}`}
+                            >
+                              <TaskSystemNavIcon listId={list.id} className={`w-[15px] h-[15px] shrink-0 transition-colors duration-150 ${selectedListId === list.id ? "text-zinc-100" : "text-zinc-500"}`} />
                               <span className="truncate">{list.label}</span>
                             </button>
                           ))}
                         </div>
                       )}
-                      <button type="button" onClick={() => {}} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] text-zinc-500 rounded-lg cursor-default">
-                        <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
-                        <span>Weekly Schedule</span>
+
+                      {/* Schedule */}
+                      <button type="button" onClick={() => {}} className="sidebar-nav-item" style={{ color: "#71717a", cursor: "default" }}>
+                        <svg className="w-[17px] h-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                        <span>Schedule</span>
                       </button>
                     </nav>
 
-                    {/* Section divider */}
-                    <div className="mx-3 my-2.5 h-px bg-white/[0.06]" />
+                    {/* ─── Divider ─── */}
+                    <div className="sidebar-section-divider" />
 
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500 px-4 pb-1.5">Organization</div>
-                    <nav className="flex flex-col gap-0.5 px-2" aria-label="Organization">
-                      <button type="button" onClick={() => {}} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] text-zinc-500 rounded-lg cursor-default">
-                        <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
+                    {/* ─── ORGANIZATION ─── */}
+                    <div className="px-4 pt-1 pb-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500/70 select-none">Organization</span>
+                    </div>
+                    <nav className="flex flex-col gap-px px-2.5" aria-label="Organization">
+                      {/* Subjects */}
+                      <button type="button" onClick={() => {}} className="sidebar-nav-item" style={{ color: "#71717a", cursor: "default" }}>
+                        <svg className="w-[17px] h-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20" /><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z" /></svg>
                         <span>Subjects</span>
                       </button>
-                      <div className="flex items-center justify-between">
-                        <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200 rounded-lg transition-colors duration-100 flex-1 min-w-0" aria-expanded={userListsSectionExpanded}>
-                          <svg className={`w-3 h-3 shrink-0 text-zinc-500 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+
+                      {/* Lists (collapsible) */}
+                      <div className="flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => setUserListsSectionExpanded((v) => !v)}
+                          className="sidebar-nav-item flex-1 min-w-0"
+                          aria-expanded={userListsSectionExpanded}
+                        >
+                          <svg className={`w-3.5 h-3.5 shrink-0 text-zinc-500 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                           <span>Lists</span>
                         </button>
-                        <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="shrink-0 w-6 h-6 rounded-md hover:bg-white/[0.08] flex items-center justify-center text-zinc-500 hover:text-zinc-300 text-sm leading-none transition-colors mr-1" aria-label="Add List">+</button>
+                        <button
+                          type="button"
+                          onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }}
+                          className="shrink-0 w-6 h-6 mr-1 rounded-md flex items-center justify-center text-zinc-500/70 hover:text-zinc-300 hover:bg-white/[0.06] transition-all duration-150 text-[14px] leading-none"
+                          aria-label="Add List"
+                        >+</button>
                       </div>
+
+                      {/* Custom lists (expanded) */}
                       <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                         <div className="min-h-0 overflow-hidden">
-                          <div className="flex flex-col gap-0.5 overflow-y-auto max-h-[200px]">
+                          <div className="flex flex-col gap-px ml-4 pl-2.5 border-l border-white/[0.04] overflow-y-auto max-h-[220px]">
                             {todayLists.map((list) => (
-                              <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center justify-between gap-1.5 py-[7px] px-2.5 text-[13px] rounded-lg transition-all duration-100 cursor-pointer ${selectedListId === list.id ? "bg-[#252525] text-zinc-50 font-medium" : "text-zinc-300 hover:bg-white/[0.04]"}`}>
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  <span className="text-sm shrink-0">{list.icon}</span>
-                                  <span className="truncate">{list.label}</span>
-                                  {list.color && <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: list.color }} aria-hidden />}
-                                </div>
-                                <div className="flex items-center">
-                                  <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-400 rounded w-5 h-5 flex items-center justify-center hover:bg-white/[0.06] text-[10px]" aria-label="List menu">•••</button>
-                                </div>
+                              <div
+                                key={list.id}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() => handleSelectList(list.id)}
+                                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }}
+                                className={`group relative flex items-center gap-2.5 py-[7px] px-3 text-[13px] rounded-lg transition-all duration-150 cursor-pointer ${selectedListId === list.id ? "bg-white/[0.06] text-zinc-50 font-medium" : "text-zinc-400 hover:bg-white/[0.035]"}`}
+                              >
+                                {list.color
+                                  ? <span className="w-[7px] h-[7px] rounded-[2px] shrink-0" style={{ backgroundColor: list.color }} aria-hidden />
+                                  : <span className="w-[7px] h-[7px] rounded-[2px] shrink-0 bg-zinc-600" aria-hidden />
+                                }
+                                <span className="text-[13px] shrink-0">{list.icon}</span>
+                                <span className="truncate flex-1">{list.label}</span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }}
+                                  className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-500 rounded-md w-5 h-5 flex items-center justify-center hover:bg-white/[0.08] text-[10px] shrink-0"
+                                  aria-label="List menu"
+                                >•••</button>
                                 {openListMenuId === list.id && (
-                                  <div ref={listMenuRef} className="absolute right-0 top-full mt-1 w-32 rounded-lg bg-[#1e1e22] border border-white/[0.06] shadow-[0_4px_12px_rgba(0,0,0,0.5)] overflow-hidden z-10">
-                                    <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3 py-2 text-[12px] text-zinc-300 hover:bg-white/[0.06] transition-colors">Delete List</button>
+                                  <div ref={listMenuRef} className="absolute right-0 top-full mt-1 w-[140px] rounded-lg bg-[#1c1c20] border border-white/[0.06] shadow-[0_8px_24px_rgba(0,0,0,0.55)] overflow-hidden z-10">
+                                    <button type="button" onClick={() => { setTodayLists((prev) => prev.filter((l) => l.id !== list.id)); setTasksByListId((prev) => { const next = { ...prev }; delete next[list.id]; return next; }); if (selectedListId === list.id) { setSelectedListId(null); setTasks([]); setSelectedTaskId(null); } setOpenListMenuId(null); }} className="w-full text-left px-3.5 py-2 text-[12px] text-zinc-300 hover:bg-white/[0.06] transition-colors">Delete List</button>
                                   </div>
                                 )}
                               </div>
@@ -4785,37 +4893,55 @@ export default function App() {
                       </div>
                     </nav>
 
-                    {/* Section divider */}
-                    <div className="mx-3 my-2.5 h-px bg-white/[0.06]" />
+                    {/* ─── Divider ─── */}
+                    <div className="sidebar-section-divider" />
 
-                    <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500 px-4 pb-1.5">Insights</div>
-                    <nav className="flex flex-col gap-0.5 px-2" aria-label="Insights">
-                      <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] rounded-lg transition-all duration-100 text-zinc-400 hover:bg-white/[0.04] hover:text-zinc-200">
-                        <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><polyline points="5 15 10 10 14 14 19 8" /></svg>
+                    {/* ─── INSIGHTS ─── */}
+                    <div className="px-4 pt-1 pb-1.5">
+                      <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-zinc-500/70 select-none">Insights</span>
+                    </div>
+                    <nav className="flex flex-col gap-px px-2.5" aria-label="Insights">
+                      <button type="button" onClick={() => handleSidebarNavClick("analytics")} className="sidebar-nav-item">
+                        <svg className="w-[17px] h-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19h16" /><polyline points="5 15 10 10 14 14 19 8" /></svg>
                         <span>Stats</span>
                       </button>
-                      <button type="button" onClick={() => {}} className="flex items-center gap-2.5 py-[7px] px-2.5 text-[13px] text-zinc-500 rounded-lg cursor-default">
-                        <svg className="w-[16px] h-[16px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                      <button type="button" onClick={() => {}} className="sidebar-nav-item" style={{ color: "#71717a", cursor: "default" }}>
+                        <svg className="w-[17px] h-[17px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                         <span>Goals</span>
                       </button>
                     </nav>
 
-                    <div className="flex-1" />
-                    <div className="shrink-0 px-3 mb-2">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-[10px] font-medium text-zinc-500">Progress</span>
-                        <span className="text-[10px] font-semibold tabular-nums text-zinc-400 inline-flex items-center gap-0.5"><span aria-hidden>🔥</span>{streak}</span>
+                    <div className="flex-1 min-h-[24px]" />
+
+                    {/* Progress summary */}
+                    <div className="shrink-0 px-4 mb-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <span className="text-[10px] font-medium text-zinc-500/80 uppercase tracking-wider">Progress</span>
+                        <span className="text-[10px] font-semibold tabular-nums text-zinc-400 inline-flex items-center gap-1">
+                          <span className="text-[12px]" aria-hidden>🔥</span>{streak}
+                        </span>
                       </div>
-                      <div className="h-1 rounded-full bg-zinc-800/90 overflow-hidden">
-                        <div className="h-full rounded-full bg-emerald-500/85" style={{ width: `${dailyTaskProgress.pct}%` }} />
+                      <div className="h-[3px] rounded-full bg-white/[0.05] overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-[width] duration-500 ease-out"
+                          style={{
+                            width: `${dailyTaskProgress.pct}%`,
+                            background: "linear-gradient(90deg, rgba(139,92,246,0.7), rgba(99,102,241,0.8))",
+                          }}
+                        />
                       </div>
-                      <p className="text-[9px] text-zinc-600 tabular-nums mt-1">{dailyTaskProgress.done} done · {dailyTaskProgress.open} open</p>
+                      <p className="text-[9px] text-zinc-600 tabular-nums mt-1.5">{dailyTaskProgress.done} done · {dailyTaskProgress.open} open</p>
                     </div>
                   </div>
 
-                  <div className="shrink-0 border-t border-white/[0.06] pt-2 pb-2 px-2">
-                    <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "completed" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setCollapsedCompletedDates({}); setTodayMainMode("completed"); }} className={`w-full flex items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-[13px] font-medium transition-all duration-100 ${todayMainMode === "completed" ? "bg-[#252525] text-zinc-50" : "text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.04]"}`}>
-                      <svg className={`w-[16px] h-[16px] shrink-0 ${todayMainMode === "completed" ? "text-zinc-200" : "text-zinc-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+                  {/* Footer — Completed */}
+                  <div className="shrink-0 border-t border-white/[0.04] px-2.5 py-2">
+                    <button
+                      type="button"
+                      onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "completed" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setCollapsedCompletedDates({}); setTodayMainMode("completed"); }}
+                      className={`sidebar-nav-item w-full ${todayMainMode === "completed" ? "sidebar-nav-item--active" : ""}`}
+                    >
+                      <svg className={`w-[17px] h-[17px] shrink-0 transition-colors duration-150 ${todayMainMode === "completed" ? "text-zinc-200" : "text-zinc-500"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
                       <span>Completed</span>
                     </button>
                   </div>
