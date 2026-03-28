@@ -1412,15 +1412,7 @@ const TASKS_BY_LIST_STORAGE_KEY = "tunnelvision_tasks_by_list_v1";
 const TODAY_LISTS_STORAGE_KEY = "tunnelvision_user_lists_v1";
 const MOTION_PREF_STORAGE_KEY = "tunnelvision_motion_tier_v1";
 
-function TaskListSkeletonRows() {
-  return (
-    <div className="space-y-2 pt-1 px-1" aria-hidden>
-      {[0, 1, 2, 3, 4].map((i) => (
-        <div key={i} className="h-9 rounded-xl skeleton-row" />
-      ))}
-    </div>
-  );
-}
+function TaskListSkeletonRows() { return null; }
 
 function loadTasksByListIdFromStorage(): Record<string, Task[]> {
   if (typeof window === "undefined") return {};
@@ -2609,7 +2601,7 @@ export default function App() {
       setTasksListSkeletonVisible(false);
       return;
     }
-    setTasksListSkeletonVisible(true);
+    setTasksListSkeletonVisible(false);
     const t = window.setTimeout(() => setTasksListSkeletonVisible(false), 450);
     return () => clearTimeout(t);
   }, [selectedListId, todayMainMode, activeView]);
@@ -4625,12 +4617,12 @@ export default function App() {
             </div>
           )}
           <div className="h-screen min-h-0 flex flex-col w-full bg-white text-zinc-800 overflow-hidden">
-            {/* ── Global Top Bar (spans full width like ClickUp) ── */}
-            <div className="shrink-0 h-[44px] flex items-center justify-center border-b border-zinc-200/60 bg-white px-4 z-[260]">
-              <div className="relative w-full max-w-[520px]">
-                <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[15px] h-[15px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[34px] pl-10 pr-10 bg-zinc-50 rounded-lg text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-zinc-200/80 hover:border-zinc-300 focus:border-violet-400 focus:ring-1 focus:ring-violet-100 focus:bg-white transition-all" />
-                <img src="/favicon.svg" className="absolute right-3 top-1/2 -translate-y-1/2 w-[16px] h-[16px] opacity-40" alt="" />
+            {/* ── Global Top Bar ── */}
+            <div className="shrink-0 h-[40px] flex items-center justify-center border-b border-zinc-200/50 bg-white px-4 z-[260]">
+              <div className="relative w-full max-w-[480px]">
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-[14px] h-[14px] text-zinc-400 pointer-events-none" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
+                <input value={taskSearchQuery} onChange={(e) => setTaskSearchQuery(e.target.value)} placeholder="Search..." className="w-full h-[30px] pl-9 pr-9 bg-zinc-50/80 rounded-md text-[12.5px] text-zinc-700 placeholder:text-zinc-400 outline-none border border-zinc-200/70 hover:border-zinc-300 focus:border-violet-400 focus:ring-1 focus:ring-violet-100 focus:bg-white transition-all" />
+                <img src="/favicon.svg" className="absolute right-2.5 top-1/2 -translate-y-1/2 w-[14px] h-[14px] opacity-35" alt="" />
               </div>
             </div>
 
@@ -4733,7 +4725,7 @@ export default function App() {
               activeView === "tasks" &&
               (!isTodayPanelCollapsed || isTodayPanelAnimatingOut) && (
                 <aside
-                  className={`h-full w-[260px] bg-white flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-zinc-200/70 ${
+                  className={`h-full w-[300px] bg-white flex flex-col min-h-0 transition-all duration-200 ease-out shrink-0 border-r border-zinc-200/70 ${
                     isTodayPanelAnimatingOut
                       ? "opacity-0 translate-x-2 pointer-events-none"
                       : "opacity-100 translate-x-0"
@@ -4741,14 +4733,14 @@ export default function App() {
                 >
                   <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain">
                     {/* Home header with + button like ClickUp */}
-                    <div className="flex items-center justify-between px-5 pt-4 pb-3">
+                    <div className="flex items-center justify-between px-5 pt-5 pb-2">
                       <h2 className="text-[16px] font-bold text-zinc-900">Home</h2>
                       <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="flex items-center justify-center w-6 h-6 rounded-md text-zinc-400 hover:text-zinc-600 hover:bg-zinc-100 transition-colors" aria-label="Add new">
                         <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                       </button>
                     </div>
 
-                    <nav className="flex flex-col gap-0.5 px-2" aria-label="Main navigation">
+                    <nav className="flex flex-col gap-0.5 px-3" aria-label="Main navigation">
                       {/* Focus Today - inbox-style icon */}
                       <button
                         type="button"
@@ -4783,8 +4775,8 @@ export default function App() {
                     <div className="sidebar-section-divider" />
 
                     {/* Lists section - TickTick flat style */}
-                    <div className="flex items-center justify-between px-4 pt-1 pb-1.5">
-                      <span className="text-[11px] font-semibold text-zinc-400 select-none">Lists</span>
+                    <div className="flex items-center justify-between px-4 pt-0.5 pb-1">
+                      <span className="text-[10.5px] font-semibold text-zinc-400 uppercase tracking-wider select-none">Lists</span>
                       <button type="button" onClick={() => setUserListsSectionExpanded((v) => !v)} className="text-zinc-400 hover:text-zinc-600 transition-colors" aria-expanded={userListsSectionExpanded}>
                         <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                       </button>
@@ -4793,8 +4785,8 @@ export default function App() {
                       <div className="min-h-0 overflow-hidden">
                         <div className="flex flex-col overflow-y-auto max-h-[280px]">
                           {todayLists.map((list) => (
-                            <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-3 py-[9px] px-5 text-[14px] transition-colors duration-100 cursor-pointer border-l-[3px] ${selectedListId === list.id ? "border-l-violet-500 bg-violet-50/50 text-zinc-900 font-medium" : "border-l-transparent text-zinc-600 hover:bg-zinc-50"}`}>
-                              <span className="text-[15px] shrink-0">{list.icon || "📋"}</span>
+                            <div key={list.id} role="button" tabIndex={0} onClick={() => handleSelectList(list.id)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSelectList(list.id); } }} className={`group relative flex items-center gap-2.5 py-[7px] px-4 text-[13.5px] transition-colors duration-100 cursor-pointer border-l-[3px] ${selectedListId === list.id ? "border-l-violet-500 bg-violet-50/50 text-zinc-900 font-medium" : "border-l-transparent text-zinc-600 hover:bg-zinc-50"}`}>
+                              <span className="text-[14px] shrink-0">{list.icon || "📋"}</span>
                               <span className="truncate flex-1">{list.label}</span>
                               {list.color && <span className="w-[8px] h-[8px] rounded-full shrink-0" style={{ backgroundColor: list.color }} aria-hidden />}
                               <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-zinc-400 rounded w-5 h-5 flex items-center justify-center hover:bg-zinc-200/60 text-[10px] shrink-0" aria-label="List menu">•••</button>
@@ -4852,7 +4844,7 @@ export default function App() {
             {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
             <section
-              className={`flex-1 min-h-0 h-full flex flex-col ${
+              className={`flex-1 min-h-0 h-full flex flex-col bg-zinc-50 ${
                 activeView === "tasks" &&
                 (todayMainMode === "tasks" || todayMainMode === "completed" || todayMainMode === "focus-today")
                   ? "overflow-hidden"
@@ -4862,70 +4854,29 @@ export default function App() {
               }`}
             >
               <div
-                className={`w-full h-full min-h-0 flex flex-col ${
-                  mainViewEnterAnim ? "micro-view-enter" : ""
-                } ${
-                  activeView === "tasks" &&
-                  (todayMainMode === "tasks" || todayMainMode === "completed" || todayMainMode === "focus-today")
-                    ? "px-0 pt-0 pb-0"
-                    : activeView === "calendar" || activeView === "analytics"
-                      ? "flex-1 min-h-0 px-0 pt-0 pb-0"
-                      : "px-5 pt-3 pb-6"
+                className={`w-full h-full min-h-0 flex flex-col bg-white rounded-tl-[14px] overflow-hidden ${
+                  activeView === "calendar" || activeView === "analytics"
+                    ? "flex-1 min-h-0"
+                    : ""
                 }`}
               >
-                <div
-                  className={`flex items-center justify-between pointer-events-auto shrink-0 ${
-                    activeView === "tasks" &&
-                    (todayMainMode === "tasks" || todayMainMode === "completed" || todayMainMode === "focus-today")
-                      ? "hidden"
-                      : activeView === "calendar" || activeView === "analytics"
-                        ? "hidden"
-                        : "mb-6"
-                  }`}
-                >
-                  {activeView === "tasks" ? (
-                    <>
-                      <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                        {todayMainMode === "completed"
-                          ? "Completed"
-                          : selectedListId
-                            ? selectedList?.label ?? "Tasks"
-                            : ""}
-                      </h1>
-                      <button
-                        type="button"
-                        disabled
-                        className={`hidden md:inline-flex items-center gap-2 px-3 py-1.5 rounded border border-zinc-700 bg-zinc-900/80 text-zinc-500 text-[11px] font-medium transition-all pointer-events-auto ${
-                          selectedListId ? "" : "hidden"
-                        }`}
-                      >
-                        Collapse
-                      </button>
-                    </>
-                  ) : (
-                    <h1 className="text-lg font-semibold text-zinc-100 tracking-tight">
-                      {activeView === "notifications" && "Notifications"}
-                      {activeView === "settings" && "Settings"}
-                    </h1>
-                  )}
-                </div>
                 {activeView === "tasks" && todayMainMode === "focus-today" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     {/* Focus Today header */}
-                    <div className="shrink-0 px-6 pt-3 pb-3 border-b border-zinc-200/60">
+                    <div className="shrink-0 px-5 pt-2.5 pb-2.5 border-b border-zinc-100">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <span className="w-[22px] h-[22px] rounded bg-orange-500 flex items-center justify-center"><svg className="w-[13px] h-[13px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></span>
-                          <h2 className="text-[16px] font-semibold text-zinc-900">Focus Today</h2>
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded bg-orange-500 flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></svg></span>
+                          <h2 className="text-[15px] font-semibold text-zinc-900 leading-none">Focus Today</h2>
                         </div>
                         {focusForTodayItems.length > 0 && (
-                          <button type="button" onClick={handleFocusForTodayStartSession} className="rounded-lg bg-violet-600 hover:bg-violet-700 px-4 py-2 text-[13px] font-semibold text-white transition-colors shadow-sm">Start Focus Session</button>
+                          <button type="button" onClick={handleFocusForTodayStartSession} className="rounded-md bg-violet-600 hover:bg-violet-700 px-3.5 py-1.5 text-[12px] font-semibold text-white transition-colors">Start Focus Session</button>
                         )}
                       </div>
                     </div>
 
                     {/* Table header */}
-                    <div className="shrink-0 flex items-center h-[36px] px-6 border-b border-zinc-200/60 bg-zinc-50/50 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-zinc-100 bg-zinc-50/30 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">
                       <div className="w-[28px] shrink-0" />
                       <div className="flex-1 min-w-0">Name</div>
                       <div className="w-[120px] shrink-0 text-center">Priority <span className="text-violet-500 font-bold">AI</span></div>
@@ -4936,8 +4887,8 @@ export default function App() {
                     {/* Focus items table */}
                     <div className="relative flex-1 min-h-0 overflow-y-auto">
                       {focusForTodayItems.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center min-h-[400px]">
-                          <svg className="w-[140px] h-[140px] mb-5" viewBox="0 0 200 200" fill="none">
+                        <div className="flex flex-col items-center justify-center min-h-[280px]">
+                          <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none">
                             <circle cx="100" cy="100" r="80" fill="#faf5ff" />
                             <circle cx="100" cy="85" r="35" fill="#ede9fe" />
                             <circle cx="90" cy="80" r="3" fill="#8b5cf6" />
@@ -4947,8 +4898,8 @@ export default function App() {
                             <circle cx="148" cy="50" r="5" fill="#fbbf24" opacity="0.5" />
                             <circle cx="52" cy="55" r="3.5" fill="#c4b5fd" opacity="0.5" />
                           </svg>
-                          <p className="text-[16px] font-semibold text-zinc-700">No focus items for today</p>
-                          <p className="text-[13px] text-zinc-400 mt-1">Enjoy a free day!</p>
+                          <p className="text-[14px] font-semibold text-zinc-600">No focus items for today</p>
+                          <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
                         </div>
                       ) : (
                         <div className="flex flex-col">
@@ -4967,7 +4918,7 @@ export default function App() {
                             const showEstimate = focusEstimatePromptKeys.has(`${pick.listId}:${pick.taskId}`);
                             return (
                               <div key={`${pick.listId}:${pick.taskId}`}>
-                                <button type="button" onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)} className="flex items-center w-full h-[40px] px-6 text-left hover:bg-zinc-50 transition-colors border-b border-zinc-100">
+                                <button type="button" onClick={() => openTaskFromCalendar(pick.listId, pick.taskId)} className="flex items-center w-full h-[36px] px-6 text-left hover:bg-zinc-50 transition-colors border-b border-zinc-100">
                                   <div className="w-[28px] shrink-0 flex items-center justify-center">
                                     <span className={`w-[8px] h-[8px] rounded-full ${pick.urgency === "overdue" || pick.urgency === "critical" ? "bg-red-500" : pick.urgency === "soon" ? "bg-orange-400" : "bg-zinc-300"}`} />
                                   </div>
@@ -4997,7 +4948,7 @@ export default function App() {
                   </div>
                 ) : activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <header className="shrink-0 flex items-center gap-3 px-6 h-[48px] border-b border-zinc-200/70">
+                    <header className="shrink-0 flex items-center gap-3 px-5 h-[40px] border-b border-zinc-100">
                       <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-zinc-500 hover:bg-zinc-100 transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
                         <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
                       </button>
@@ -5006,10 +4957,10 @@ export default function App() {
                     </header>
                     <div className="flex-1 min-h-0 overflow-y-auto">
                       {completedGroups.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center min-h-[400px]">
-                          <svg className="w-[120px] h-[120px] mb-4 opacity-80" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
-                          <p className="text-[15px] font-medium text-zinc-600">No completed tasks yet</p>
-                          <p className="text-[13px] text-zinc-400 mt-1">Complete some tasks and they'll show up here</p>
+                        <div className="flex flex-col items-center justify-center min-h-[280px]">
+                          <svg className="w-[80px] h-[80px] mb-3 opacity-70" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
+                          <p className="text-[14px] font-medium text-zinc-600">No completed tasks yet</p>
+                          <p className="text-[12px] text-zinc-400 mt-0.5">Complete some tasks and they'll show up here</p>
                         </div>
                       ) : (
                         <div>
@@ -5017,15 +4968,15 @@ export default function App() {
                             const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
                             return (
                               <div key={group.dateStr} className="border-b border-zinc-100">
-                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2.5 px-6 py-3 text-left hover:bg-zinc-50 transition-colors">
-                                  <svg className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="flex-1 text-[14px] font-semibold text-zinc-800">{group.label}</span>
-                                  <span className="text-[12px] text-zinc-400 font-medium tabular-nums">{group.items.length}</span>
+                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 px-5 py-2 text-left hover:bg-zinc-50 transition-colors">
+                                  <svg className={`w-3 h-3 text-zinc-400 transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                                  <span className="flex-1 text-[13px] font-semibold text-zinc-800">{group.label}</span>
+                                  <span className="text-[11px] text-zinc-400 font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
                                   <div className="divide-y divide-zinc-50">
                                     {group.items.map((item) => (
-                                      <div key={item.key} className="flex items-center gap-3 px-6 py-2.5 pl-14 hover:bg-zinc-50/50 transition-colors">
+                                      <div key={item.key} className="flex items-center gap-2.5 px-5 py-2 pl-12 hover:bg-zinc-50/50 transition-colors">
                                         <span className="shrink-0 w-[16px] h-[16px] rounded-full bg-emerald-500 flex items-center justify-center"><span className="text-white text-[9px] leading-none">✓</span></span>
                                         <span className="flex-1 min-w-0 text-[13px] text-zinc-400 line-through truncate">{item.taskName}</span>
                                         <span className="shrink-0 text-[11px] text-zinc-400 tabular-nums">{item.minutes}m</span>
@@ -5044,25 +4995,25 @@ export default function App() {
                 ) : activeView === "tasks" && todayMainMode === "tasks" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
                     {/* ── "My Tasks" title + category tabs (ClickUp style) ── */}
-                    <div className="shrink-0 px-6 pt-3 pb-0 border-b border-zinc-200/60">
-                      <div className="flex items-center gap-2.5 mb-2.5">
-                        <span className="w-[22px] h-[22px] rounded bg-violet-500 flex items-center justify-center"><svg className="w-[13px] h-[13px] text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
-                        <h2 className="text-[16px] font-semibold text-zinc-900">My Tasks</h2>
+                    <div className="shrink-0 px-5 pt-2.5 pb-0 border-b border-zinc-100">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <span className="w-5 h-5 rounded bg-violet-500 flex items-center justify-center"><svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg></span>
+                        <h2 className="text-[15px] font-semibold text-zinc-900 leading-none">My Tasks</h2>
                       </div>
-                      <div className="flex items-center gap-0">
+                      <div className="flex items-center -ml-1">
                         {[
-                          { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⚡" },
-                          { id: SYS_LIST_TODAY, label: "Today", emoji: "☀️" },
-                          { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📂" },
-                          { id: SYS_LIST_TESTS, label: "Tests", emoji: "✏️" },
-                          { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🗓️" },
+                          { id: SYS_LIST_OVERDUE, label: "Overdue", emoji: "⏰" },
+                          { id: SYS_LIST_TODAY, label: "Today", emoji: "📅" },
+                          { id: SYS_LIST_PROJECTS, label: "Projects", emoji: "📁" },
+                          { id: SYS_LIST_TESTS, label: "Tests", emoji: "🧪" },
+                          { id: SYS_LIST_LONGTERM, label: "Long-Term", emoji: "🧠" },
                         ].map((tab) => {
                           const isActive = selectedListId === tab.id;
                           return (
-                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium transition-colors duration-150 ${isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"}`}>
-                              <span className="text-[12px]">{tab.emoji}</span>
+                            <button key={tab.id} type="button" onClick={() => handleSelectList(tab.id)} className={`relative flex items-center gap-1 px-2.5 py-1.5 text-[12.5px] font-medium transition-colors duration-100 ${isActive ? "text-zinc-900" : "text-zinc-400 hover:text-zinc-600"}`}>
+                              <span className="text-[11px]">{tab.emoji}</span>
                               <span>{tab.label}</span>
-                              {isActive && <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-zinc-900 rounded-full" />}
+                              {isActive && <span className="absolute bottom-0 left-1.5 right-1.5 h-[2px] bg-violet-500 rounded-full" />}
                             </button>
                           );
                         })}
@@ -5070,7 +5021,7 @@ export default function App() {
                     </div>
 
                     {/* ── Table Header (ClickUp style: Name / Priority AI / Class) ── */}
-                    <div className="shrink-0 flex items-center h-[36px] px-6 border-b border-zinc-200/60 bg-zinc-50/50 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">
+                    <div className="shrink-0 flex items-center h-[32px] px-6 border-b border-zinc-100 bg-zinc-50/30 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">
                       <div className="w-[28px] shrink-0" />
                       <div className="flex-1 min-w-0">Name</div>
                       <div className="w-[120px] shrink-0 text-center">Priority <span className="text-violet-500 font-bold">AI</span></div>
@@ -5084,8 +5035,6 @@ export default function App() {
 
                       {!selectedListId ? (
                         <div className="px-6 py-10 text-zinc-400 text-[14px] text-center">Select a category to view tasks</div>
-                      ) : tasksListSkeletonVisible ? (
-                        <TaskListSkeletonRows />
                       ) : (() => {
                         const searchQ = taskSearchQuery.toLowerCase().trim();
                         const filtered = searchQ ? visibleTasksForList.filter((t) => t.text.toLowerCase().includes(searchQ)) : visibleTasksForList;
@@ -5095,8 +5044,8 @@ export default function App() {
                         if (filtered.length === 0) {
                           if (allElasticListTasksComplete) {
                             return (
-                              <div className="flex flex-col items-center justify-center min-h-[400px]">
-                                <svg className="w-[140px] h-[140px] mb-5" viewBox="0 0 200 200" fill="none">
+                              <div className="flex flex-col items-center justify-center min-h-[280px]">
+                                <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none">
                                   <circle cx="100" cy="100" r="80" fill="#f8fafc" />
                                   <circle cx="100" cy="85" r="35" fill="#e0e7ff" />
                                   <circle cx="85" cy="78" r="4" fill="#818cf8" />
@@ -5109,15 +5058,15 @@ export default function App() {
                                   <path d="M70 45l3-8 3 8-8-5h10z" fill="#fcd34d" opacity="0.5" />
                                   <path d="M140 35l2-6 2 6-6-4h8z" fill="#c4b5fd" opacity="0.4" />
                                 </svg>
-                                <p className="text-[16px] font-semibold text-zinc-700">No upcoming items in this category</p>
-                                <p className="text-[13px] text-zinc-400 mt-1">Enjoy a free day!</p>
+                                <p className="text-[14px] font-semibold text-zinc-600">No upcoming items in this category</p>
+                                <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
                               </div>
                             );
                           }
                           if (selectedListId === SYS_LIST_OVERDUE) {
                             return (
-                              <div className="flex flex-col items-center justify-center min-h-[400px]">
-                                <svg className="w-[140px] h-[140px] mb-5" viewBox="0 0 200 200" fill="none">
+                              <div className="flex flex-col items-center justify-center min-h-[280px]">
+                                <svg className="w-[100px] h-[100px] mb-4" viewBox="0 0 200 200" fill="none">
                                   <circle cx="100" cy="100" r="80" fill="#f0fdf4" />
                                   <circle cx="100" cy="85" r="35" fill="#dcfce7" />
                                   <circle cx="85" cy="78" r="4" fill="#22c55e" />
@@ -5128,14 +5077,14 @@ export default function App() {
                                   <circle cx="55" cy="60" r="4" fill="#fbbf24" opacity="0.4" />
                                   <path d="M70 45l3-8 3 8-8-5h10z" fill="#86efac" opacity="0.5" />
                                 </svg>
-                                <p className="text-[16px] font-semibold text-zinc-700">Nothing overdue — nice work!</p>
-                                <p className="text-[13px] text-zinc-400 mt-1">Enjoy a free day!</p>
+                                <p className="text-[14px] font-semibold text-zinc-600">Nothing overdue — nice work!</p>
+                                <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
                               </div>
                             );
                           }
                           return (
-                            <div className={`flex flex-col items-center justify-center min-h-[400px] ${listEmptyExit ? "micro-empty-out" : ""}`}>
-                              <svg className="w-[140px] h-[140px] mb-5" viewBox="0 0 200 200" fill="none">
+                            <div className={`flex flex-col items-center justify-center min-h-[280px] ${listEmptyExit ? "micro-empty-out" : ""}`}>
+                              <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none">
                                 <circle cx="100" cy="100" r="80" fill="#faf5ff" />
                                 <circle cx="100" cy="85" r="35" fill="#ede9fe" />
                                 <circle cx="90" cy="80" r="3" fill="#8b5cf6" />
@@ -5146,8 +5095,8 @@ export default function App() {
                                 <circle cx="52" cy="55" r="3.5" fill="#c4b5fd" opacity="0.5" />
                                 <path d="M65 40l2.5-7 2.5 7-7-4.5h9z" fill="#fcd34d" opacity="0.4" />
                               </svg>
-                              <p className="text-[16px] font-semibold text-zinc-700">No upcoming items in this category</p>
-                              <p className="text-[13px] text-zinc-400 mt-1">Enjoy a free day!</p>
+                              <p className="text-[14px] font-semibold text-zinc-600">No upcoming items in this category</p>
+                              <p className="text-[12px] text-zinc-400 mt-0.5">Enjoy a free day!</p>
                             </div>
                           );
                         }
@@ -5170,7 +5119,7 @@ export default function App() {
                                   })();
                                   const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
                                   return (
-                                    <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center h-[40px] px-6 cursor-pointer transition-colors duration-100 border-b border-zinc-100 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-violet-50/60" : "hover:bg-zinc-50"}`}>
+                                    <div key={t.id} role="button" tabIndex={0} onClick={() => setSelectedTaskId(isSelected ? null : t.id)} onKeyDown={(e) => { if (e.key === "Enter") setSelectedTaskId(isSelected ? null : t.id); }} className={`group flex items-center h-[36px] px-6 cursor-pointer transition-colors duration-100 border-b border-zinc-100 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""} ${taskReappearId === t.id ? "animate-task-reappear" : ""} ${newListTaskAnimId === t.id ? "micro-row-enter" : ""} ${isSelected ? "bg-violet-50/60" : "hover:bg-zinc-50"}`}>
                                       <div className="w-[28px] shrink-0 flex items-center justify-center">
                                         <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); const next = !t.completed; if (!selectedListId) return; if (next && listUsesElasticComplete) { scheduleElasticListTaskComplete(t, selectedListId, selectedList?.label ?? ""); return; } if (next) { appendCompletedActivity(t.text, 0, selectedListId, selectedList?.label ?? ""); } else { removeLastCompletedForTaskOnList(t.text, selectedListId); } setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: next } : x)); }} className={`btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] flex items-center justify-center transition-colors disabled:opacity-100 ${t.completed || taskCheckAnimatingId === t.id ? "border-emerald-500 bg-emerald-500" : "border-zinc-300 hover:border-zinc-400"} ${taskCheckAnimatingId === t.id ? "elastic-cb-pulse" : ""}`} aria-label={t.completed ? "Mark incomplete" : "Complete task"}>
                                           {listUsesElasticComplete && taskCheckAnimatingId === t.id ? (<svg className="w-[9px] h-[9px]" viewBox="0 0 12 12" fill="none" aria-hidden><path className="elastic-check-path-draw" d="M2.5 6.2 L5 8.8 L9.5 3.5" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>) : t.completed ? (<span className="text-white text-[8px] leading-none">✓</span>) : null}
@@ -5191,35 +5140,28 @@ export default function App() {
                               </div>
                             )}
 
-                            {/* Inline Add Task (ClickUp style) */}
+                            {/* Inline Add Task */}
                             {selectedListId !== SYS_LIST_OVERDUE && (
-                              <div className="flex items-center h-[40px] px-6 border-b border-zinc-100 hover:bg-zinc-50/50 transition-colors">
+                              <div className="flex items-center h-[42px] px-5 border-b border-zinc-100 bg-zinc-50/40 hover:bg-zinc-50 transition-colors cursor-text" onClick={() => taskListInputRef.current?.focus()}>
                                 <div className="w-[28px] shrink-0 flex items-center justify-center">
-                                  <svg className="w-[14px] h-[14px] text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                                  <svg className="w-[13px] h-[13px] text-violet-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
                                 </div>
-                                <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder="Add task" disabled={!selectedListId} className={`flex-1 min-w-0 h-full bg-transparent text-[13px] text-zinc-800 placeholder:text-zinc-400 outline-none disabled:opacity-50 ${taskInputClearFlash ? "opacity-40" : ""}`} />
-                              </div>
-                            )}
-                            {taskInputLiveHints.length > 0 && (
-                              <div className="pl-14 py-1" role="status" aria-live="polite">
-                                {taskInputLiveHints.map((hint, hi) => (
-                                  <p key={hi} className="text-[10px] leading-snug text-zinc-400" style={{ animationDelay: `${hi * 40}ms` }}>{hint}</p>
-                                ))}
+                                <input ref={taskListInputRef} value={taskInput} onChange={(e) => setTaskInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTaskFromListInput({ fromEnter: true }); } }} placeholder={taskInputPlaceholder(selectedListId)} disabled={!selectedListId} className={`flex-1 min-w-0 h-full bg-transparent text-[13px] text-zinc-700 placeholder:text-zinc-400 outline-none disabled:opacity-50 ${taskInputClearFlash ? "opacity-40" : ""}`} />
                               </div>
                             )}
 
                             {doneTasks.length > 0 && (
                               <>
-                                <div className="flex items-center gap-2 px-6 pt-4 pb-1.5">
+                                <div className="flex items-center gap-1.5 px-5 pt-3 pb-1">
                                   <svg className="w-3 h-3 text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-zinc-400">Done</span>
-                                  <span className="text-[11px] font-medium text-zinc-400 tabular-nums">{doneTasks.length}</span>
+                                  <span className="inline-flex items-center gap-1 text-[10.5px] font-semibold uppercase tracking-wider text-zinc-400">Done</span>
+                                  <span className="text-[10.5px] font-medium text-zinc-400 tabular-nums">{doneTasks.length}</span>
                                 </div>
                                 <div>
                                   {doneTasks.map((t) => {
                                     const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
                                     return (
-                                      <div key={t.id} className={`group flex items-center h-[40px] px-6 border-b border-zinc-50 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
+                                      <div key={t.id} className={`group flex items-center h-[36px] px-6 border-b border-zinc-50 ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
                                         <div className="w-[28px] shrink-0 flex items-center justify-center">
                                           <button type="button" disabled={taskCheckAnimatingId === t.id} onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; removeLastCompletedForTaskOnList(t.text, selectedListId); setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, completed: false } : x)); }} className="btn-press-instant w-[16px] h-[16px] rounded-full border-[1.5px] border-emerald-500 bg-emerald-500 flex items-center justify-center transition-colors disabled:opacity-100" aria-label="Mark incomplete"><span className="text-white text-[8px] leading-none">✓</span></button>
                                         </div>
