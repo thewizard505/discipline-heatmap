@@ -787,7 +787,7 @@ function DefaultTasksEmptyIllustration() {
           height="10"
           rx="2"
           stroke="#a1a1aa"
-          strokeWidth="1.8"
+          strokeWidth="1.5"
         />
         <line
           x1="74"
@@ -4586,15 +4586,15 @@ export default function App() {
           <div className="h-screen min-h-0 flex w-full bg-white text-[#111827] overflow-hidden">
             {/* ── Unified SaaS Sidebar ── */}
             {!isFocusSessionActive && (
-              <aside className="h-full w-[252px] bg-[#F8FAFC] flex flex-col shrink-0 border-r border-[#E5E7EB] z-[250]">
+              <aside className="app-sidebar h-full w-[252px] flex flex-col shrink-0 z-[250] border-r border-[#E8E6E3] bg-[#FAFAF8]">
                 {/* Sidebar header */}
-                <div className="shrink-0 flex items-center gap-2.5 px-4 h-[52px] border-b border-[#E5E7EB]">
-                  <img src="/favicon.svg" className="w-[20px] h-[20px]" alt="" />
-                  <span className="text-[14px] font-semibold text-[#111827] tracking-tight">TunnelVision</span>
+                <div className="shrink-0 flex items-center gap-2.5 px-4 h-[52px] border-b border-[#E8E6E3]">
+                  <img src="/favicon.svg" className="w-[20px] h-[20px] opacity-90" alt="" />
+                  <span className="text-[14px] font-medium text-[#202020] tracking-tight">TunnelVision</span>
                 </div>
 
                 {/* Scrollable navigation */}
-                <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain py-3 px-3">
+                <div className="flex-1 min-h-0 flex flex-col overflow-y-auto overflow-x-hidden overscroll-contain py-3 px-2.5">
                   {/* MAIN section */}
                   <div className="sidebar-section-label mb-1">Main</div>
                   <nav className="flex flex-col gap-[2px]" aria-label="Main navigation">
@@ -4603,10 +4603,10 @@ export default function App() {
                       onClick={() => { handleSidebarNavClick("tasks"); handleSelectList(SYS_LIST_TODAY); setTodayMainMode("focus-today"); }}
                       className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "focus-today" ? "sidebar-nav-item--active" : ""}`}
                     >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l2.5 2.5" /></svg>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><path d="M12 8v4l2.5 2.5" /></svg>
                       <span className="flex-1 text-left truncate">Focus Today</span>
                       {focusForTodayItems.length > 0 && (
-                        <span className="shrink-0 min-w-[20px] h-[18px] rounded-[4px] bg-[#6366F1] text-white text-[10px] font-semibold flex items-center justify-center px-1.5">{focusForTodayItems.length}</span>
+                        <span className="sidebar-badge-accent shrink-0">{focusForTodayItems.length}</span>
                       )}
                     </button>
 
@@ -4615,9 +4615,9 @@ export default function App() {
                       onClick={() => { handleSidebarNavClick("tasks"); if (!selectedListId || ![SYS_LIST_TODAY, SYS_LIST_OVERDUE, SYS_LIST_PROJECTS, SYS_LIST_TESTS, SYS_LIST_LONGTERM].includes(selectedListId)) { handleSelectList(SYS_LIST_TODAY); } setTodayMainMode("tasks"); }}
                       className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "tasks" ? "sidebar-nav-item--active" : ""}`}
                     >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" /></svg>
                       <span className="flex-1 text-left truncate">My Tasks</span>
-                      {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="shrink-0 min-w-[20px] h-[18px] rounded-[4px] bg-[#6366F1] text-white text-[10px] font-semibold flex items-center justify-center px-1.5">{total}</span> : null; })()}
+                      {(() => { const total = Object.values(tasksByListId).reduce((s, arr) => s + (Array.isArray(arr) ? arr.filter(t => !t.completed && !t.removing).length : 0), 0); return total > 0 ? <span className="sidebar-badge-muted shrink-0">{total}</span> : null; })()}
                     </button>
 
                     <button
@@ -4625,7 +4625,7 @@ export default function App() {
                       onClick={() => handleSidebarNavClick("calendar")}
                       className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
                     >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" /><path d="M16 2v4M8 2v4M3 10h18" /></svg>
                       <span className="flex-1 text-left truncate">Schedule</span>
                     </button>
                   </nav>
@@ -4642,7 +4642,7 @@ export default function App() {
                       onClick={handleStartFocusSession}
                       className="sidebar-nav-item"
                     >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                       <span className="flex-1 text-left truncate">Timer</span>
                     </button>
 
@@ -4651,7 +4651,7 @@ export default function App() {
                       onClick={() => handleSidebarNavClick("analytics")}
                       className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
                     >
-                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></svg>
+                      <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 20V10" /><path d="M12 20V4" /><path d="M6 20v-6" /></svg>
                       <span className="flex-1 text-left truncate">Insights</span>
                     </button>
                   </nav>
@@ -4663,26 +4663,26 @@ export default function App() {
                   <button
                     type="button"
                     onClick={() => setUserListsSectionExpanded((v) => !v)}
-                    className="sidebar-section-label flex items-center justify-between w-full cursor-pointer hover:text-[#6B7280] transition-colors mb-1"
+                    className="sidebar-section-label flex items-center justify-between w-full cursor-pointer transition-opacity hover:opacity-80 mb-1"
                     aria-expanded={userListsSectionExpanded}
                   >
                     <span>Organization</span>
-                    <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
+                    <svg className={`w-3.5 h-3.5 transition-transform duration-150 ${userListsSectionExpanded ? "rotate-90" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
                   </button>
                   <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${userListsSectionExpanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                     <div className="min-h-0 overflow-hidden">
                       <div className="flex flex-col gap-[2px] overflow-y-auto max-h-[280px]">
                         {/* Add list button */}
-                        <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="sidebar-nav-item text-[#9CA3AF] hover:text-[#6B7280] pl-[24px]">
+                        <button type="button" onClick={() => { if (isFocusTimerRunning) { setFocusSessionDialog({ kind: "quit", pending: { action: "addList" } }); return; } if (focusEnterZenActive) { cancelFocusEnterZen(); } if (isFocusSessionActive) { cleanupFocusSessionAfterQuit(); } setNewListName(""); setNewListColor("#eab308"); setIsAddListModalOpen(true); }} className="sidebar-nav-item sidebar-nav-item--add pl-[20px]">
                           <svg className="w-[16px] h-[16px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-                          <span className="text-[13px]">Add List</span>
+                          <span className="text-[14px]">Add List</span>
                         </button>
                         {todayLists.map((list) => (
-                          <div key={list.id} role="button" tabIndex={0} onClick={() => { handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); } }} className={`group relative flex items-center gap-2.5 py-[7px] pl-[24px] pr-3 text-[14px] font-medium rounded-[6px] transition-colors duration-100 cursor-pointer ${selectedListId === list.id && activeView === "tasks" ? "bg-[rgba(99,102,241,0.08)] text-[#6366F1]" : "text-[#111827] hover:bg-[#F1F5F9]"}`}>
-                            <svg className="w-[16px] h-[16px] shrink-0" viewBox="0 0 24 24" fill="none" stroke={selectedListId === list.id && activeView === "tasks" ? "#6366F1" : "#6B7280"} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
+                          <div key={list.id} role="button" tabIndex={0} onClick={() => { handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSidebarNavClick("tasks"); handleSelectList(list.id); setTodayMainMode("tasks"); } }} className={`group relative w-full sidebar-list-row pr-2 ${selectedListId === list.id && activeView === "tasks" ? "sidebar-list-row--active" : ""}`}>
+                            <svg className="w-[16px] h-[16px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z" /></svg>
                             <span className="truncate flex-1">{list.label}</span>
-                            {list.color && <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ backgroundColor: list.color }} aria-hidden />}
-                            <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-[#9CA3AF] rounded w-5 h-5 flex items-center justify-center hover:bg-[#E5E7EB]/60 text-[10px] shrink-0" aria-label="List menu">
+                            {list.color && <span className="w-[5px] h-[5px] rounded-full shrink-0 opacity-90" style={{ backgroundColor: list.color }} aria-hidden />}
+                            <button type="button" onClick={(e) => { e.stopPropagation(); setOpenListMenuId((cur) => cur === list.id ? null : list.id); }} className="opacity-0 group-hover:opacity-100 transition-opacity duration-100 text-[#888888] rounded w-5 h-5 flex items-center justify-center hover:bg-[#E8E6E3]/80 text-[10px] shrink-0" aria-label="List menu">
                               <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="5" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="12" cy="19" r="1" /></svg>
                             </button>
                             {openListMenuId === list.id && (
@@ -4700,9 +4700,9 @@ export default function App() {
                 </div>
 
                 {/* Bottom pinned section */}
-                <div className="shrink-0 border-t border-[#E5E7EB] px-3 py-2">
+                <div className="shrink-0 border-t border-[#E8E6E3] px-2.5 py-2">
                   <button type="button" onClick={() => {}} className="sidebar-nav-item w-full">
-                    <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></svg>
+                    <svg className="w-[18px] h-[18px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z" /><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z" /></svg>
                     <span className="flex-1 text-left truncate">Resources</span>
                   </button>
                 </div>
@@ -4719,7 +4719,7 @@ export default function App() {
                     setIsTodayPanelCollapsed(false);
                     setIsTodayPanelAnimatingOut(false);
                   }}
-                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#F8FAFC] border-r border-[#E5E7EB] text-[#6B7280] hover:text-[#111827] hover:bg-white transition-colors"
+                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#FAFAF8] border-r border-[#E8E6E3] text-[#5a5a5a] hover:text-[#202020] hover:bg-[#f3f0ee] transition-colors"
                   aria-label="Expand sidebar"
                   title="Show sidebar"
                 >
@@ -4740,7 +4740,7 @@ export default function App() {
                 <div className="flex items-center gap-1">
                   <button ref={notificationsButtonRef} type="button" onClick={handleNotificationsButtonClick} aria-expanded={notificationsPanelOpen} aria-haspopup="dialog" aria-label="Notifications" className="relative flex items-center justify-center w-9 h-9 rounded-[6px] transition-colors duration-100 hover:bg-[#F1F5F9]">
                     {hasUnreadNotifications && (<span className="absolute top-1.5 right-1.5 z-[1] h-[6px] w-[6px] rounded-full bg-red-500 ring-[2px] ring-white" aria-hidden />)}
-                    <svg className="w-[18px] h-[18px] text-[#6B7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
+                    <svg className="w-[18px] h-[18px] text-[#6B7280]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
                   </button>
                   <div className="w-8 h-8 rounded-full bg-[#6366F1] flex items-center justify-center text-white text-[12px] font-semibold ml-1">
                     U
@@ -4916,7 +4916,7 @@ export default function App() {
                       <button type="button" onClick={handleToggleTodaySidebar} disabled={isTodayPanelAnimatingOut} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] hover:bg-[#F1F5F9] transition-colors disabled:opacity-50" aria-label="Toggle sidebar">
                         <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
                       </button>
-                      <svg className="w-[18px] h-[18px] text-[#6B7280] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
+                      <svg className="w-[18px] h-[18px] text-[#6B7280] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
                       <h2 className="text-[15px] font-semibold text-[#111827] tracking-tight">Completed</h2>
                     </header>
                     <div className="flex-1 min-h-0 overflow-y-auto">

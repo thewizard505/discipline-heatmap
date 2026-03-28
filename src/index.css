@@ -8,67 +8,172 @@
   animation: demo-cursor-blink 1s step-end infinite;
 }
 
-/* ===== Unified SaaS Sidebar ===== */
+/* ===== Sidebar (Todoist-inspired: warm neutrals + red accent) ===== */
+.app-sidebar {
+  --sb-bg: #fafaf8;
+  --sb-border: #e8e6e3;
+  --sb-text: #202020;
+  --sb-muted: #666666;
+  --sb-icon: #5a5a5a;
+  --sb-hover: #f3f0ee;
+  --sb-accent: #db4c3f;
+  --sb-accent-hover: #c73a2e;
+  --sb-active-bg: #ffefe5;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
 .sidebar-section-label {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #9CA3AF;
-  padding: 0 12px;
-  margin-bottom: 4px;
+  letter-spacing: 0.06em;
+  color: var(--sb-muted);
+  padding: 0 10px;
+  margin-bottom: 6px;
   user-select: none;
+}
+
+.app-sidebar button.sidebar-section-label {
+  background: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+}
+.app-sidebar button.sidebar-section-label svg {
+  color: var(--sb-muted);
+  flex-shrink: 0;
 }
 
 .sidebar-nav-item {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 7px 12px;
+  padding: 8px 10px;
   font-size: 14px;
-  font-weight: 500;
-  border-radius: 6px;
-  transition: background-color 100ms ease-out, color 100ms ease-out;
-  color: #111827;
+  font-weight: 400;
+  line-height: 1.35;
+  border-radius: 5px;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease,
+    transform 0.1s ease;
+  color: var(--sb-text);
   cursor: pointer;
   position: relative;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
 }
 .sidebar-nav-item svg {
-  color: #6B7280;
-  transition: color 100ms ease-out;
+  flex-shrink: 0;
+  color: var(--sb-icon);
+  stroke-width: 1.5;
+  transition: color 0.12s ease;
 }
 .sidebar-nav-item:hover {
-  background: #F1F5F9;
+  background: var(--sb-hover);
 }
 .sidebar-nav-item:hover svg {
-  color: #4B5563;
+  color: #404040;
+}
+.sidebar-nav-item:focus-visible {
+  outline: 2px solid rgba(219, 76, 63, 0.35);
+  outline-offset: 1px;
 }
 .sidebar-nav-item--active {
-  background: rgba(99, 102, 241, 0.08);
-  color: #6366F1;
+  background: var(--sb-active-bg);
+  color: var(--sb-accent);
   font-weight: 500;
 }
 .sidebar-nav-item--active svg {
-  color: #6366F1;
+  color: var(--sb-accent);
 }
-.sidebar-nav-item--active::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 6px;
-  bottom: 6px;
-  width: 2px;
-  border-radius: 0 2px 2px 0;
-  background: #6366F1;
+.sidebar-nav-item--active:active {
+  background: #ffe8dc;
 }
-.sidebar-nav-item:active {
-  background: rgba(99, 102, 241, 0.12);
+
+.sidebar-nav-item--add {
+  color: var(--sb-accent) !important;
+  font-weight: 500;
+}
+.sidebar-nav-item--add svg {
+  color: var(--sb-accent) !important;
+}
+.sidebar-nav-item--add:hover {
+  background: rgba(219, 76, 63, 0.08) !important;
+  color: var(--sb-accent-hover) !important;
+}
+.sidebar-nav-item--add:hover svg {
+  color: var(--sb-accent-hover) !important;
+}
+
+.sidebar-badge-accent {
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #fff0eb;
+  color: var(--sb-accent);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.sidebar-badge-muted {
+  color: #6a6a6a;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.25rem;
+  text-align: right;
+}
+
+.sidebar-list-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 20px;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.35;
+  border-radius: 5px;
+  color: var(--sb-text);
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+.sidebar-list-row:hover {
+  background: var(--sb-hover);
+}
+.sidebar-list-row:focus-visible {
+  outline: 2px solid rgba(219, 76, 63, 0.35);
+  outline-offset: 1px;
+}
+.sidebar-list-row--active {
+  background: var(--sb-active-bg);
+  color: var(--sb-accent);
+  font-weight: 500;
+}
+.sidebar-list-row--active svg {
+  color: var(--sb-accent);
+}
+.sidebar-list-row svg {
+  flex-shrink: 0;
+  stroke-width: 1.5;
+  color: var(--sb-icon);
+  transition: color 0.12s ease;
 }
 
 .sidebar-section-divider {
   height: 1px;
   margin: 8px 12px;
-  background: rgba(0, 0, 0, 0.05);
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* Due date aura classes (kept as no-ops for compatibility) */
