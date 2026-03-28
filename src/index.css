@@ -34,7 +34,7 @@
   user-select: none;
 }
 
-.sidebar-section-label--projects {
+.sidebar-section-label--tools {
   text-transform: none;
   letter-spacing: 0.01em;
   font-size: 13px;
@@ -181,20 +181,6 @@
   height: 20px;
 }
 
-.sidebar-project-hash {
-  flex-shrink: 0;
-  width: 24px;
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--sb-muted);
-  line-height: 1;
-}
-
-.sidebar-nav-item--project {
-  gap: 10px;
-}
-
 .sidebar-nav-item {
   display: flex;
   align-items: center;
@@ -239,9 +225,6 @@
   font-weight: 500;
 }
 .sidebar-nav-item--active .sidebar-badge-muted {
-  color: var(--sb-accent);
-}
-.sidebar-nav-item--active .sidebar-project-hash {
   color: var(--sb-accent);
 }
 .sidebar-nav-item--active svg {

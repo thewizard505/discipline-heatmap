@@ -1539,10 +1539,17 @@ function SidebarPrimaryListIcon({
     return (
       <svg className={className} viewBox="0 0 24 24" aria-hidden>
         {active ? (
-          <path
-            fill={SIDEBAR_RED}
-            d="M9 2h6v2h4a1 1 0 011 1v15a2 2 0 01-2 2H6a2 2 0 01-2-2V5a1 1 0 011-1h4V2zm1 4v12h4V6h-4zm2-4V4h2V2h-2z"
-          />
+          <>
+            <path
+              fill={SIDEBAR_RED}
+              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
+            />
+            <path
+              fill="rgba(255,255,255,0.22)"
+              d="M14 2v6h6L14 2z"
+            />
+            <path d="M10 12h4M10 16h4" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+          </>
         ) : (
           <>
             <path
@@ -1585,22 +1592,6 @@ function SidebarPrimaryListIcon({
   );
 }
 
-function SidebarSearchIcon({
-  active,
-  className = "h-5 w-5 shrink-0",
-}: {
-  active: boolean;
-  className?: string;
-}) {
-  const c = active ? SIDEBAR_RED : SIDEBAR_ICON_OUTLINE;
-  return (
-    <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
-      <circle cx="11" cy="11" r="6" stroke={c} strokeWidth="1.5" />
-      <path d="M20 20l-4.35-4.35" stroke={c} strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
 function SidebarCompletedIcon({
   active,
   className = "h-[18px] w-[18px] shrink-0",
@@ -1621,6 +1612,71 @@ function SidebarCompletedIcon({
         <>
           <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} fill="none" />
           <path d="M9 12l2 2 4-4" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Matches primary nav icon language: outline @ #666, solid red + white detail when active. */
+function SidebarToolsIcon({
+  kind,
+  active,
+  className = "h-[18px] w-[18px] shrink-0",
+}: {
+  kind: "timer" | "insights" | "schedule";
+  active: boolean;
+  className?: string;
+}) {
+  const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
+  const sw = active ? 0 : 1.5;
+  const fill = active ? SIDEBAR_RED : "none";
+  if (kind === "timer") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
+        {active ? (
+          <>
+            <circle cx="12" cy="12" r="10" fill={fill} />
+            <path d="M12 6v6l4 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
+          </>
+        ) : (
+          <>
+            <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} />
+            <path d="M12 6v6l4 2" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+          </>
+        )}
+      </svg>
+    );
+  }
+  if (kind === "insights") {
+    return (
+      <svg className={className} viewBox="0 0 24 24" aria-hidden>
+        {active ? (
+          <>
+            <rect x="4" y="14" width="4" height="6" rx="1" fill={fill} />
+            <rect x="10" y="8" width="4" height="12" rx="1" fill={fill} />
+            <rect x="16" y="4" width="4" height="16" rx="1" fill={fill} />
+          </>
+        ) : (
+          <path d="M18 20V10M12 20V4M6 20v-6" stroke={stroke} strokeWidth={sw} strokeLinecap="round" />
+        )}
+      </svg>
+    );
+  }
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      {active ? (
+        <>
+          <path
+            fill={fill}
+            d="M8 2h8v2h4a1 1 0 011 1v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5a1 1 0 011-1h4V2zm1 4v12h6V6H9zm3-4V4h2V2h-2z"
+          />
+          <path d="M8 3v4M16 3v4M4 11h16" stroke="white" strokeWidth="1.35" strokeLinecap="round" />
+        </>
+      ) : (
+        <>
+          <rect x="4" y="5" width="16" height="16" rx="1.5" stroke={stroke} strokeWidth={sw} fill="none" />
+          <path d="M8 3v4M16 3v4M4 11h16" stroke={stroke} strokeWidth={sw} />
         </>
       )}
     </svg>
@@ -4914,69 +4970,11 @@ export default function App() {
                             <line x1="8" y1="12" x2="16" y2="12" stroke="white" strokeWidth="2.25" strokeLinecap="round" />
                           </svg>
                         </span>
-                        <span className="sidebar-focus-cta-label">Add task</span>
+                        <span className="sidebar-focus-cta-label">Focus Today</span>
                       </button>
                     </div>
 
                     <nav className="flex flex-col gap-px" aria-label="Tasks">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isFocusTimerRunning) {
-                            setFocusSessionDialog({
-                              kind: "quit",
-                              pending: { action: "search" },
-                            });
-                            return;
-                          }
-                          if (focusEnterZenActive) cancelFocusEnterZen();
-                          if (isFocusSessionActive) cleanupFocusSessionAfterQuit();
-                          setActiveView("tasks");
-                          setTodayMainMode("search");
-                          queueMicrotask(() => {
-                            taskSearchInputRef.current?.focus();
-                            taskSearchInputRef.current?.select();
-                          });
-                        }}
-                        className={`sidebar-nav-item ${activeView === "tasks" && todayMainMode === "search" ? "sidebar-nav-item--active" : ""}`}
-                      >
-                        <span className="sidebar-icon-slot">
-                          <SidebarSearchIcon active={activeView === "tasks" && todayMainMode === "search"} />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-left">Search</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          handleSidebarNavClick("tasks");
-                          handleSelectList(SYS_LIST_INBOX);
-                          setTodayMainMode("tasks");
-                        }}
-                        className={`sidebar-nav-item ${
-                          activeView === "tasks" &&
-                          todayMainMode === "tasks" &&
-                          selectedListId === SYS_LIST_INBOX
-                            ? "sidebar-nav-item--active"
-                            : ""
-                        }`}
-                      >
-                        <span className="sidebar-icon-slot">
-                          <SidebarPrimaryListIcon
-                            listId={SYS_LIST_INBOX}
-                            active={
-                              activeView === "tasks" &&
-                              todayMainMode === "tasks" &&
-                              selectedListId === SYS_LIST_INBOX
-                            }
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-left">Inbox</span>
-                        {(tasksByListId[SYS_LIST_INBOX] ?? []).filter((t) => !t.completed && !t.removing).length > 0 ? (
-                          <span className="sidebar-badge-muted shrink-0">
-                            {(tasksByListId[SYS_LIST_INBOX] ?? []).filter((t) => !t.completed && !t.removing).length}
-                          </span>
-                        ) : null}
-                      </button>
                       {SIDEBAR_PRIMARY_LIST_NAV.map((row) => {
                         const n = (tasksByListId[row.id] ?? []).filter((t) => !t.completed && !t.removing).length;
                         const isActive =
@@ -5026,36 +5024,36 @@ export default function App() {
 
                     <div className="h-4" />
 
-                    <div className="sidebar-section-label sidebar-section-label--projects mb-1.5 px-0">My Projects</div>
-                    <nav className="flex flex-col gap-px" aria-label="My Projects">
+                    <div className="sidebar-section-label sidebar-section-label--tools mb-1.5 px-0">Tools</div>
+                    <nav className="flex flex-col gap-px" aria-label="Tools">
                       <button
                         ref={focusNavButtonRef}
                         type="button"
                         onClick={handleStartFocusSession}
-                        className="sidebar-nav-item sidebar-nav-item--project"
+                        className="sidebar-nav-item"
                       >
-                        <span className="sidebar-project-hash" aria-hidden>
-                          #
+                        <span className="sidebar-icon-slot">
+                          <SidebarToolsIcon kind="timer" active={false} />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-left">Timer</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSidebarNavClick("analytics")}
-                        className={`sidebar-nav-item sidebar-nav-item--project ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
+                        className={`sidebar-nav-item ${activeView === "analytics" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <span className="sidebar-project-hash" aria-hidden>
-                          #
+                        <span className="sidebar-icon-slot">
+                          <SidebarToolsIcon kind="insights" active={activeView === "analytics"} />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-left">Insights</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSidebarNavClick("calendar")}
-                        className={`sidebar-nav-item sidebar-nav-item--project ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
+                        className={`sidebar-nav-item ${activeView === "calendar" ? "sidebar-nav-item--active" : ""}`}
                       >
-                        <span className="sidebar-project-hash" aria-hidden>
-                          #
+                        <span className="sidebar-icon-slot">
+                          <SidebarToolsIcon kind="schedule" active={activeView === "calendar"} />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-left">Schedule</span>
                       </button>
