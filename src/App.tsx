@@ -358,7 +358,10 @@ function applySoftEstimateReorder(
 ): FocusForTodayPick[] {
   if (picks.length === 0) return picks;
   const overdue = picks.filter((p) => p.listId === SYS_LIST_OVERDUE);
-  const today = picks.filter((p) => p.listId === SYS_LIST_TODAY);
+  const today = picks.filter(
+    (p) =>
+      p.listId === SYS_LIST_TODAY || p.listId === SYS_LIST_INBOX,
+  );
   const big = picks.filter((p) =>
     [SYS_LIST_TESTS, SYS_LIST_PROJECTS, SYS_LIST_LONGTERM].includes(p.listId),
   );
@@ -568,6 +571,59 @@ function formatDueChipLabel(iso: string | null, todayIso: string): string {
   if (!iso) return "Due date";
   if (iso === todayIso) return "Today";
   return formatDueButtonLabel(iso);
+}
+
+/** Todoist-style empty / “all done” hero (suitcase + hat + soft clouds). */
+function SaaSAllCaughtUpIllustration() {
+  return (
+    <div
+      className="mb-6 flex w-full max-w-[340px] flex-col items-center"
+      aria-hidden
+    >
+      <svg
+        className="h-[168px] w-full drop-shadow-sm"
+        viewBox="0 0 320 200"
+        fill="none"
+      >
+        <ellipse cx="248" cy="52" rx="36" ry="14" fill="#E2E8F0" opacity="0.85" />
+        <ellipse cx="72" cy="44" rx="28" ry="11" fill="#E2E8F0" opacity="0.7" />
+        <ellipse cx="180" cy="36" rx="22" ry="9" fill="#E2E8F0" opacity="0.55" />
+        <ellipse cx="210" cy="68" rx="48" ry="16" fill="#D4A574" />
+        <ellipse cx="210" cy="58" rx="40" ry="24" fill="#E8D4B8" />
+        <rect x="96" y="88" width="128" height="78" rx="10" fill="#8FA8BC" />
+        <rect x="104" y="98" width="112" height="52" rx="6" fill="#A8BFD4" />
+        <path
+          d="M136 88 V72 Q160 56 184 72 V88"
+          stroke="#64748B"
+          strokeWidth="5"
+          strokeLinecap="round"
+          fill="none"
+        />
+        <rect
+          x="112"
+          y="108"
+          width="14"
+          height="10"
+          rx="2"
+          fill="#F97373"
+          opacity="0.9"
+          transform="rotate(-10 119 113)"
+        />
+        <rect x="188" y="112" width="12" height="12" rx="2" fill="#F8FAFC" />
+        <circle cx="116" cy="174" r="6" fill="#64748B" />
+        <circle cx="204" cy="174" r="6" fill="#64748B" />
+        <path
+          d="M52 178 C100 162 220 162 268 178"
+          stroke="#86B894"
+          strokeWidth="4"
+          strokeLinecap="round"
+          opacity="0.85"
+        />
+        <ellipse cx="120" cy="182" rx="5" ry="10" fill="#86B894" opacity="0.5" />
+        <ellipse cx="200" cy="182" rx="5" ry="10" fill="#86B894" opacity="0.5" />
+      </svg>
+    </div>
+  );
 }
 
 /** Overdue row: “Yesterday” when due was calendar yesterday, else short date */
@@ -1774,16 +1830,39 @@ function SidebarToolsIcon({
     <svg className={className} viewBox="0 0 24 24" aria-hidden>
       {active ? (
         <>
+          <rect x="3" y="4" width="18" height="18" rx="2" fill={fill} />
           <path
-            fill={fill}
-            d="M8 2h8v2h4a1 1 0 011 1v15a2 2 0 01-2 2H5a2 2 0 01-2-2V5a1 1 0 011-1h4V2zm1 4v12h6V6H9zm3-4V4h2V2h-2z"
+            d="M8 2v4M16 2v4M3 10h18"
+            stroke="white"
+            strokeWidth="1.5"
+            strokeLinecap="round"
           />
-          <path d="M8 3v4M16 3v4M4 11h16" stroke="white" strokeWidth="1.35" strokeLinecap="round" />
+          <path
+            d="M7 14h4M13 14h4M7 18h10"
+            stroke="white"
+            strokeWidth="1.35"
+            strokeLinecap="round"
+            opacity="0.92"
+          />
         </>
       ) : (
         <>
-          <rect x="4" y="5" width="16" height="16" rx="1.5" stroke={stroke} strokeWidth={sw} fill="none" />
-          <path d="M8 3v4M16 3v4M4 11h16" stroke={stroke} strokeWidth={sw} />
+          <rect
+            x="4"
+            y="5"
+            width="16"
+            height="16"
+            rx="1.5"
+            stroke={stroke}
+            strokeWidth={sw}
+            fill="none"
+          />
+          <path
+            d="M8 3v4M16 3v4M4 11h16"
+            stroke={stroke}
+            strokeWidth={sw}
+            strokeLinecap="round"
+          />
         </>
       )}
     </svg>
@@ -2388,6 +2467,16 @@ export default function App() {
     );
   }, [selectedListId, selectedList]);
 
+  const mainTasksPanelTitle = useMemo(() => {
+    if (todayMainMode === "search") return "Search";
+    if (selectedListId === SYS_LIST_INBOX) return "Focus Today";
+    return (
+      selectedList?.label ??
+      SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
+      "Tasks"
+    );
+  }, [todayMainMode, selectedListId, selectedList]);
+
   const todoistEmptyDayMessage = useMemo(() => {
     const h = new Date().getHours();
     const disp = name?.trim() || "User";
@@ -2480,6 +2569,11 @@ export default function App() {
     const base = buildFocusForTodayPicks(tasksByListId, notificationDay);
     return applySoftEstimateReorder(base, tasksByListId);
   }, [tasksByListId, notificationDay]);
+
+  const inboxFocusPicks = useMemo(
+    () => focusForTodayItems.filter((p) => p.listId === SYS_LIST_INBOX),
+    [focusForTodayItems],
+  );
 
   const [estimateSessionActions, setEstimateSessionActions] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -5643,62 +5737,30 @@ export default function App() {
                   (todayMainMode === "tasks" || todayMainMode === "search") ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
                     <header className="shrink-0 px-8 pt-8 pb-2 bg-[#FAFAFA]">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
-                            {todayMainMode === "search"
-                              ? "Search"
-                              : selectedList?.label ??
-                                SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
-                                "Tasks"}
-                          </h1>
-                          {selectedListId ? (
-                            <p className="mt-1 flex items-center gap-1.5 text-[13px] text-[#808080]">
-                              <svg className="w-3.5 h-3.5 text-[#B0B0B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                                <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                                <path d="M22 4L12 14.01l-3-3" />
-                              </svg>
-                              <span>
-                                {(() => {
-                                  const searchQ = taskSearchQuery.toLowerCase().trim();
-                                  const filtered = searchQ
-                                    ? visibleTasksForList.filter((t) =>
-                                        t.text.toLowerCase().includes(searchQ),
-                                      )
-                                    : visibleTasksForList;
-                                  const n = filtered.filter((t) => !t.completed).length;
-                                  return `${n} ${n === 1 ? "task" : "tasks"}`;
-                                })()}
-                              </span>
-                            </p>
-                          ) : null}
-                        </div>
-                        <div className="hidden sm:flex items-center gap-2 pt-1">
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-                              <rect x="3" y="4" width="18" height="18" rx="2" />
-                              <path d="M16 2v4M8 2v4M3 10h18" />
+                      <div>
+                        <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                          {mainTasksPanelTitle}
+                        </h1>
+                        {selectedListId ? (
+                          <p className="mt-1 flex items-center gap-1.5 text-[13px] text-[#808080]">
+                            <svg className="w-3.5 h-3.5 text-[#B0B0B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                              <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                              <path d="M22 4L12 14.01l-3-3" />
                             </svg>
-                            Connect calendar
-                          </button>
-                          <button
-                            type="button"
-                            className="inline-flex items-center gap-1.5 rounded-md border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[12px] text-[#6B7280] hover:bg-[#F8FAFC] transition-colors"
-                          >
-                            <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
-                              <line x1="8" y1="6" x2="21" y2="6" />
-                              <line x1="8" y1="12" x2="21" y2="12" />
-                              <line x1="8" y1="18" x2="21" y2="18" />
-                              <line x1="3" y1="6" x2="3.01" y2="6" />
-                              <line x1="3" y1="12" x2="3.01" y2="12" />
-                              <line x1="3" y1="18" x2="3.01" y2="18" />
-                            </svg>
-                            Display
-                          </button>
-                        </div>
+                            <span>
+                              {(() => {
+                                const searchQ = taskSearchQuery.toLowerCase().trim();
+                                const filtered = searchQ
+                                  ? visibleTasksForList.filter((t) =>
+                                      t.text.toLowerCase().includes(searchQ),
+                                    )
+                                  : visibleTasksForList;
+                                const n = filtered.filter((t) => !t.completed).length;
+                                return `${n} ${n === 1 ? "task" : "tasks"}`;
+                              })()}
+                            </span>
+                          </p>
+                        ) : null}
                       </div>
                     </header>
 
@@ -5714,78 +5776,44 @@ export default function App() {
                         const todoTasks = filtered.filter((t) => !t.completed);
                         const doneTasks = filtered.filter((t) => t.completed);
 
-                        if (filtered.length === 0) {
-                          if (todayMainMode === "search" && searchQ) {
-                            return (
-                              <div className="flex min-h-[200px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
-                                No tasks match your search.
-                              </div>
-                            );
-                          }
-                          if (allElasticListTasksComplete) {
-                            const ev = todoistEmptyDayMessage.variant;
-                            return (
-                              <div
-                                className={`flex flex-col items-center justify-center min-h-[320px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
-                              >
-                                {ev === "morning" ? (
-                                  <svg className="w-[200px] h-[140px] mb-6" viewBox="0 0 220 150" fill="none" aria-hidden>
-                                    <ellipse cx="110" cy="120" rx="90" ry="18" fill="#E0F2FE" opacity="0.8" />
-                                    <circle cx="170" cy="38" r="22" fill="#FDE68A" />
-                                    <path d="M40 95 Q110 45 180 95" stroke="#BAE6FD" strokeWidth="3" fill="none" strokeLinecap="round" />
-                                    <rect x="85" y="72" width="50" height="38" rx="6" fill="#E0F2FE" stroke="#7DD3FC" strokeWidth="1.5" />
-                                    <ellipse cx="110" cy="68" rx="28" ry="10" fill="#FEF3C7" />
-                                  </svg>
-                                ) : (
-                                  <svg className="w-[200px] h-[140px] mb-6" viewBox="0 0 220 150" fill="none" aria-hidden>
-                                    <rect width="220" height="150" fill="#1e1b4b" opacity="0.04" rx="12" />
-                                    <circle cx="110" cy="55" r="3" fill="#C4B5FD" />
-                                    <circle cx="95" cy="48" r="2" fill="#C4B5FD" opacity="0.7" />
-                                    <circle cx="125" cy="48" r="2" fill="#C4B5FD" opacity="0.7" />
-                                    <path d="M75 100 Q110 75 145 100" stroke="#A78BFA" strokeWidth="2" fill="none" opacity="0.5" />
-                                    <rect x="88" y="88" width="44" height="32" rx="5" fill="#312E81" fillOpacity="0.08" />
-                                  </svg>
-                                )}
-                                <p className="text-[16px] font-bold text-[#202020] text-center max-w-md">
-                                  {todoistEmptyDayMessage.title}
-                                </p>
-                                <p className="text-[13px] text-[#808080] mt-2 text-center max-w-sm">
-                                  You&apos;re all caught up in this view.
-                                </p>
-                              </div>
-                            );
-                          }
-                          if (selectedListId === SYS_LIST_OVERDUE) {
-                            return (
-                              <div className="flex flex-col items-center justify-center min-h-[280px]">
-                                <svg className="w-[100px] h-[100px] mb-4" viewBox="0 0 200 200" fill="none" aria-hidden>
-                                  <circle cx="100" cy="100" r="80" fill="#f0fdf4" />
-                                  <circle cx="100" cy="85" r="35" fill="#dcfce7" />
-                                  <circle cx="85" cy="78" r="4" fill="#22c55e" />
-                                  <circle cx="115" cy="78" r="4" fill="#22c55e" />
-                                  <path d="M88 92c0 0 5 7 12 7s12-7 12-7" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" />
-                                  <path d="M60 130c0 0 15-10 40-10s40 10 40 10" stroke="#bbf7d0" strokeWidth="3" strokeLinecap="round" />
-                                </svg>
-                                <p className="text-[14px] font-semibold text-[#6B7280]">Nothing overdue — nice work!</p>
-                                <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
-                              </div>
-                            );
-                          }
-                          return (
-                            <div className={`flex flex-col items-center justify-center min-h-[280px] ${listEmptyExit ? "micro-empty-out" : ""}`}>
-                              <svg className="w-[100px] h-[100px] mb-5" viewBox="0 0 200 200" fill="none" aria-hidden>
-                                <circle cx="100" cy="100" r="80" fill="#faf5ff" />
-                                <circle cx="100" cy="85" r="35" fill="#ede9fe" />
-                                <circle cx="90" cy="80" r="3" fill="#8b5cf6" />
-                                <circle cx="110" cy="80" r="3" fill="#8b5cf6" />
-                                <path d="M93 95 a8 5 0 0 0 14 0" stroke="#8b5cf6" strokeWidth="2" strokeLinecap="round" />
-                                <rect x="75" y="110" width="50" height="30" rx="8" fill="#ede9fe" />
-                              </svg>
-                              <p className="text-[14px] font-semibold text-[#6B7280]">No upcoming items in this category</p>
-                              <p className="text-[12px] text-[#9CA3AF] mt-0.5">Enjoy a free day!</p>
+                        const emptyBlock =
+                          todayMainMode === "search" && searchQ ? (
+                            <div className="flex min-h-[200px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
+                              No tasks match your search.
+                            </div>
+                          ) : selectedListId === SYS_LIST_OVERDUE ? (
+                            <div className="flex flex-col items-center justify-center min-h-[240px]">
+                              <SaaSAllCaughtUpIllustration />
+                              <p className="text-[15px] font-semibold text-[#374151]">
+                                Nothing overdue — nice work!
+                              </p>
+                              <p className="text-[13px] text-[#9CA3AF] mt-1">You&apos;re all clear.</p>
+                            </div>
+                          ) : allElasticListTasksComplete ? (
+                            <div
+                              className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
+                            >
+                              <SaaSAllCaughtUpIllustration />
+                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
+                                {todoistEmptyDayMessage.title}
+                              </p>
+                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
+                                You&apos;re all caught up in this view.
+                              </p>
+                            </div>
+                          ) : (
+                            <div
+                              className={`flex flex-col items-center justify-center min-h-[260px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
+                            >
+                              <SaaSAllCaughtUpIllustration />
+                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
+                                No tasks yet
+                              </p>
+                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
+                                Add your first task using the button above.
+                              </p>
                             </div>
                           );
-                        }
 
                         return (
                           <div className="flex flex-col max-w-[820px]">
@@ -5898,6 +5926,96 @@ export default function App() {
                               </>
                             )}
 
+                            {selectedListId === SYS_LIST_INBOX && todoTasks.length > 0 ? (
+                              <div className="mb-4 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
+                                      Focus queue · smart sort
+                                    </p>
+                                    <p className="mt-1 text-[13px] leading-relaxed text-[#6B7280]">
+                                      Order uses due dates and quick time estimates. Add an estimate when prompted to keep the queue accurate.
+                                    </p>
+                                    <ol className="mt-3 space-y-2">
+                                      {inboxFocusPicks.map((p, i) => {
+                                        const t = getTaskForPick(tasksByListId, p);
+                                        const key = `${p.listId}:${p.taskId}`;
+                                        const showEst =
+                                          !!t && focusEstimatePromptKeys.has(key);
+                                        return (
+                                          <li
+                                            key={key}
+                                            className="flex flex-col gap-2 rounded-lg border border-[#F1F5F9] bg-[#FAFAFA] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
+                                          >
+                                            <div className="flex min-w-0 items-start gap-2">
+                                              <span className="text-[12px] font-semibold text-[#9CA3AF]">
+                                                {i + 1}
+                                              </span>
+                                              <div className="min-w-0">
+                                                <p className="font-medium text-[#202020]">{p.displayTitle}</p>
+                                                <p className="text-[12px] text-[#9CA3AF]">
+                                                  {formatFocusTimeLine(p, t)}
+                                                </p>
+                                              </div>
+                                            </div>
+                                            {showEst && t ? (
+                                              <div className="flex flex-wrap gap-1">
+                                                {[15, 25, 45, 60].map((m) => (
+                                                  <button
+                                                    key={m}
+                                                    type="button"
+                                                    onClick={() =>
+                                                      handleFocusEstimateInline(
+                                                        p.listId,
+                                                        p.taskId,
+                                                        m,
+                                                      )
+                                                    }
+                                                    className="rounded-md border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-medium text-[#6B7280] hover:border-[#6366F1]/40 hover:text-[#6366F1]"
+                                                  >
+                                                    {m}m
+                                                  </button>
+                                                ))}
+                                                <button
+                                                  type="button"
+                                                  onClick={() =>
+                                                    handleFocusEstimateInline(
+                                                      p.listId,
+                                                      p.taskId,
+                                                      "skip",
+                                                    )
+                                                  }
+                                                  className="rounded-md px-2 py-0.5 text-[11px] text-[#9CA3AF] hover:text-[#6B7280]"
+                                                >
+                                                  Skip
+                                                </button>
+                                              </div>
+                                            ) : null}
+                                          </li>
+                                        );
+                                      })}
+                                    </ol>
+                                  </div>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      addAllTasksToFocusSession(SYS_LIST_INBOX);
+                                      if (!isFocusSessionActive && !focusEnterZenActive) {
+                                        runFocusEnterZenTransition();
+                                      }
+                                    }}
+                                    className="shrink-0 rounded-lg bg-[#6366F1] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#4f46e5]"
+                                  >
+                                    Send to timer
+                                  </button>
+                                </div>
+                              </div>
+                            ) : null}
+
+                            {filtered.length === 0 ? (
+                              emptyBlock
+                            ) : (
+                            <>
                             <div
                               className={`overflow-hidden rounded-lg border border-[#E5E7EB] bg-white ${listFirstTaskEnter ? "micro-list-shell-in" : ""}`}
                             >
@@ -6220,6 +6338,8 @@ export default function App() {
                                   })}
                                 </div>
                               </>
+                            )}
+                            </>
                             )}
                           </div>
                         );
