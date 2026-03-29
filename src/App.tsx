@@ -648,6 +648,12 @@ function parseISODate(iso: string): Date {
   return new Date(yy, mm - 1, dd);
 }
 
+function addDaysToIso(iso: string, deltaDays: number): string {
+  const d = parseISODate(iso);
+  d.setDate(d.getDate() + deltaDays);
+  return toISODate(d);
+}
+
 function addDaysFromToday(days: number): string {
   const d = new Date();
   d.setDate(d.getDate() + days);
@@ -1249,228 +1255,239 @@ type CalendarPlacedTask = {
   listId: string;
   /** List name for display (e.g. Tests, Today). */
   categoryLabel: string;
+  priority: TaskPriorityLevel;
 };
 
-const CALENDAR_TASKS_VISIBLE_CAP = 4;
-
-/** Solid category fills (month view) — flat opaque colors, no gradient overlay. */
-function calendarTaskChipClassForList(listId: string): string {
-  const base =
-    "w-full text-left rounded-[3px] px-2 py-1.5 min-w-0 border transition-colors duration-150 active:scale-[0.99] [background-image:none]";
-  const byList: Record<string, string> = {
-    [SYS_LIST_OVERDUE]:
-      "!border-[#7a3040] !bg-[#4a1c26] hover:!bg-[#5c2430]",
-    [SYS_LIST_TODAY]:
-      "!border-[#556987] !bg-[#3d4a63] hover:!bg-[#465673]",
-    [SYS_LIST_PROJECTS]:
-      "!border-[#9a7828] !bg-[#6b4a18] hover:!bg-[#7d5520]",
-    [SYS_LIST_TESTS]:
-      "!border-[#3d7a7a] !bg-[#1f4d4d] hover:!bg-[#265c5c]",
-    [SYS_LIST_LONGTERM]:
-      "!border-[#6b5a8a] !bg-[#3f3658] hover:!bg-[#4a4065]",
-  };
-  return `${base} ${byList[listId] ?? "!border-[#5c5c66] !bg-[#3f3f46] hover:!bg-[#52525b]"}`;
+/** Pastel card + left strip for Upcoming schedule (priority-driven). */
+function upcomingTaskCardStyles(p: TaskPriorityLevel): {
+  strip: string;
+  card: string;
+} {
+  switch (p) {
+    case 1:
+      return {
+        strip: "bg-[#d1453c]",
+        card: "border-[#f0d6d4] bg-[#fcf4f4]",
+      };
+    case 2:
+      return {
+        strip: "bg-[#eb8a0a]",
+        card: "border-[#fce8cc] bg-[#fff8f0]",
+      };
+    case 3:
+      return {
+        strip: "bg-[#246fe0]",
+        card: "border-[#d6e4fa] bg-[#f4f8ff]",
+      };
+    default:
+      return {
+        strip: "bg-[#d1d5db]",
+        card: "border-[#E5E7EB] bg-[#F8FAFC]",
+      };
+  }
 }
 
-type CalendarGridCell =
-  | { kind: "outside"; key: string; displayDay: number }
-  | { kind: "inside"; key: string; iso: string; day: number };
+const UPCOMING_SCHEDULE_HOURS = Array.from(
+  { length: 10 },
+  (_, i) => i + 9,
+);
 
-function TasksDueCalendarMonth({
-  monthStart,
+function TasksDueUpcomingSchedule({
+  rangeStartIso,
   tasksByDate,
   todayIso,
-  onPrevMonth,
-  onNextMonth,
-  onTodayMonth,
+  onPrevDay,
+  onNextDay,
+  onTodayRange,
   onTaskPick,
+  onCompleteTask,
 }: {
-  monthStart: Date;
+  rangeStartIso: string;
   tasksByDate: Record<string, CalendarPlacedTask[]>;
   todayIso: string;
-  onPrevMonth: () => void;
-  onNextMonth: () => void;
-  onTodayMonth: () => void;
+  onPrevDay: () => void;
+  onNextDay: () => void;
+  onTodayRange: () => void;
   onTaskPick: (listId: string, taskId: number) => void;
+  onCompleteTask: (listId: string, taskId: number) => void;
 }) {
-  const y = monthStart.getFullYear();
-  const m = monthStart.getMonth();
-  const firstDow = new Date(y, m, 1).getDay();
-  const daysInMonth = new Date(y, m + 1, 0).getDate();
-  const daysInPrevMonth = new Date(y, m, 0).getDate();
-
-  const cells: CalendarGridCell[] = [];
-  for (let i = 0; i < firstDow; i++) {
-    const displayDay = daysInPrevMonth - firstDow + 1 + i;
-    cells.push({ kind: "outside", key: `pre-${y}-${m}-${i}`, displayDay });
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    cells.push({
-      kind: "inside",
-      key: toISODate(new Date(y, m, d)),
-      iso: toISODate(new Date(y, m, d)),
-      day: d,
+  const days: { iso: string; dow: string; dayNum: number }[] = [];
+  for (let i = 0; i < 5; i++) {
+    const iso = addDaysToIso(rangeStartIso, i);
+    const d = parseISODate(iso);
+    days.push({
+      iso,
+      dow: d.toLocaleDateString("en-US", { weekday: "short" }),
+      dayNum: d.getDate(),
     });
   }
-  let post = 0;
-  while (cells.length % 7 !== 0) {
-    cells.push({
-      kind: "outside",
-      key: `post-${y}-${m}-${post}`,
-      displayDay: post + 1,
-    });
-    post += 1;
-  }
 
-  const rowCount = cells.length / 7;
-
-  const monthTitle = monthStart.toLocaleDateString("en-US", {
-    month: "long",
-  });
-  const yearTitle = monthStart.toLocaleDateString("en-US", {
-    year: "numeric",
-  });
+  const first = parseISODate(rangeStartIso);
+  const last = parseISODate(days[4]!.iso);
+  const rangeSubtitle =
+    first.getMonth() === last.getMonth() && first.getFullYear() === last.getFullYear()
+      ? first.toLocaleDateString("en-US", { month: "long", year: "numeric" })
+      : `${first.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${last.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 w-full h-full bg-white antialiased [text-rendering:optimizeLegibility]">
-      <header className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 pt-3.5 pb-3 border-b border-[#E5E7EB]">
-        <div className="min-w-0 flex items-baseline gap-2.5 flex-wrap">
-          <h2 className="text-xl sm:text-2xl font-semibold text-[#111827] tracking-[-0.02em] tabular-nums">
-            {monthTitle}
-          </h2>
-          <span className="text-lg sm:text-xl font-medium text-[#6B7280] tabular-nums">
-            {yearTitle}
-          </span>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button
-            type="button"
-            onClick={onTodayMonth}
-            className="px-3 py-1.5 rounded-lg text-[12px] font-medium text-[#111827] bg-white border border-[#E5E7EB] hover:bg-[#F8FAFC] transition-all duration-150 active:scale-[0.98]"
-          >
-            Today
-          </button>
-          <button
-            type="button"
-            onClick={onPrevMonth}
-            className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-lg leading-none transition-all duration-150 flex items-center justify-center active:scale-[0.97]"
-            aria-label="Previous month"
-          >
-            ‹
-          </button>
-          <button
-            type="button"
-            onClick={onNextMonth}
-            className="w-9 h-9 rounded-lg border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827] hover:bg-[#F8FAFC] text-lg leading-none transition-all duration-150 flex items-center justify-center active:scale-[0.97]"
-            aria-label="Next month"
-          >
-            ›
-          </button>
+    <div className="flex flex-1 min-h-0 w-full flex-col bg-white font-['Inter',system-ui,sans-serif] antialiased [text-rendering:optimizeLegibility]">
+      <header className="shrink-0 px-5 pt-6 pb-4 sm:px-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
+              Upcoming
+            </h1>
+            <p className="mt-1 text-[14px] font-medium text-[#4B5563]">
+              {rangeSubtitle}
+            </p>
+          </div>
+          <div className="inline-flex shrink-0 items-stretch overflow-hidden rounded-full border border-[#E5E7EB] bg-white shadow-sm">
+            <button
+              type="button"
+              onClick={onTodayRange}
+              className="px-4 py-2 text-[13px] font-semibold text-[#111827] transition-colors hover:bg-[#F9FAFB] active:bg-[#F3F4F6]"
+            >
+              Today
+            </button>
+            <span className="w-px shrink-0 self-stretch bg-[#E5E7EB]" aria-hidden />
+            <button
+              type="button"
+              onClick={onPrevDay}
+              className="flex w-10 items-center justify-center text-[#6B7280] transition-colors hover:bg-[#F9FAFB] hover:text-[#111827] active:bg-[#F3F4F6]"
+              aria-label="Previous day"
+            >
+              <span className="text-lg leading-none">‹</span>
+            </button>
+            <button
+              type="button"
+              onClick={onNextDay}
+              className="flex w-10 items-center justify-center text-[#6B7280] transition-colors hover:bg-[#F9FAFB] hover:text-[#111827] active:bg-[#F3F4F6]"
+              aria-label="Next day"
+            >
+              <span className="text-lg leading-none">›</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 min-h-0 flex flex-col">
-        <div className="grid grid-cols-7 shrink-0 border-b border-[#E5E7EB] bg-[#F8FAFC]">
-          {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((wd) => (
-            <div
-              key={wd}
-              className="py-2 text-center text-[11px] font-medium text-[#6B7280] tracking-tight"
-            >
-              {wd}
-            </div>
-          ))}
-        </div>
-
+      <div className="shrink-0 border-b border-[#E5E7EB] px-5 sm:px-8">
         <div
-          className="flex-1 min-h-0 grid grid-cols-7 gap-px bg-[#E5E7EB]"
+          className="grid gap-0"
           style={{
-            gridTemplateRows: `repeat(${rowCount}, minmax(80px, 1fr))`,
+            gridTemplateColumns: `72px repeat(5, minmax(0, 1fr))`,
           }}
         >
-          {cells.map((cell) => {
-            if (cell.kind === "outside") {
-              return (
-                <div
-                  key={cell.key}
-                  className="bg-[#F8FAFC] min-h-[100px] p-1.5 flex flex-col min-w-0"
-                  aria-hidden
-                >
-                  <div className="text-[11px] font-medium tabular-nums text-[#D1D5DB] mb-1 shrink-0">
-                    {cell.displayDay}
-                  </div>
-                </div>
-              );
-            }
-
-            const dayTasks = tasksByDate[cell.iso] ?? [];
-            const visible = dayTasks.slice(0, CALENDAR_TASKS_VISIBLE_CAP);
-            const more = dayTasks.length - visible.length;
-            const isToday = cell.iso === todayIso;
-            const dayLabel =
-              cell.day === 1
-                ? monthStart.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : String(cell.day);
-
+          <div className="min-h-[52px]" aria-hidden />
+          {days.map((d) => {
+            const isRealToday = d.iso === todayIso;
             return (
               <div
-                key={cell.key}
-                className={`relative bg-white min-h-[100px] p-1.5 flex flex-col min-w-0 ${
-                  isToday
-                    ? "ring-1 ring-inset ring-[#6366F1]/30 bg-[#EEF2FF]"
-                    : ""
-                }`}
+                key={d.iso}
+                className="flex min-h-[52px] flex-col items-center justify-center gap-1 border-l border-[#E5E7EB] py-2 first:border-l-0"
               >
-                <div className="mb-1 shrink-0">
-                  {isToday ? (
-                    <span
-                      className="inline-flex min-w-[1.75rem] h-7 px-1.5 items-center justify-center rounded-full bg-[#6366F1] text-[11px] font-semibold text-white tabular-nums"
-                      title="Today"
-                    >
-                      {cell.day}
-                    </span>
-                  ) : (
-                    <span className="inline-flex text-[11px] font-semibold tabular-nums text-[#6B7280] pl-0.5">
-                      {dayLabel}
-                    </span>
-                  )}
-                </div>
-                <div className="flex flex-col gap-0.5 flex-1 min-h-0 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(209,213,219,0.6)_transparent]">
-                  {visible.map((t) => (
-                    <button
-                      key={`${t.listId}-${t.id}`}
-                      type="button"
-                      onClick={() => onTaskPick(t.listId, t.id)}
-                      className={calendarTaskChipClassForList(t.listId)}
-                      title={`${t.categoryLabel} — ${t.text}`}
-                    >
-                      <span className="flex items-baseline gap-1 min-w-0 w-full">
-                        <span className="shrink-0 max-w-[42%] truncate text-[10px] font-semibold text-[#6B7280] leading-tight">
-                          {t.categoryLabel}
-                        </span>
+                <span
+                  className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
+                >
+                  {d.dow}
+                </span>
+                {isRealToday ? (
+                  <span
+                    className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#db4c3f] px-1.5 text-[13px] font-semibold tabular-nums text-white"
+                    title="Today"
+                  >
+                    {d.dayNum}
+                  </span>
+                ) : (
+                  <span className="text-[15px] font-semibold tabular-nums text-[#111827]">
+                    {d.dayNum}
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div
+          className="grid min-h-full gap-0"
+          style={{
+            gridTemplateColumns: `72px repeat(5, minmax(0, 1fr))`,
+          }}
+        >
+          <div className="flex items-start justify-end border-b border-[#E5E7EB] bg-white py-3 pr-2 pt-3.5 text-right text-[11px] font-medium leading-snug text-[#9CA3AF]">
+            All day
+          </div>
+          {days.map((d) => {
+            const raw = tasksByDate[d.iso] ?? [];
+            const sorted = [...raw].sort((a, b) => {
+              const pa = a.priority ?? 4;
+              const pb = b.priority ?? 4;
+              if (pa !== pb) return pa - pb;
+              return a.text.localeCompare(b.text);
+            });
+            return (
+              <div
+                key={`allday-${d.iso}`}
+                className="border-b border-l border-[#E5E7EB] bg-white px-1.5 py-2 first:border-l-0 sm:px-2"
+              >
+                <div className="flex min-h-[40px] flex-col gap-1.5">
+                  {sorted.map((t) => {
+                    const pr = (t.priority ?? 4) as TaskPriorityLevel;
+                    const styles = upcomingTaskCardStyles(pr);
+                    return (
+                      <div
+                        key={`${t.listId}-${t.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => onTaskPick(t.listId, t.id)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") onTaskPick(t.listId, t.id);
+                        }}
+                        className={`relative flex cursor-pointer items-stretch gap-0 overflow-hidden rounded-md border text-left shadow-sm transition-shadow hover:shadow ${styles.card}`}
+                      >
                         <span
-                          className="shrink-0 text-[11px] text-[#D1D5DB] font-light select-none"
+                          className={`w-[3px] shrink-0 ${styles.strip}`}
                           aria-hidden
-                        >
-                          ·
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#111827] leading-snug">
-                          {t.text}
-                        </span>
-                      </span>
-                    </button>
-                  ))}
-                  {more > 0 ? (
-                    <div className="text-[10px] font-medium text-[#6B7280] pl-0.5 pt-0.5 tracking-tight">
-                      +{more} more
-                    </div>
-                  ) : null}
+                        />
+                        <div className="flex min-w-0 flex-1 items-start gap-2 px-2 py-2">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onCompleteTask(t.listId, t.id);
+                            }}
+                            className="btn-press-instant mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border-[2px] border-[#D1D5DB] bg-white transition-colors hover:border-[#9CA3AF]"
+                            aria-label="Complete task"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-[13px] font-bold leading-snug text-[#111827]">
+                              {t.text}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             );
           })}
+
+          {UPCOMING_SCHEDULE_HOURS.map((hour) => (
+            <React.Fragment key={hour}>
+              <div className="flex items-start justify-end border-b border-[#E5E7EB] bg-white py-2 pr-2 pt-3 text-right text-[11px] font-medium tabular-nums text-[#9CA3AF]">
+                {`${String(hour).padStart(2, "0")}:00`}
+              </div>
+              {days.map((d) => (
+                <div
+                  key={`${d.iso}-${hour}`}
+                  className="min-h-[52px] border-b border-l border-[#E5E7EB] bg-white first:border-l-0"
+                  aria-hidden
+                />
+              ))}
+            </React.Fragment>
+          ))}
         </div>
       </div>
     </div>
@@ -2374,10 +2391,10 @@ export default function App() {
   selectedListIdRef.current = selectedListId;
   const skipNextTasksPersistRef = useRef(false);
   const [calendarDay, setCalendarDay] = useState(() => toISODate(new Date()));
-  const [calendarMonthStart, setCalendarMonthStart] = useState(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), 1);
-  });
+  /** First day of the 5-day Upcoming schedule (inclusive). */
+  const [scheduleRangeStartIso, setScheduleRangeStartIso] = useState(() =>
+    toISODate(new Date()),
+  );
   const [dueDatePopover, setDueDatePopover] = useState<null | {
     taskId: number;
     anchor: DOMRect;
@@ -2622,11 +2639,15 @@ export default function App() {
           text: t.text,
           listId,
           categoryLabel,
+          priority: (t.priority ?? 4) as TaskPriorityLevel,
         });
       }
     }
     for (const k of Object.keys(map)) {
       map[k].sort((a, b) => {
+        const pa = a.priority ?? 4;
+        const pb = b.priority ?? 4;
+        if (pa !== pb) return pa - pb;
         const byCat = a.categoryLabel.localeCompare(b.categoryLabel);
         if (byCat !== 0) return byCat;
         return a.text.localeCompare(b.text);
@@ -3156,6 +3177,40 @@ export default function App() {
         taskDoneToastTimerRef.current = null;
       }, 8000);
     }, 420 + 300);
+  }
+
+  function completeTaskFromSchedule(listId: string, taskId: number) {
+    if (isSimulation) return;
+    const list = tasksByListId[listId] ?? [];
+    const task = list.find((t) => t.id === taskId && !t.removing);
+    if (!task || task.completed) return;
+    const listLabel =
+      allListsForSelection.find((l) => l.id === listId)?.label ?? "Tasks";
+    const rowElasticComplete =
+      listId !== SYS_LIST_OVERDUE &&
+      (ELASTIC_COMPLETE_SYS_LIST_IDS.has(listId) ||
+        todayLists.some((l) => l.id === listId));
+    if (rowElasticComplete) {
+      scheduleElasticListTaskComplete(task, listId, listLabel);
+      return;
+    }
+    appendCompletedActivity(task.text, 0, listId, listLabel);
+    setTasksByListId((prev) => {
+      const arr = prev[listId] ?? [];
+      return {
+        ...prev,
+        [listId]: arr.map((x) =>
+          x.id === taskId ? { ...x, completed: true } : x,
+        ),
+      };
+    });
+    if (selectedListId === listId || selectedListId === SYS_LIST_INBOX) {
+      setTasks((prev) =>
+        prev.map((x) =>
+          x.id === taskId ? { ...x, completed: true } : x,
+        ),
+      );
+    }
   }
 
   function undoTaskCompletionToast() {
@@ -6839,29 +6894,21 @@ export default function App() {
                     }`}
                   >
                     {activeView === "tasks" ? null : activeView === "calendar" ? (
-                      <TasksDueCalendarMonth
-                        monthStart={calendarMonthStart}
+                      <TasksDueUpcomingSchedule
+                        rangeStartIso={scheduleRangeStartIso}
                         tasksByDate={tasksByDueDate}
                         todayIso={calendarDay}
-                        onPrevMonth={() =>
-                          setCalendarMonthStart(
-                            (d) =>
-                              new Date(d.getFullYear(), d.getMonth() - 1, 1),
-                          )
+                        onPrevDay={() =>
+                          setScheduleRangeStartIso((s) => addDaysToIso(s, -1))
                         }
-                        onNextMonth={() =>
-                          setCalendarMonthStart(
-                            (d) =>
-                              new Date(d.getFullYear(), d.getMonth() + 1, 1),
-                          )
+                        onNextDay={() =>
+                          setScheduleRangeStartIso((s) => addDaysToIso(s, 1))
                         }
-                        onTodayMonth={() => {
-                          const n = new Date();
-                          setCalendarMonthStart(
-                            new Date(n.getFullYear(), n.getMonth(), 1),
-                          );
-                        }}
+                        onTodayRange={() =>
+                          setScheduleRangeStartIso(toISODate(new Date()))
+                        }
                         onTaskPick={openTaskFromCalendar}
+                        onCompleteTask={completeTaskFromSchedule}
                       />
                     ) : activeView === "analytics" ? (
                       <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white text-[#111827] [text-rendering:optimizeLegibility]">
