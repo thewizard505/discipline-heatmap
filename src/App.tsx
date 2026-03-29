@@ -110,6 +110,35 @@ const FOCUS_FOR_TODAY_TAG_LABELS: Record<string, string> = {
   [SYS_LIST_LONGTERM]: "Long-term",
 };
 
+/** Quick-add title placeholder examples, randomized when the selected list changes. */
+const COMPOSER_TITLE_PLACEHOLDER_BY_LIST: Record<
+  string,
+  readonly string[]
+> = {
+  [SYS_LIST_TODAY]: [
+    "Take bins down by today",
+    "Take pictures of math homework by today",
+    "Read Ch20 Of Mice and Men by tonight",
+  ],
+  [SYS_LIST_TESTS]: [
+    "Trig test this Friday",
+    "Open note Bio Test on Thursday",
+    "Math group quiz on function graphs this Wednesday",
+  ],
+  [SYS_LIST_PROJECTS]: [
+    "Mural Project on Latin Americans due this Tuesday",
+    "DBQ on Julius Caesar due this Wednesday in class",
+    "Presentation on Muhammad Ali this Thursday",
+  ],
+  [SYS_LIST_LONGTERM]: [
+    "History Extra Credit due by February 15th",
+    "SSR book project due by March 3rd",
+    "Math Extra Credit assignment due by January 19th",
+  ],
+};
+
+const DEFAULT_COMPOSER_TITLE_PLACEHOLDER = "Add a clear task title";
+
 type FocusSessionEntry = { listId: string; taskId: number };
 
 /**
@@ -2014,7 +2043,7 @@ export default function App() {
     () => typeof window === "undefined" || !hasStoredTasks(),
   );
   const [isTransitioning, setIsTransitioning] = useState(false);
-  const [name, setName] = useState("Alex");
+  const [name, setName] = useState("User");
   const [seconds, setSeconds] = useState(0);
   const [initialSeconds, setInitialSeconds] = useState(0);
   const secondsRef = useRef(0);
@@ -2543,6 +2572,13 @@ export default function App() {
       "Tasks"
     );
   }, [todayMainMode, selectedListId, selectedList]);
+
+  const quickAddComposerTitlePlaceholder = useMemo(() => {
+    if (!selectedListId) return DEFAULT_COMPOSER_TITLE_PLACEHOLDER;
+    const opts = COMPOSER_TITLE_PLACEHOLDER_BY_LIST[selectedListId];
+    if (!opts?.length) return DEFAULT_COMPOSER_TITLE_PLACEHOLDER;
+    return opts[Math.floor(Math.random() * opts.length)]!;
+  }, [selectedListId, quickAddOpen]);
 
   const todoistEmptyDayMessage = useMemo(() => {
     const h = new Date().getHours();
@@ -3992,7 +4028,6 @@ export default function App() {
   };
 
   const handleStartFocusSession = () => {
-    if (focusEnterZenActive) return;
     if (isFocusSessionActive) {
       if (isFocusTimerRunning) {
         setFocusSessionDialog({ kind: "reset" });
@@ -4001,7 +4036,15 @@ export default function App() {
       }
       return;
     }
-    runFocusEnterZenTransition();
+    if (focusEnterZenActive) {
+      clearFocusEnterTimers();
+      setFocusEnterZenActive(false);
+      setZenOverlayOrigin(null);
+      setFocusEnterZenBlocking(false);
+      setFocusZenFadeOut(false);
+    }
+    allowFocusEnterRef.current = true;
+    finishEnterFocusSession();
   };
 
   const handleQuitFocusSession = () => {
@@ -5786,7 +5829,7 @@ export default function App() {
                   id="app-notifications-panel"
                   role="dialog"
                   aria-label="Notifications"
-                  className="pointer-events-auto fixed z-[280] w-[min(340px,calc(100vw-16px))] max-h-[min(420px,calc(100vh-80px))] flex flex-col rounded-[8px] border border-[#E5E7EB] bg-white shadow-[0_4px_16px_rgba(0,0,0,0.08)] overflow-hidden"
+                  className="pointer-events-auto fixed z-[280] w-[min(420px,calc(100vw-20px))] max-h-[min(560px,calc(100vh-72px))] flex flex-col rounded-[12px] border border-[#E5E7EB] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.1)] overflow-hidden"
                   style={{
                     left: notificationsPanelPos.left,
                     top: notificationsPanelPos.bottom,
@@ -5799,13 +5842,18 @@ export default function App() {
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
                     {notificationItems.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
-                        <svg className="w-8 h-8 text-[#D1D5DB] mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 01-3.46 0" /></svg>
-                        <p className="text-[14px] font-medium text-[#111827]">
+                      <div className="flex flex-col items-center justify-center px-8 py-10 text-center">
+                        <img
+                          src="/notifications-empty.png"
+                          alt=""
+                          className="mb-4 h-auto w-[min(100%,260px)] max-h-[200px] object-contain select-none"
+                          draggable={false}
+                        />
+                        <p className="text-[15px] font-semibold text-[#111827]">
                           No notifications
                         </p>
-                        <p className="text-[12px] text-[#9CA3AF] mt-1.5 max-w-[220px] leading-snug">
-                          Overdue alerts and due-date reminders appear here.
+                        <p className="text-[13px] text-[#6B7280] mt-2 max-w-[280px] leading-relaxed">
+                          Overdue alerts and due-date reminders will show up here.
                         </p>
                       </div>
                     ) : (
@@ -6038,7 +6086,7 @@ export default function App() {
                                     <input
                                       value={composerTitle}
                                       onChange={(e) => setComposerTitle(e.target.value)}
-                                      placeholder="Confirm catering by Fri at noon"
+                                      placeholder={quickAddComposerTitlePlaceholder}
                                       className="w-full border-0 bg-transparent p-0 text-[15px] font-semibold text-[#202020] placeholder:text-[#B0B0B0] outline-none"
                                     />
                                     <textarea
@@ -8309,7 +8357,7 @@ export default function App() {
                               Today
                             </p>
                             <h3 className="text-2xl font-semibold tracking-tight text-[#111827]">
-                              Hello <span className="text-[#6366F1]">Alex</span>.
+                              Hello <span className="text-[#6366F1]">{name}</span>.
                             </h3>
                             <p className="text-xs text-[#6B7280] mt-1">
                               Ready to beat yesterday?
@@ -8576,7 +8624,7 @@ export default function App() {
                               Today
                             </p>
                             <h3 className="text-2xl font-semibold tracking-tight text-[#111827]">
-                              Hello <span className="text-[#6366F1]">Alex</span>.
+                              Hello <span className="text-[#6366F1]">{name}</span>.
                             </h3>
                             <p className="text-xs text-[#6B7280] mt-1">
                               Ready to beat yesterday?
