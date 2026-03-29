@@ -7600,13 +7600,13 @@ export default function App() {
                   />
                 </svg>
                 <div
-                  className={`absolute inset-[11px] z-[2] flex flex-col overflow-hidden rounded-[22px] border border-[#f0f0f0] bg-white transition-all duration-200 ease-out ${
-                    focusFinaleOpen ? "focus-finale-timer-card" : ""
-                  }`}
+                  className={`absolute inset-[11px] z-[2] flex flex-col overflow-hidden rounded-[26px] border border-[#e8e8e8] bg-white transition-all duration-200 ease-out ${
+                    running ? "shadow-none" : "focus-timer-idle-shadow"
+                  } ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
                 >
                   <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
                     <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
-                      <div className="font-mono text-[clamp(3.5rem,12vw,6rem)] font-medium tabular-nums tracking-[-0.04em] text-[#171717] transition-opacity duration-200 ease-out">
+                      <div className="text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.03em] text-[#171717] transition-opacity duration-200 ease-out font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                         {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                           2,
                           "0",
@@ -7625,7 +7625,7 @@ export default function App() {
                       )}
                     </div>
                     {!running && (
-                      <div className="flex shrink-0 flex-col items-center gap-3 pb-7 pt-2">
+                      <div className="flex shrink-0 flex-col items-center gap-2 pb-6 pt-1">
                         <button
                           type="button"
                           disabled={isSimulation}
@@ -7633,17 +7633,17 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="btn-press-instant rounded-full bg-[#f3f4f6] px-4 py-1.5 text-[13px] font-medium uppercase tracking-[0.06em] text-[#4b5563] transition-colors duration-200 ease-out hover:bg-[#e5e7eb] disabled:opacity-50"
+                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
                         >
-                          + 15 MIN
+                          +15 min
                         </button>
                         {seconds > 0 && (
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="focus-timer-control-primary btn-press-instant rounded-xl bg-[#6366F1] px-8 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm transition-all duration-200 ease-out hover:bg-[#4f46e5]"
+                            className="btn-press-instant rounded border border-[#c5372f] bg-[#db4c3f] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#c5372f]"
                           >
-                            START
+                            Start
                           </button>
                         )}
                       </div>
@@ -7659,7 +7659,7 @@ export default function App() {
               >
                 <div className="space-y-1.5">
                   <div
-                    className={`flex gap-3 rounded-[24px] ${
+                    className={`flex gap-2 rounded-[3px] ${
                       invalidInputTarget === "focus"
                         ? "micro-input-invalid"
                         : taskInputShellPress
@@ -7681,9 +7681,9 @@ export default function App() {
                       placeholder={
                         isSimulation ? "Simulating input..." : "Next objective..."
                       }
-                      className={`flex-1 px-6 py-4 rounded-lg bg-white border border-[#E5E7EB] text-[#111827] outline-none text-[13px] focus:border-[#6366F1] transition-all duration-200 ease-out placeholder-[#6B7280] ${
+                      className={`min-h-[38px] flex-1 rounded-[3px] border border-[#ddd] bg-white px-3 py-2 text-[14px] font-normal leading-snug text-[#202020] outline-none transition-colors duration-150 ease-out placeholder:text-[#808080] focus:border-[#999] ${
                         taskInputClearFlash ? "opacity-50" : ""
-                      }`}
+                      } font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]`}
                     />
                     <button
                       disabled={isSimulation}
@@ -7691,9 +7691,9 @@ export default function App() {
                       onClick={() =>
                         addTaskFromFocusBar({ fromButtonClick: true })
                       }
-                      className="btn-press-instant px-8 bg-[#6366F1] text-white rounded-lg font-semibold text-[13px] tracking-wide uppercase shrink-0 active:bg-[#4f46e5]"
+                      className="btn-press-instant shrink-0 rounded-[3px] bg-[#1f1f1f] px-4 py-2 text-[13px] font-medium leading-snug text-white transition-colors duration-150 ease-out hover:bg-black disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                     >
-                      ADD
+                      Add
                     </button>
                   </div>
                   {taskInputLiveHints.length > 0 && (
@@ -7711,9 +7711,9 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="flex w-full flex-col gap-3">
+                <div className="flex w-full flex-col overflow-hidden rounded-[3px] border border-[#E5E5E5] bg-white">
                   {focusSessionEntries.length === 0 ? (
-                    <p className="text-center text-sm text-[#6B7280] py-2">
+                    <p className="py-8 text-center text-[13px] text-[#808080] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                       No tasks in session
                     </p>
                   ) : (
@@ -7733,10 +7733,12 @@ export default function App() {
                           t: Task;
                         } => row !== null,
                       )
-                      .map(({ entry, t }) => (
+                      .map(({ entry, t }, idx, arr) => (
                         <div
                           key={`${entry.listId}-${entry.taskId}`}
-                          className={`flex items-center justify-between gap-3 p-4 rounded-lg bg-white border border-[#E5E7EB] transition-all duration-300 ${
+                          className={`flex items-center justify-between gap-2 border-[#E5E5E5] px-3 py-2.5 transition-colors duration-150 hover:bg-[#fafafa] ${
+                            idx < arr.length - 1 ? "border-b" : ""
+                          } ${
                             t.removing
                               ? "opacity-0 translate-x-12"
                               : "opacity-100"
@@ -7746,9 +7748,12 @@ export default function App() {
                               : ""
                           }`}
                         >
-                          <div className="flex items-center gap-3 flex-1 min-w-0">
-                            <div className="w-1.5 h-1.5 rounded-full shrink-0 bg-[#9CA3AF]" />
-                            <span className="text-base text-gray-800 truncate">
+                          <div className="flex min-w-0 flex-1 items-start gap-2">
+                            <span
+                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5b9fd9]"
+                              aria-hidden
+                            />
+                            <span className="min-w-0 flex-1 truncate text-[14px] font-normal leading-snug text-[#202020] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                               {getFocusSessionDisplayLabel(entry.listId, t.text)}
                             </span>
                           </div>
@@ -7758,7 +7763,7 @@ export default function App() {
                             onClick={() =>
                               completeFocusTask(entry.listId, entry.taskId)
                             }
-                            className="w-7 h-7 shrink-0 rounded-full border border-[#D1D5DB] hover:border-emerald-500 hover:bg-emerald-50 transition-all disabled:opacity-40 disabled:hover:border-[#D1D5DB] disabled:hover:bg-transparent"
+                            className="h-4 w-4 shrink-0 rounded-full border border-[#c8c8c8] bg-white transition-colors hover:border-[#808080] disabled:opacity-40"
                             title="Mark complete"
                           />
                         </div>
@@ -7775,18 +7780,27 @@ export default function App() {
                       focusImmerseIntro ? "opacity-[0.88]" : "opacity-100"
                     }`}
                   >
-                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#E5E7EB] border-l-[3px] border-l-[#6366F1]/40 bg-[#F8FAFC] sm:rounded-lg">
-                      <div className="shrink-0 border-b border-[#E5E7EB] bg-white px-3 py-2.5 sm:px-3.5">
+                    <div className="focus-queue-panel-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#E5E5E5] bg-white sm:rounded-lg">
+                      <div className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2.5 sm:px-3.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 flex-1 items-center gap-2">
                             <span
-                              className="inline-flex select-none text-[17px] leading-none grayscale opacity-[0.88]"
+                              className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-[#1f1f1f]"
                               aria-hidden
                             >
-                              🧩
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
+                              </svg>
                             </span>
-                            <h2 className="min-w-0 truncate text-[15px] font-semibold leading-7 tracking-normal text-[#111827]">
-                              Constructor
+                            <h2 className="min-w-0 truncate text-[14px] font-semibold leading-7 tracking-tight text-[#1f1f1f] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                              Task queue
                             </h2>
                           </div>
                           <div
@@ -7807,7 +7821,7 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#F8FAFC] px-2 py-2 sm:px-2.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fafafa] px-2 py-2 sm:px-2.5">
                           <div className="flex flex-col">
                             {focusSidebarSections.map((section, secIdx) => {
                               const expanded =
@@ -7827,16 +7841,16 @@ export default function App() {
                                           !prev[section.listId],
                                       }))
                                     }
-                                    className="flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left transition-colors hover:bg-white active:bg-[#EEF2FF]"
+                                    className="flex w-full items-center gap-2.5 rounded-[3px] px-2 py-2 text-left transition-colors hover:bg-[#f0f0f0] active:bg-[#ebebeb]"
                                   >
                                     <TaskSystemNavIcon
                                       listId={section.listId}
-                                      className="h-5 w-5 shrink-0 text-[#9CA3AF]"
+                                      className="h-5 w-5 shrink-0 text-[#808080]"
                                     />
-                                    <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#111827]">
+                                    <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-[#202020] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                                       {section.label}
                                     </span>
-                                    <span className="shrink-0 tabular-nums text-[12px] font-medium text-[#6B7280]">
+                                    <span className="shrink-0 tabular-nums text-[12px] font-medium text-[#808080]">
                                       {section.tasks.length}
                                     </span>
                                     <svg
@@ -7868,9 +7882,9 @@ export default function App() {
                                                 section.listId,
                                               );
                                             }}
-                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-[#E5E7EB] bg-white py-1.5 text-[11px] font-semibold text-[#6B7280] transition hover:border-[#6366F1]/40 hover:bg-[#EEF2FF] active:scale-[0.99]"
+                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-dashed border-[#d4d4d4] bg-white py-1.5 text-[11px] font-medium text-[#666] transition hover:bg-[#f5f5f5] active:scale-[0.99] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                                           >
-                                            <span className="text-[12px] font-semibold text-[#6366F1]">
+                                            <span className="text-[12px] font-medium text-[#444]">
                                               +
                                             </span>
                                             Add all {section.label} tasks
@@ -7905,17 +7919,17 @@ export default function App() {
                                                         task.id,
                                                       )
                                                     }
-                                                    className={`group flex w-full items-start gap-2.5 rounded-lg border px-2.5 py-2 text-left transition active:scale-[0.99] ${
+                                                    className={`group flex w-full items-start gap-2.5 rounded-[3px] border px-2.5 py-2 text-left transition active:scale-[0.99] ${
                                                       inSession
-                                                        ? "cursor-default border-[#6366F1]/30 bg-[#EEF2FF]"
-                                                        : "border-[#E5E7EB] bg-white hover:border-[#D1D5DB] hover:bg-[#F8FAFC]"
+                                                        ? "cursor-default border-[#d4d4d4] bg-[#f0f0f0]"
+                                                        : "border-[#E5E5E5] bg-white hover:border-[#ccc] hover:bg-[#fafafa]"
                                                     }`}
                                                   >
                                                     <span
-                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-md border-2 text-[13px] font-semibold leading-none transition-colors ${
+                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[3px] border text-[13px] font-medium leading-none transition-colors ${
                                                         inSession
-                                                          ? "border-[#6366F1] bg-[#6366F1] text-white"
-                                                          : "border-[#E5E7EB] bg-white text-[#6B7280] group-hover:border-[#6366F1]/60 group-hover:text-[#6366F1]"
+                                                          ? "border-[#1f1f1f] bg-[#1f1f1f] text-white"
+                                                          : "border-[#c8c8c8] bg-white text-[#666] group-hover:border-[#808080] group-hover:text-[#202020]"
                                                       }`}
                                                       aria-hidden
                                                     >
@@ -7937,16 +7951,16 @@ export default function App() {
                                                     </span>
                                                     <span className="min-w-0 flex-1">
                                                       <span
-                                                        className={`block text-[13px] leading-snug ${
+                                                        className={`block text-[13px] leading-snug font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif] ${
                                                           inSession
-                                                            ? "text-[#6B7280]"
-                                                            : "text-[#111827]"
+                                                            ? "text-[#666]"
+                                                            : "text-[#202020]"
                                                         }`}
                                                       >
                                                         {task.text}
                                                       </span>
                                                       {inSession && (
-                                                        <span className="mt-0.5 block text-[10px] font-medium text-[#6366F1]">
+                                                        <span className="mt-0.5 block text-[10px] font-medium text-[#666]">
                                                           In your session
                                                         </span>
                                                       )}
@@ -9257,7 +9271,18 @@ html { scroll-behavior: smooth; }
     0 8px 24px rgba(0, 0, 0, 0.06);
 }
 .focus-timer-hero-square {
-  border-radius: 28px;
+  border-radius: 32px;
+}
+/** Neutral SaaS panel depth (timer idle + task queue) — no purple tint */
+.focus-timer-idle-shadow {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 14px rgba(0, 0, 0, 0.06);
+}
+.focus-queue-panel-shadow {
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.08),
+    0 4px 14px rgba(0, 0, 0, 0.06);
 }
 .focus-finale-streamers-ring {
   opacity: 0.6;
