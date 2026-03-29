@@ -18,10 +18,10 @@ import {
  */
 
 /* --- SYSTEM CONSTANTS --- */
-/** Focus session countdown ring (SVG progress). Slightly larger than legacy 135 for centerpiece UI. */
-const FOCUS_TIMER_RING_RADIUS = 170;
+/** Focus session countdown ring (SVG progress). Sized for prominence without crowding the viewport. */
+const FOCUS_TIMER_RING_RADIUS = 140;
 const FOCUS_TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * FOCUS_TIMER_RING_RADIUS;
-const FOCUS_TIMER_SVG_SIZE = 450;
+const FOCUS_TIMER_SVG_SIZE = 360;
 const FOCUS_TIMER_SVG_CENTER = FOCUS_TIMER_SVG_SIZE / 2;
 
 /** Typing simulation: updates setText with one more character every msPerChar. */
@@ -5940,7 +5940,13 @@ export default function App() {
                 </div>
               )}
 
-              <div className="flex-1 min-h-0 flex overflow-hidden">
+              <div
+                className={`flex min-h-0 flex-1 ${
+                  isFocusSessionActive
+                    ? "overflow-x-hidden overflow-y-auto"
+                    : "overflow-hidden"
+                }`}
+              >
 
             {/* Content panel (hidden during focus session — replaced by light focus column) */}
             {!isFocusSessionActive && (
@@ -7431,7 +7437,7 @@ export default function App() {
 
             {isFocusSessionActive && (
               <div
-                className={`flex flex-1 min-h-0 h-screen w-full min-w-0 overflow-hidden relative bg-white text-[#111827] transition-[filter] duration-300 ease-out ${
+                className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-white text-[#111827] transition-[filter] duration-300 ease-out ${
                   focusRootShake ? "micro-focus-shake" : ""
                 }`}
               >
@@ -7442,14 +7448,13 @@ export default function App() {
                 <div
                   className="pointer-events-none absolute inset-0 z-0"
                 />
-                <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row">
+                <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row items-stretch overflow-x-hidden">
                   <div
-                    className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden ${
+                    className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain ${
                       focusImmerseIntro ? "micro-focus-main-in" : ""
                     }`}
                   >
-                    <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
-                      <div className="flex w-full flex-shrink-0 flex-col items-center gap-6 px-4 pb-4 pt-16 sm:gap-8">
+                    <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-4 pb-20 pt-10 sm:gap-10 sm:pb-24 sm:pt-12">
                   {warning && (
               <div className="fixed top-24 bg-[#6366F1] text-white px-8 py-2 rounded-lg z-[100] animate-pulse text-[13px] font-semibold tracking-wide uppercase shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                 {warning}
@@ -7535,13 +7540,13 @@ export default function App() {
             </div>
 
             {/* TIMER CARD — centerpiece */}
-            <div className="relative z-[200] flex w-full max-w-4xl flex-col items-center px-3 py-10 sm:px-6 sm:py-14">
+            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-6 sm:py-8">
               <div
-                className={`relative flex flex-col items-center justify-center transition-[box-shadow,filter] duration-200 ease-out ${
+                className={`relative flex w-full max-w-[380px] flex-col items-center justify-center overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
                   focusFinaleOpen ? "focus-finale-timer-wrap" : ""
                 } ${focusTimerNudge ? "micro-timer-nudge" : ""} ${
                   running ? "focus-timer-running-glow focus-timer-breathe" : ""
-                } rounded-[20px] bg-[#F8FAFC] p-8 sm:p-10 md:p-12 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.04)]`}
+                } rounded-[20px] bg-[#F8FAFC] p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.04)]`}
               >
                 {focusFinaleOpen && (
                   <div
@@ -7549,7 +7554,7 @@ export default function App() {
                     aria-hidden
                   />
                 )}
-                <div className="relative flex h-[min(92vw,450px)] w-[min(92vw,450px)] shrink-0 items-center justify-center">
+                <div className="relative flex h-[min(88vw,360px)] w-[min(88vw,360px)] shrink-0 items-center justify-center">
                   <svg
                     className="absolute z-[1] h-full w-full -rotate-90"
                     viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
@@ -7573,7 +7578,7 @@ export default function App() {
                       cy={FOCUS_TIMER_SVG_CENTER}
                       r={FOCUS_TIMER_RING_RADIUS}
                       stroke="rgba(15, 23, 42, 0.06)"
-                      strokeWidth="14"
+                      strokeWidth="12"
                       fill="none"
                     />
                     <circle
@@ -7581,7 +7586,7 @@ export default function App() {
                       cy={FOCUS_TIMER_SVG_CENTER}
                       r={FOCUS_TIMER_RING_RADIUS}
                       stroke="url(#focusTimerRingGradient)"
-                      strokeWidth="14"
+                      strokeWidth="12"
                       fill="none"
                       strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
                       strokeDashoffset={
@@ -7596,11 +7601,11 @@ export default function App() {
                     />
                   </svg>
                   <div
-                    className={`relative z-[2] flex h-[min(76vw,400px)] w-[min(76vw,400px)] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#E5E7EB]/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_48px_-12px_rgba(15,23,42,0.1)] transition-all duration-200 ease-out ${
+                    className={`relative z-[2] flex h-[min(70vw,300px)] w-[min(70vw,300px)] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#E5E7EB]/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_48px_-12px_rgba(15,23,42,0.1)] transition-all duration-200 ease-out ${
                       focusFinaleOpen ? "focus-finale-timer-card" : ""
                     }`}
                   >
-                    <div className="font-mono text-[clamp(3.25rem,10vw,4.5rem)] font-semibold tabular-nums tracking-[-0.06em] text-[#111827] transition-opacity duration-200 ease-out">
+                    <div className="font-mono text-[clamp(2.75rem,8vw,3.75rem)] font-semibold tabular-nums tracking-[-0.06em] text-[#111827] transition-opacity duration-200 ease-out">
                       {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                         2,
                         "0",
@@ -7647,12 +7652,10 @@ export default function App() {
                 </div>
               </div>
             </div>
-                      </div>
 
-                      <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto overflow-x-hidden">
-            <div className="mx-auto w-full max-w-4xl space-y-12 px-4 pb-24 pt-2">
+            <div className="w-full max-w-xl space-y-12 px-0 pb-12 pt-6 sm:pt-8">
               <div
-                className={`space-y-4 max-w-xl mx-auto transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
+                className={`space-y-4 transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="space-y-1.5">
                   <div
@@ -7708,7 +7711,7 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="flex flex-col gap-3 w-full max-w-xl mx-auto">
+                <div className="flex w-full flex-col gap-3">
                   {focusSessionEntries.length === 0 ? (
                     <p className="text-center text-sm text-[#6B7280] py-2">
                       No tasks in session
@@ -7764,7 +7767,6 @@ export default function App() {
                 </div>
               </div>
             </div>
-                      </div>
                     </div>
                   </div>
 
