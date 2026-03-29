@@ -18,8 +18,8 @@ import {
  */
 
 /* --- SYSTEM CONSTANTS --- */
-/** Focus session countdown ring (SVG progress). Sized for prominence without crowding the viewport. */
-const FOCUS_TIMER_RING_RADIUS = 140;
+/** Focus session countdown ring (SVG progress). Inscribed in the square timer hero. */
+const FOCUS_TIMER_RING_RADIUS = 148;
 const FOCUS_TIMER_RING_CIRCUMFERENCE = 2 * Math.PI * FOCUS_TIMER_RING_RADIUS;
 const FOCUS_TIMER_SVG_SIZE = 360;
 const FOCUS_TIMER_SVG_CENTER = FOCUS_TIMER_SVG_SIZE / 2;
@@ -7539,14 +7539,14 @@ export default function App() {
               )}
             </div>
 
-            {/* TIMER CARD — centerpiece */}
-            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-6 sm:py-8">
+            {/* TIMER — square hero card (reference layout: time top ~2/3, pill +15 MIN bottom) */}
+            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-8 sm:py-10">
               <div
-                className={`relative flex w-full max-w-[380px] flex-col items-center justify-center overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
+                className={`focus-timer-hero-square relative aspect-square w-full max-w-[360px] shrink-0 overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
                   focusFinaleOpen ? "focus-finale-timer-wrap" : ""
                 } ${focusTimerNudge ? "micro-timer-nudge" : ""} ${
                   running ? "focus-timer-running-glow focus-timer-breathe" : ""
-                } rounded-[20px] bg-[#F8FAFC] p-6 sm:p-8 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_1px_2px_rgba(15,23,42,0.04)]`}
+                }`}
               >
                 {focusFinaleOpen && (
                   <div
@@ -7554,78 +7554,78 @@ export default function App() {
                     aria-hidden
                   />
                 )}
-                <div className="relative flex h-[min(88vw,360px)] w-[min(88vw,360px)] shrink-0 items-center justify-center">
-                  <svg
-                    className="absolute z-[1] h-full w-full -rotate-90"
-                    viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
-                    aria-hidden
-                  >
-                    <defs>
-                      <linearGradient
-                        id="focusTimerRingGradient"
-                        x1="0%"
-                        y1="0%"
-                        x2="100%"
-                        y2="100%"
-                      >
-                        <stop offset="0%" stopColor="#818CF8" />
-                        <stop offset="55%" stopColor="#6366F1" />
-                        <stop offset="100%" stopColor="#4F46E5" />
-                      </linearGradient>
-                    </defs>
-                    <circle
-                      cx={FOCUS_TIMER_SVG_CENTER}
-                      cy={FOCUS_TIMER_SVG_CENTER}
-                      r={FOCUS_TIMER_RING_RADIUS}
-                      stroke="rgba(15, 23, 42, 0.06)"
-                      strokeWidth="12"
-                      fill="none"
-                    />
-                    <circle
-                      cx={FOCUS_TIMER_SVG_CENTER}
-                      cy={FOCUS_TIMER_SVG_CENTER}
-                      r={FOCUS_TIMER_RING_RADIUS}
-                      stroke="url(#focusTimerRingGradient)"
-                      strokeWidth="12"
-                      fill="none"
-                      strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
-                      strokeDashoffset={
-                        FOCUS_TIMER_RING_CIRCUMFERENCE -
-                        focusTimerProgressLength
-                      }
-                      strokeLinecap="round"
-                      style={{
-                        transition:
-                          "stroke-dashoffset 1s linear, stroke 0.5s ease",
-                      }}
-                    />
-                  </svg>
-                  <div
-                    className={`relative z-[2] flex h-[min(70vw,300px)] w-[min(70vw,300px)] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#E5E7EB]/90 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04),0_16px_48px_-12px_rgba(15,23,42,0.1)] transition-all duration-200 ease-out ${
-                      focusFinaleOpen ? "focus-finale-timer-card" : ""
-                    }`}
-                  >
-                    <div className="font-mono text-[clamp(2.75rem,8vw,3.75rem)] font-semibold tabular-nums tracking-[-0.06em] text-[#111827] transition-opacity duration-200 ease-out">
-                      {String(Math.floor(Math.abs(seconds) / 60)).padStart(
-                        2,
-                        "0",
-                      )}
-                      <span className="inline-block translate-y-[-0.02em] opacity-90">
-                        :
-                      </span>
-                      {String(Math.abs(seconds) % 60).padStart(2, "0")}
-                    </div>
-
-                    {running && (
-                      <div
-                        className={`mt-3 text-[10px] tracking-[0.18em] font-semibold uppercase transition-all duration-200 ease-out ${isViolating ? "text-red-500 scale-105" : "text-[#9CA3AF]"}`}
-                      >
-                        Focus Integrity: {integrityScore}%
+                <svg
+                  className="absolute inset-0 z-[1] h-full w-full -rotate-90"
+                  viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
+                  aria-hidden
+                >
+                  <defs>
+                    <linearGradient
+                      id="focusTimerRingGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor="#818CF8" />
+                      <stop offset="55%" stopColor="#6366F1" />
+                      <stop offset="100%" stopColor="#4F46E5" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx={FOCUS_TIMER_SVG_CENTER}
+                    cy={FOCUS_TIMER_SVG_CENTER}
+                    r={FOCUS_TIMER_RING_RADIUS}
+                    stroke="rgba(15, 23, 42, 0.06)"
+                    strokeWidth="10"
+                    fill="none"
+                  />
+                  <circle
+                    cx={FOCUS_TIMER_SVG_CENTER}
+                    cy={FOCUS_TIMER_SVG_CENTER}
+                    r={FOCUS_TIMER_RING_RADIUS}
+                    stroke="url(#focusTimerRingGradient)"
+                    strokeWidth="10"
+                    fill="none"
+                    strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
+                    strokeDashoffset={
+                      FOCUS_TIMER_RING_CIRCUMFERENCE -
+                      focusTimerProgressLength
+                    }
+                    strokeLinecap="round"
+                    style={{
+                      transition:
+                        "stroke-dashoffset 1s linear, stroke 0.5s ease",
+                    }}
+                  />
+                </svg>
+                <div
+                  className={`absolute inset-[11px] z-[2] flex flex-col overflow-hidden rounded-[22px] border border-[#f0f0f0] bg-white transition-all duration-200 ease-out ${
+                    focusFinaleOpen ? "focus-finale-timer-card" : ""
+                  }`}
+                >
+                  <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
+                    <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
+                      <div className="font-mono text-[clamp(3.5rem,12vw,6rem)] font-medium tabular-nums tracking-[-0.04em] text-[#171717] transition-opacity duration-200 ease-out">
+                        {String(Math.floor(Math.abs(seconds) / 60)).padStart(
+                          2,
+                          "0",
+                        )}
+                        <span className="inline-block translate-y-[-0.03em] text-[#171717]">
+                          :
+                        </span>
+                        {String(Math.abs(seconds) % 60).padStart(2, "0")}
                       </div>
-                    )}
-
+                      {running && (
+                        <div
+                          className={`mt-4 text-[10px] tracking-[0.16em] font-semibold uppercase transition-all duration-200 ease-out ${isViolating ? "text-red-500" : "text-[#9CA3AF]"}`}
+                        >
+                          Focus Integrity: {integrityScore}%
+                        </div>
+                      )}
+                    </div>
                     {!running && (
-                      <div className="mt-10 flex w-full max-w-[240px] flex-col gap-3">
+                      <div className="flex shrink-0 flex-col items-center gap-3 pb-7 pt-2">
                         <button
                           type="button"
                           disabled={isSimulation}
@@ -7633,15 +7633,15 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="focus-timer-control-secondary btn-press-instant rounded-xl border border-[#E5E7EB] bg-[#F1F5F9] px-8 py-3.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-[#111827] shadow-sm transition-all duration-200 ease-out hover:-translate-y-0.5 hover:border-[#E2E8F0] hover:bg-[#E8EEF5] disabled:opacity-50"
+                          className="btn-press-instant rounded-full bg-[#f3f4f6] px-4 py-1.5 text-[13px] font-medium uppercase tracking-[0.06em] text-[#4b5563] transition-colors duration-200 ease-out hover:bg-[#e5e7eb] disabled:opacity-50"
                         >
-                          +15 MIN
+                          + 15 MIN
                         </button>
                         {seconds > 0 && (
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="focus-timer-control-primary btn-press-instant rounded-xl bg-[#6366F1] px-8 py-3.5 text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-md shadow-indigo-500/15 transition-all duration-200 ease-out hover:-translate-y-0.5 hover:bg-[#4f46e5] hover:shadow-lg hover:shadow-indigo-500/20"
+                            className="focus-timer-control-primary btn-press-instant rounded-xl bg-[#6366F1] px-8 py-2.5 text-[12px] font-semibold uppercase tracking-[0.12em] text-white shadow-sm transition-all duration-200 ease-out hover:bg-[#4f46e5]"
                           >
                             START
                           </button>
@@ -9255,6 +9255,9 @@ html { scroll-behavior: smooth; }
   box-shadow:
     0 0 0 1px rgba(99, 102, 241, 0.12),
     0 8px 24px rgba(0, 0, 0, 0.06);
+}
+.focus-timer-hero-square {
+  border-radius: 28px;
 }
 .focus-finale-streamers-ring {
   opacity: 0.6;
