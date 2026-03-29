@@ -1500,6 +1500,281 @@ function TasksDueUpcomingSchedule({
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
+/** Logged when a focus session ends (reflection or quit) for analytics insights. */
+type FocusSessionRecord = {
+  id: string;
+  /** Local calendar date YYYY-MM-DD */
+  dateIso: string;
+  /** Local hour 0–23 when session ended */
+  hourEnded: number;
+  integrity: number;
+  durationSeconds: number;
+};
+
+type FocusInsight = {
+  id: string;
+  headline: string;
+  description: string;
+  tone: "positive" | "negative" | "neutral";
+};
+
+const FOCUS_SESSION_LOG_KEY = "tunnelvision_focus_session_log_v1";
+
+function toLocalDateIso(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function parseLocalDateIso(iso: string): Date {
+  const [y, m, day] = iso.split("-").map(Number);
+  return new Date(y, m - 1, day);
+}
+
+function startOfWeekMonday(d: Date): Date {
+  const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const day = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - day);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function hourBucket(
+  h: number,
+): "morning" | "afternoon" | "evening" | null {
+  if (h >= 5 && h < 12) return "morning";
+  if (h >= 12 && h < 17) return "afternoon";
+  if (h >= 17 && h < 22) return "evening";
+  return null;
+}
+
+const WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+/** Max 4 insights; priority: weekly trend → time-of-day → weekday consistency → session length. */
+function generateFocusInsights(
+  records: FocusSessionRecord[],
+): FocusInsight[] {
+  const MIN_SESSIONS = 4;
+  const MIN_DISTINCT_DAYS = 2;
+  if (records.length < MIN_SESSIONS) return [];
+  const distinctDays = new Set(records.map((r) => r.dateIso));
+  if (distinctDays.size < MIN_DISTINCT_DAYS) return [];
+
+  const out: FocusInsight[] = [];
+
+  const avgIntegrity = (arr: FocusSessionRecord[]) =>
+    arr.reduce((s, r) => s + r.integrity, 0) / Math.max(1, arr.length);
+
+  const overallAvg = avgIntegrity(records);
+
+  // 1) Weekly trend (this calendar week vs previous, Mon–Sun)
+  const now = new Date();
+  const thisWeekStart = startOfWeekMonday(now);
+  const nextWeekStart = new Date(thisWeekStart);
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+  const lastWeekStart = new Date(thisWeekStart);
+  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+
+  const thisWeekRecs = records.filter((r) => {
+    const d = parseLocalDateIso(r.dateIso);
+    return d >= thisWeekStart && d < nextWeekStart;
+  });
+  const lastWeekRecs = records.filter((r) => {
+    const d = parseLocalDateIso(r.dateIso);
+    return d >= lastWeekStart && d < thisWeekStart;
+  });
+
+  if (thisWeekRecs.length >= 1 && lastWeekRecs.length >= 1) {
+    const tw = avgIntegrity(thisWeekRecs);
+    const lw = avgIntegrity(lastWeekRecs);
+    if (lw > 1e-6) {
+      const pct = ((tw - lw) / lw) * 100;
+      const rounded = Math.round(pct);
+      if (pct >= 1) {
+        out.push({
+          id: "weekly-trend-up",
+          headline: `You're improving +${Math.abs(rounded)}% this week`,
+          description:
+            "Your focus integrity has increased week-on-week.",
+          tone: "positive",
+        });
+      } else if (pct <= -1) {
+        out.push({
+          id: "weekly-trend-down",
+          headline: "Your focus dropped slightly this week",
+          description:
+            "Your focus integrity has decreased compared to last week.",
+          tone: "negative",
+        });
+      }
+    }
+  }
+
+  // 2) Time of day
+  const buckets: Record<
+    "morning" | "afternoon" | "evening",
+    { sum: number; n: number }
+  > = {
+    morning: { sum: 0, n: 0 },
+    afternoon: { sum: 0, n: 0 },
+    evening: { sum: 0, n: 0 },
+  };
+  for (const r of records) {
+    const b = hourBucket(r.hourEnded);
+    if (b) {
+      buckets[b].sum += r.integrity;
+      buckets[b].n += 1;
+    }
+  }
+  const withData = (
+    ["morning", "afternoon", "evening"] as const
+  ).filter((k) => buckets[k].n >= 1);
+  if (withData.length >= 2) {
+    const ranked = withData
+      .map((k) => ({
+        k,
+        avg: buckets[k].sum / buckets[k].n,
+      }))
+      .sort((a, b) => b.avg - a.avg);
+    const bestK = ranked[0]?.k ?? null;
+    const bestAvg = ranked[0]?.avg ?? 0;
+    const secondAvg = ranked[1]?.avg ?? 0;
+    if (bestK !== null && bestAvg - secondAvg >= 5) {
+      const label =
+        bestK === "morning"
+          ? "the morning"
+          : bestK === "afternoon"
+            ? "the afternoon"
+            : "the evening";
+      const sub =
+        bestK === "morning"
+          ? "Highest consistency before 12 PM"
+          : bestK === "afternoon"
+            ? "Highest consistency between 12 PM and 5 PM"
+            : "Highest consistency between 5 PM and 10 PM";
+      out.push({
+        id: "time-of-day",
+        headline: `You focus best in ${label}`,
+        description: sub,
+        tone: "positive",
+      });
+    }
+  }
+
+  // 3) Weekday consistency (weakest / strongest)
+  const byDow: Record<number, { sum: number; n: number }> = {};
+  for (const r of records) {
+    const dow = parseLocalDateIso(r.dateIso).getDay();
+    if (!byDow[dow]) byDow[dow] = { sum: 0, n: 0 };
+    byDow[dow].sum += r.integrity;
+    byDow[dow].n += 1;
+  }
+  const entries = Object.entries(byDow).map(([d, v]) => ({
+    dow: Number(d),
+    avg: v.sum / v.n,
+    n: v.n,
+  }));
+  const multi = entries.filter((e) => e.n >= 2);
+  const pool = multi.length >= 2 ? multi : entries;
+  if (pool.length >= 2) {
+    let worst = pool[0];
+    let best = pool[0];
+    for (const e of pool) {
+      if (e.avg < worst.avg) worst = e;
+      if (e.avg > best.avg) best = e;
+    }
+    if (worst.avg + 3 <= overallAvg) {
+      out.push({
+        id: "dow-weakest",
+        headline: `Your consistency dropped on ${WEEKDAY_NAMES[worst.dow]}`,
+        description: `${WEEKDAY_NAMES[worst.dow]} had the lowest focus integrity.`,
+        tone: "negative",
+      });
+    } else if (best.avg >= overallAvg + 5 && best.dow !== worst.dow) {
+      out.push({
+        id: "dow-strongest",
+        headline: `You are most consistent on ${WEEKDAY_NAMES[best.dow]}s`,
+        description: `${WEEKDAY_NAMES[best.dow]} has your highest average focus integrity.`,
+        tone: "positive",
+      });
+    }
+  }
+
+  // 4) Session length (one card max)
+  const avgDur =
+    records.reduce((s, r) => s + r.durationSeconds, 0) / records.length;
+  const under10 = records.filter((r) => r.durationSeconds < 600).length;
+  if (under10 / records.length >= 0.6 && avgDur < 600) {
+    out.push({
+      id: "session-short",
+      headline: "Most sessions last under 10 minutes",
+      description: "Average session length is below ten minutes.",
+      tone: "neutral",
+    });
+  } else {
+    const durByBucket: Record<
+      "morning" | "afternoon" | "evening",
+      number[]
+    > = { morning: [], afternoon: [], evening: [] };
+    for (const r of records) {
+      const b = hourBucket(r.hourEnded);
+      if (b) durByBucket[b].push(r.durationSeconds);
+    }
+    const median = (arr: number[]) => {
+      if (arr.length === 0) return 0;
+      const s = [...arr].sort((a, b) => a - b);
+      return s[Math.floor(s.length / 2)];
+    };
+    const ma = median(durByBucket.morning);
+    const aa = median(durByBucket.afternoon);
+    const ea = median(durByBucket.evening);
+    if (
+      durByBucket.afternoon.length >= 2 &&
+      aa > ma &&
+      aa > ea &&
+      aa > 0
+    ) {
+      out.push({
+        id: "session-long-afternoon",
+        headline: "Your longest sessions happen in the afternoon",
+        description:
+          "Median session length is highest between 12 PM and 5 PM.",
+        tone: "neutral",
+      });
+    }
+  }
+
+  const priority = [
+    "weekly-trend-up",
+    "weekly-trend-down",
+    "time-of-day",
+    "dow-weakest",
+    "dow-strongest",
+    "session-short",
+    "session-long-afternoon",
+  ];
+  const seen = new Set<string>();
+  const ordered: FocusInsight[] = [];
+  for (const pid of priority) {
+    const found = out.find((o) => o.id === pid);
+    if (found && !seen.has(found.id)) {
+      seen.add(found.id);
+      ordered.push(found);
+      if (ordered.length >= 4) break;
+    }
+  }
+  return ordered;
+}
+
 /** Canonical key for task speed graphs (case-insensitive, trimmed). */
 function normalizeTaskKey(text: string): string {
   return text.trim().toLowerCase();
@@ -2256,6 +2531,9 @@ export default function App() {
 
   /* --- HEATMAP & SCORE STATE --- */
   const [heatmapData, setHeatmapData] = useState<DayMetric[]>([]);
+  const [focusSessionRecords, setFocusSessionRecords] = useState<
+    FocusSessionRecord[]
+  >([]);
 
   /* --- BEAT YESTERDAY FUNCTIONAL STATE --- */
   const [yesterdayTotalFocusMinutes, setYesterdayTotalFocusMinutes] =
@@ -3603,6 +3881,12 @@ export default function App() {
     ];
   }, [heatmapData, taskHistory, isSimulation]);
 
+  const focusInsights = useMemo(
+    () =>
+      isSimulation ? [] : generateFocusInsights(focusSessionRecords),
+    [focusSessionRecords, isSimulation],
+  );
+
   /* -----------------------------------------------------------
      DATA PERSISTENCE & COMPUTATION
   ----------------------------------------------------------- */
@@ -3614,10 +3898,20 @@ export default function App() {
       "tunnelvision_discipline_heatmap",
     );
     const savedTodayMins = localStorage.getItem("tunnelvision_today_mins");
+    const savedFocusSessions = localStorage.getItem(FOCUS_SESSION_LOG_KEY);
 
     if (savedStreak) setStreak(parseInt(savedStreak));
     if (savedHistory) setHistory(JSON.parse(savedHistory));
     if (savedTodayMins) setTodayTotalFocusMinutes(parseInt(savedTodayMins));
+
+    if (savedFocusSessions) {
+      try {
+        const parsed = JSON.parse(savedFocusSessions) as FocusSessionRecord[];
+        if (Array.isArray(parsed)) setFocusSessionRecords(parsed);
+      } catch {
+        setFocusSessionRecords([]);
+      }
+    }
 
     if (savedTaskHistory) {
       const parsed = JSON.parse(savedTaskHistory);
@@ -3720,11 +4014,16 @@ export default function App() {
         TODAY_LISTS_STORAGE_KEY,
         JSON.stringify(todayLists),
       );
+      localStorage.setItem(
+        FOCUS_SESSION_LOG_KEY,
+        JSON.stringify(focusSessionRecords),
+      );
     }
   }, [
     history,
     taskHistory,
     streak,
+    focusSessionRecords,
     isSimulation,
     heatmapData,
     todayTotalFocusMinutes,
@@ -3878,6 +4177,25 @@ export default function App() {
       };
       return next;
     });
+
+    const elapsedSecs = Math.max(
+      0,
+      Math.floor(initialSecondsRef.current - secondsRef.current),
+    );
+    const now = new Date();
+    setFocusSessionRecords((prev) => [
+      ...prev,
+      {
+        id:
+          typeof crypto !== "undefined" && crypto.randomUUID
+            ? crypto.randomUUID()
+            : `fs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        dateIso: toLocalDateIso(now),
+        hourEnded: now.getHours(),
+        integrity: v,
+        durationSeconds: elapsedSecs,
+      },
+    ]);
   };
 
   const cleanupFocusSessionAfterQuit = () => {
@@ -4409,14 +4727,42 @@ export default function App() {
     setPendingWorkModeTaskId(null);
     setPendingWorkModeListId(null);
     setIsWorkModeModalOpen(false);
+    setFocusSessionRecords([]);
     setWarning("System Purged");
     setTimeout(() => setWarning(null), 3000);
   };
 
-  const handleReflectionSubmit = (options?: { tasksCompleted?: number }) => {
+  const handleReflectionSubmit = (options?: {
+    tasksCompleted?: number;
+    durationSeconds?: number;
+  }) => {
     const todayStr = getTodayStr();
     const sessionSecs = todayTotalFocusMinutes * 60;
     const tasksDone = options?.tasksCompleted ?? tasks.length;
+    const integrityRounded = Math.round(
+      Math.max(0, Math.min(100, integrityScoreNum)),
+    );
+    const durationLogged =
+      options?.durationSeconds != null
+        ? Math.max(0, Math.floor(options.durationSeconds))
+        : Math.max(0, Math.floor(sessionSecs));
+
+    if (!isSimulation) {
+      const now = new Date();
+      setFocusSessionRecords((prev) => [
+        ...prev,
+        {
+          id:
+            typeof crypto !== "undefined" && crypto.randomUUID
+              ? crypto.randomUUID()
+              : `fs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+          dateIso: toLocalDateIso(now),
+          hourEnded: now.getHours(),
+          integrity: integrityRounded,
+          durationSeconds: durationLogged,
+        },
+      ]);
+    }
 
     setHeatmapData((prev) => {
       const newData = [...prev];
@@ -4436,10 +4782,10 @@ export default function App() {
 
         newData[todayIndex] = {
           ...existingDay,
-          focusIntegrity: (existingDay.focusIntegrity + integrityScoreNum) / 2,
+          focusIntegrity: (existingDay.focusIntegrity + integrityRounded) / 2,
           tasksCompleted: existingDay.tasksCompleted + tasksDone,
           totalFocusSeconds: newTotalSecs,
-          score: integrityScoreNum,
+          score: integrityRounded,
           symbol: symbol,
         };
       }
@@ -4450,7 +4796,7 @@ export default function App() {
       ...prev,
       "Focus Integrity": [
         ...(prev["Focus Integrity"] || []),
-        { value: Math.round(integrityScoreNum), date: todayStr },
+        { value: integrityRounded, date: todayStr },
       ],
     }));
 
@@ -4982,7 +5328,10 @@ export default function App() {
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
     if (snap) {
-      handleReflectionSubmit({ tasksCompleted: snap.tasksDone });
+      handleReflectionSubmit({
+        tasksCompleted: snap.tasksDone,
+        durationSeconds: snap.elapsedSecs,
+      });
     } else {
       handleReflectionSubmit();
     }
@@ -6920,12 +7269,12 @@ export default function App() {
                         onCompleteTask={completeTaskFromSchedule}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-white text-[#111827] [text-rendering:optimizeLegibility]">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA] text-[#111827] [text-rendering:optimizeLegibility] font-[family-name:Inter,system-ui,-apple-system,sans-serif] antialiased">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-none mx-auto px-3 sm:px-5 lg:px-6 py-4 pb-10 space-y-2.5">
-                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-[#E5E7EB] pb-6 mb-0.5">
+                          <div className="w-full max-w-none mx-auto px-3 sm:px-5 lg:px-6 py-5 pb-10 space-y-5">
+                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                               <div>
-                                <h1 className="text-[20px] font-semibold text-[#111827] tracking-tight flex items-center gap-2.5">
+                                <h1 className="text-[22px] sm:text-[23px] font-semibold text-[#111827] tracking-[-0.02em] flex items-center gap-2.5">
                                   <span
                                     className="text-[#6B7280] shrink-0"
                                     aria-hidden
@@ -6948,14 +7297,14 @@ export default function App() {
                                   </span>
                                   Analytics
                                 </h1>
-                                <p className="text-[13px] text-[#6B7280] mt-2 max-w-lg leading-relaxed">
+                                <p className="text-[13px] text-[#6B7280] mt-1.5 max-w-lg leading-relaxed font-medium">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-1 text-[11px] font-medium text-[#6B7280] tabular-nums">
+                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6B7280] tabular-nums shadow-sm">
                                   <span
-                                    className="h-1 w-1 rounded-full bg-[#6366F1]"
+                                    className="h-1.5 w-1.5 rounded-full bg-[#0EA5E9]"
                                     aria-hidden
                                   />
                                   Last 7 days
@@ -6963,16 +7312,16 @@ export default function App() {
                               </div>
                             </header>
 
-                            <section className="rounded-lg border border-[#E5E7EB] bg-white transition-[background-color] duration-150">
+                            <section className="rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-[background-color] duration-150">
                               <div className="flex flex-col gap-1.5 p-3 sm:p-4 border-b border-[#E5E7EB]">
                                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
                                   <div className="min-w-0">
-                                    <h2 className="text-[15px] font-semibold text-[#111827] tracking-tight">
+                                    <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
                                         : "Task Speed"}
                                     </h2>
-                                    <p className="text-[13px] text-[#6B7280] mt-0.5 leading-snug">
+                                    <p className="text-[13px] text-[#6B7280] mt-0.5 leading-snug font-medium">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
                                         : selectedTaskGraph
@@ -6995,7 +7344,7 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#6366F1] focus-visible:ring-2 focus-visible:ring-[#6366F1]/20"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#0EA5E9] focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/20"
                                         >
                                           <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
@@ -7037,7 +7386,7 @@ export default function App() {
                                                 }}
                                                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
-                                                    ? "bg-[#EEF2FF] text-[#111827]"
+                                                    ? "bg-sky-50 text-[#111827]"
                                                     : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                 }`}
                                               >
@@ -7090,7 +7439,7 @@ export default function App() {
                                                       }}
                                                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                         isSel
-                                                          ? "bg-[#EEF2FF] text-[#111827]"
+                                                          ? "bg-sky-50 text-[#111827]"
                                                           : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                       }`}
                                                     >
@@ -7121,7 +7470,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] p-1">
+                                    <div className="inline-flex h-9 shrink-0 rounded-lg border border-[#E5E7EB] bg-white p-1">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -7135,9 +7484,9 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`rounded-lg px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
+                                            className={`rounded-md px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
                                               selectedStat === type
-                                                ? "bg-white text-[#111827] shadow-sm"
+                                                ? "bg-[#0EA5E9] text-white shadow-sm"
                                                 : "text-[#6B7280] hover:text-[#111827]"
                                             }`}
                                           >
@@ -7188,7 +7537,7 @@ export default function App() {
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-[#6366F1] mt-0.5">
+                                          <div className="tabular-nums text-[#0EA5E9] mt-0.5">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -7236,8 +7585,8 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#6366F1"
-                                            stopOpacity="0.1"
+                                            stopColor="#0EA5E9"
+                                            stopOpacity="0.14"
                                           />
                                           <stop
                                             offset="100%"
@@ -7272,7 +7621,7 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#6366F1"
+                                        stroke="#0EA5E9"
                                         strokeWidth="0.5"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
@@ -7293,8 +7642,8 @@ export default function App() {
                                           }
                                           fill={
                                             analyticsChartHover === i
-                                              ? "#818CF8"
-                                              : "#6366F1"
+                                              ? "#38BDF8"
+                                              : "#0EA5E9"
                                           }
                                           stroke="#ffffff"
                                           strokeWidth="0.22"
@@ -7319,92 +7668,68 @@ export default function App() {
                               </div>
                             </section>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 pt-0.5">
-                              <section className="rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-3.5">
-                                <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-[#E5E7EB]">
-                                  <h2 className="text-[15px] font-semibold text-[#111827]">
-                                    Discipline
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 pt-0.5">
+                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:col-span-2">
+                                <div className="mb-4 border-b border-[#E5E7EB] pb-3">
+                                  <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
+                                    Insights
                                   </h2>
-                                  <span className="text-[10px] font-medium text-[#6B7280] tabular-nums">
-                                    {getCurrentMonthName()}
-                                  </span>
+                                  <p className="text-[13px] text-[#6B7280] mt-1 font-medium">
+                                    Patterns based on your focus data
+                                  </p>
                                 </div>
-
-                                <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
-                                  {["M", "T", "W", "T", "F", "S", "S"].map(
-                                    (day, i) => (
+                                {focusInsights.length === 0 ? (
+                                  <div className="py-12 sm:py-14 text-center px-2">
+                                    <p className="text-[15px] font-medium text-[#4B5563]">
+                                      Not enough data yet
+                                    </p>
+                                    <p className="text-[13px] text-[#9CA3AF] mt-2 max-w-md mx-auto leading-relaxed">
+                                      Complete a few focus sessions to unlock
+                                      insights
+                                    </p>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                                    {focusInsights.map((ins) => (
                                       <div
-                                        key={i}
-                                        className="text-[9px] font-medium text-[#6B7280] text-center pb-0.5"
+                                        key={ins.id}
+                                        className={`min-w-0 flex-1 rounded-[14px] border px-4 py-3.5 shadow-sm ${
+                                          ins.tone === "positive"
+                                            ? "bg-[#F0F9FF] border-sky-100/90"
+                                            : ins.tone === "negative"
+                                              ? "bg-[#FFF5F5] border-red-100/80"
+                                              : "bg-[#F8FAFC] border-[#E5E7EB]"
+                                        }`}
                                       >
-                                        {day}
+                                        <p
+                                          className={`text-[14px] font-semibold leading-snug tracking-[-0.01em] ${
+                                            ins.tone === "positive"
+                                              ? "text-[#0C4A6E]"
+                                              : ins.tone === "negative"
+                                                ? "text-[#7F1D1D]"
+                                                : "text-[#111827]"
+                                          }`}
+                                        >
+                                          {ins.headline}
+                                        </p>
+                                        <p className="text-[12px] text-[#6B7280] mt-1.5 leading-snug">
+                                          {ins.description}
+                                        </p>
                                       </div>
-                                    ),
-                                  )}
-
-                                  {heatmapData.map((day, i) => {
-                                    const todayDateNum = new Date().getDate();
-                                    const isToday = i + 1 === todayDateNum;
-                                    const mins = Math.floor(
-                                      day.totalFocusSeconds / 60,
-                                    );
-                                    const hint = day.date
-                                      ? `${day.date} · ${mins} min · ${day.focusIntegrity.toFixed(0)}%`
-                                      : `${mins} min`;
-
-                                    return (
-                                      <div
-                                        key={i}
-                                        title={hint}
-                                        className={`group relative aspect-square ${getHeatmapClass(day.symbol || "⬜", isToday)} flex items-center justify-center overflow-hidden cursor-default`}
-                                      >
-                                        <span className="text-[9px] leading-none opacity-85 z-10 pointer-events-none">
-                                          {day.symbol || "⬜"}
-                                        </span>
-                                        {day.date && (
-                                          <div className="absolute bottom-full left-1/2 z-[300] mb-1.5 w-[9.5rem] -translate-x-1/2 rounded-lg border border-[#E5E7EB] bg-white p-2.5 text-[10px] text-[#6B7280] opacity-0 shadow-sm transition-opacity duration-100 pointer-events-none group-hover:opacity-100">
-                                            <div className="font-medium border-b border-[#E5E7EB] pb-1.5 mb-1.5 text-[#111827] text-[10px]">
-                                              {day.date}
-                                            </div>
-                                            <div className="flex justify-between gap-2 text-[#6B7280]">
-                                              <span>Minutes</span>
-                                              <span className="text-[#111827] tabular-nums font-medium">
-                                                {mins}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
-                                              <span>Tasks</span>
-                                              <span className="text-[#111827] tabular-nums font-medium">
-                                                {day.tasksCompleted}
-                                              </span>
-                                            </div>
-                                            <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
-                                              <span>Integrity</span>
-                                              <span className="text-[#111827] tabular-nums font-medium">
-                                                {day.focusIntegrity.toFixed(0)}%
-                                              </span>
-                                            </div>
-                                            <div className="mt-1.5 flex justify-between border-t border-[#E5E7EB] pt-1.5 text-[#6366F1] text-[10px]">
-                                              <span>Grade</span>
-                                              <span>{day.symbol}</span>
-                                            </div>
-                                          </div>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                                    ))}
+                                  </div>
+                                )}
                               </section>
 
-                              <section className="rounded-lg border border-[#E5E7EB] bg-white p-3 sm:p-3.5">
-                                <h2 className="text-[15px] font-semibold text-[#111827] mb-2.5 pb-2 border-b border-[#E5E7EB] tracking-tight">
+                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-3 sm:p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:col-span-1">
+                                <h2 className="text-[15px] font-semibold text-[#111827] mb-2.5 pb-2 border-b border-[#E5E7EB] tracking-[-0.01em]">
                                   Performance
                                 </h2>
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-2.5">
+                                <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
                                   {stats.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-lg border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-2.5 transition-all duration-150 hover:bg-white sm:px-3 sm:py-3"
+                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-2.5 transition-all duration-150 hover:bg-white sm:px-3 sm:py-3"
                                     >
                                       <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6B7280] leading-snug line-clamp-2">
                                         {stat.label}
@@ -7417,6 +7742,82 @@ export default function App() {
                                 </div>
                               </section>
                             </div>
+
+                            <section className="rounded-2xl border border-[#E5E7EB] bg-white p-3 sm:p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+                              <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-[#E5E7EB]">
+                                <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
+                                  Discipline
+                                </h2>
+                                <span className="text-[10px] font-medium text-[#6B7280] tabular-nums">
+                                  {getCurrentMonthName()}
+                                </span>
+                              </div>
+
+                              <div className="grid grid-cols-7 gap-1.5 sm:gap-2">
+                                {["M", "T", "W", "T", "F", "S", "S"].map(
+                                  (day, i) => (
+                                    <div
+                                      key={i}
+                                      className="text-[9px] font-medium text-[#6B7280] text-center pb-0.5"
+                                    >
+                                      {day}
+                                    </div>
+                                  ),
+                                )}
+
+                                {heatmapData.map((day, i) => {
+                                  const todayDateNum = new Date().getDate();
+                                  const isToday = i + 1 === todayDateNum;
+                                  const mins = Math.floor(
+                                    day.totalFocusSeconds / 60,
+                                  );
+                                  const hint = day.date
+                                    ? `${day.date} · ${mins} min · ${day.focusIntegrity.toFixed(0)}%`
+                                    : `${mins} min`;
+
+                                  return (
+                                    <div
+                                      key={i}
+                                      title={hint}
+                                      className={`group relative aspect-square ${getHeatmapClass(day.symbol || "⬜", isToday)} flex items-center justify-center overflow-hidden cursor-default`}
+                                    >
+                                      <span className="text-[9px] leading-none opacity-85 z-10 pointer-events-none">
+                                        {day.symbol || "⬜"}
+                                      </span>
+                                      {day.date && (
+                                        <div className="absolute bottom-full left-1/2 z-[300] mb-1.5 w-[9.5rem] -translate-x-1/2 rounded-lg border border-[#E5E7EB] bg-white p-2.5 text-[10px] text-[#6B7280] opacity-0 shadow-sm transition-opacity duration-100 pointer-events-none group-hover:opacity-100">
+                                          <div className="font-medium border-b border-[#E5E7EB] pb-1.5 mb-1.5 text-[#111827] text-[10px]">
+                                            {day.date}
+                                          </div>
+                                          <div className="flex justify-between gap-2 text-[#6B7280]">
+                                            <span>Minutes</span>
+                                            <span className="text-[#111827] tabular-nums font-medium">
+                                              {mins}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
+                                            <span>Tasks</span>
+                                            <span className="text-[#111827] tabular-nums font-medium">
+                                              {day.tasksCompleted}
+                                            </span>
+                                          </div>
+                                          <div className="flex justify-between gap-2 text-[#6B7280] mt-1">
+                                            <span>Integrity</span>
+                                            <span className="text-[#111827] tabular-nums font-medium">
+                                              {day.focusIntegrity.toFixed(0)}%
+                                            </span>
+                                          </div>
+                                          <div className="mt-1.5 flex justify-between border-t border-[#E5E7EB] pt-1.5 text-[#0EA5E9] text-[10px]">
+                                            <span>Grade</span>
+                                            <span>{day.symbol}</span>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </section>
                           </div>
                         </div>
                       </div>
