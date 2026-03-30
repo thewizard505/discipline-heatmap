@@ -1500,6 +1500,36 @@ function TasksDueUpcomingSchedule({
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
+/** Parse labels from `toLocaleDateString` (e.g. "Mar 29") for analytics range filtering. */
+function parseHistoryPointDateLabel(label: string, ref: Date): Date | null {
+  if (label === "N/A") return null;
+  const y = ref.getFullYear();
+  let d = new Date(`${label} ${y}`);
+  if (Number.isNaN(d.getTime())) return null;
+  if (d.getTime() > ref.getTime() + 864e5 * 3) {
+    d = new Date(`${label} ${y - 1}`);
+  }
+  return d;
+}
+
+function filterHistoryPointsByRange(
+  points: HistoryPoint[],
+  rangeDays: number,
+  ref: Date = new Date(),
+): HistoryPoint[] {
+  const cutoff = new Date(ref);
+  cutoff.setHours(0, 0, 0, 0);
+  cutoff.setDate(cutoff.getDate() - (rangeDays - 1));
+  const withDates = points
+    .map((p) => ({ p, dt: parseHistoryPointDateLabel(p.date, ref) }))
+    .filter((x): x is { p: HistoryPoint; dt: Date } => x.dt != null);
+  const kept = withDates.filter(
+    (x) => x.dt.getTime() >= cutoff.getTime(),
+  );
+  kept.sort((a, b) => a.dt.getTime() - b.dt.getTime());
+  return kept.map((x) => x.p);
+}
+
 /** Logged when a focus session ends (reflection or quit) for analytics insights. */
 type FocusSessionRecord = {
   id: string;
@@ -2425,6 +2455,11 @@ export default function App() {
   const [analyticsTaskPickerOpen, setAnalyticsTaskPickerOpen] =
     useState(false);
   const analyticsTaskPickerRef = useRef<HTMLDivElement>(null);
+  const [analyticsRange, setAnalyticsRange] = useState<
+    "7d" | "14d" | "30d"
+  >("7d");
+  const [analyticsRangeOpen, setAnalyticsRangeOpen] = useState(false);
+  const analyticsRangeRef = useRef<HTMLDivElement>(null);
 
   const [taskViewTab, setTaskViewTab] = useState<"list" | "board" | "calendar">("list");
   const [taskSearchQuery, setTaskSearchQuery] = useState("");
@@ -4105,6 +4140,22 @@ export default function App() {
   }, [activeView]);
 
   useEffect(() => {
+    if (!analyticsRangeOpen) return;
+    const handlePointerDown = (e: MouseEvent) => {
+      const el = analyticsRangeRef.current;
+      if (el && !el.contains(e.target as Node)) {
+        setAnalyticsRangeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => document.removeEventListener("mousedown", handlePointerDown);
+  }, [analyticsRangeOpen]);
+
+  useEffect(() => {
+    if (activeView !== "analytics") setAnalyticsRangeOpen(false);
+  }, [activeView]);
+
+  useEffect(() => {
     if (!categoryDropdownOpen) return;
     const h = (e: MouseEvent) => {
       if (categoryDropdownRef.current && !categoryDropdownRef.current.contains(e.target as Node)) setCategoryDropdownOpen(false);
@@ -5396,18 +5447,29 @@ export default function App() {
   /* ------------------- GRAPH ENGINE ------------------- */
   const currentData = useMemo(() => {
     if (isSimulation) return heroGraphData;
+    const rangeDays =
+      analyticsRange === "7d" ? 7 : analyticsRange === "14d" ? 14 : 30;
+    const ref = new Date();
     if (selectedStat === "Speed") {
       const nk = normalizeTaskKey(selectedTaskGraph);
-      const data =
+      const raw =
         taskHistory[nk] ||
-        (selectedTaskGraph ? taskHistory[selectedTaskGraph] : undefined);
-      return data && data.length > 0 ? data : [{ value: 0, date: "N/A" }];
+        (selectedTaskGraph ? taskHistory[selectedTaskGraph] : undefined) ||
+        [];
+      const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
+      return filtered.length > 0 ? filtered : [{ value: 0, date: "N/A" }];
     }
-    const integrityData = history["Focus Integrity"] || [];
-    return integrityData.length > 0
-      ? integrityData
-      : [{ value: 0, date: "N/A" }];
-  }, [selectedStat, history, taskHistory, selectedTaskGraph, isSimulation]);
+    const raw = history["Focus Integrity"] || [];
+    const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
+    return filtered.length > 0 ? filtered : [{ value: 0, date: "N/A" }];
+  }, [
+    selectedStat,
+    history,
+    taskHistory,
+    selectedTaskGraph,
+    isSimulation,
+    analyticsRange,
+  ]);
 
   /** Adaptive domain so lines aren’t crushed at top/bottom (Integrity % or Speed seconds). */
   const graphScale = useMemo(() => {
@@ -5580,6 +5642,23 @@ export default function App() {
       const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
       const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
       d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2[0]} ${p2[1]}`;
+    }
+    const last = pts[pts.length - 1];
+    d += ` L ${last[0]} 100 L ${pts[0][0]} 100 Z`;
+    return d;
+  }
+
+  /** Linear area path — no spline overshoot / “humps” above the line. */
+  function buildAnalyticsLinearAreaD(data: HistoryPoint[]) {
+    const pts = getAnalyticsChartPoints(data);
+    if (pts.length === 0) return "";
+    if (pts.length === 1) {
+      const p = pts[0];
+      return `M 0 100 L 0 ${p[1]} L 100 ${p[1]} L 100 100 Z`;
+    }
+    let d = `M ${pts[0][0]} 100 L ${pts[0][0]} ${pts[0][1]}`;
+    for (let i = 1; i < pts.length; i++) {
+      d += ` L ${pts[i][0]} ${pts[i][1]}`;
     }
     const last = pts[pts.length - 1];
     d += ` L ${last[0]} 100 L ${pts[0][0]} 100 Z`;
@@ -7354,28 +7433,70 @@ export default function App() {
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                <span
-                                  className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3.5 py-2 text-[12px] font-medium text-[#6B7280] tabular-nums shadow-sm"
-                                  role="status"
+                                <div
+                                  ref={analyticsRangeRef}
+                                  className="relative z-[402]"
                                 >
-                                  <span
-                                    className="h-1.5 w-1.5 rounded-full bg-[#00AEEF]"
-                                    aria-hidden
-                                  />
-                                  Last 7 days
-                                  <svg
-                                    className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    aria-hidden
+                                  <button
+                                    type="button"
+                                    aria-expanded={analyticsRangeOpen}
+                                    aria-haspopup="listbox"
+                                    onClick={() =>
+                                      setAnalyticsRangeOpen((o) => !o)
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] shadow-sm outline-none transition-colors hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-[#6366F1]/25"
                                   >
-                                    <path d="M6 9l6 6 6-6" />
-                                  </svg>
-                                </span>
+                                    {analyticsRange === "7d"
+                                      ? "Last 7 days"
+                                      : analyticsRange === "14d"
+                                        ? "Last 14 days"
+                                        : "Last month"}
+                                    <svg
+                                      className={`h-4 w-4 text-[#9CA3AF] shrink-0 transition-transform duration-150 ${analyticsRangeOpen ? "rotate-180" : ""}`}
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      aria-hidden
+                                    >
+                                      <path d="M6 9l6 6 6-6" />
+                                    </svg>
+                                  </button>
+                                  {analyticsRangeOpen && (
+                                    <div
+                                      className="absolute right-0 top-full z-[403] mt-1.5 min-w-[11.5rem] overflow-hidden rounded-lg border border-[#E5E7EB] bg-white py-1 shadow-[0_8px_24px_rgba(15,23,42,0.1)]"
+                                      role="listbox"
+                                    >
+                                      {(
+                                        [
+                                          ["7d", "Last 7 days"],
+                                          ["14d", "Last 14 days"],
+                                          ["30d", "Last month"],
+                                        ] as const
+                                      ).map(([val, label]) => (
+                                        <button
+                                          key={val}
+                                          type="button"
+                                          role="option"
+                                          aria-selected={analyticsRange === val}
+                                          onClick={() => {
+                                            setAnalyticsRange(val);
+                                            setAnalyticsRangeOpen(false);
+                                          }}
+                                          className={`flex w-full items-center px-3 py-2 text-left text-[13px] font-medium transition-colors ${
+                                            analyticsRange === val
+                                              ? "bg-[#F5F3FF] text-[#4338CA]"
+                                              : "text-[#374151] hover:bg-[#F9FAFB]"
+                                          }`}
+                                        >
+                                          {label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
                               </div>
                             </header>
 
@@ -7411,7 +7532,7 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#00AEEF] focus-visible:ring-2 focus-visible:ring-[#00AEEF]/20"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-colors duration-150 hover:border-[#D1D5DB] focus-visible:border-[#6366F1] focus-visible:ring-2 focus-visible:ring-[#6366F1]/20"
                                         >
                                           <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
@@ -7453,7 +7574,7 @@ export default function App() {
                                                 }}
                                                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
-                                                    ? "bg-[#E6F7FD] text-[#111827]"
+                                                    ? "bg-[#EEF2FF] text-[#111827]"
                                                     : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                 }`}
                                               >
@@ -7506,7 +7627,7 @@ export default function App() {
                                                       }}
                                                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                         isSel
-                                                          ? "bg-[#E6F7FD] text-[#111827]"
+                                                          ? "bg-[#EEF2FF] text-[#111827]"
                                                           : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                       }`}
                                                     >
@@ -7537,7 +7658,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-[#F3F4F6] p-1 gap-1">
+                                    <div className="inline-flex h-9 shrink-0 rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-1">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -7551,10 +7672,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`rounded-lg px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
+                                            className={`flex min-w-[5.5rem] items-center justify-center rounded-lg px-3 py-1.5 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
                                               selectedStat === type
-                                                ? "bg-[#00AEEF] text-white shadow-sm"
-                                                : "border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827]"
+                                                ? "bg-[#6366F1] text-white"
+                                                : "bg-white text-[#111827] shadow-sm"
                                             }`}
                                           >
                                             {type}
@@ -7584,7 +7705,7 @@ export default function App() {
                                     {analyticsChartHover !== null &&
                                       currentData[analyticsChartHover] && (
                                         <div
-                                          className="pointer-events-none absolute z-30 rounded-lg border border-[#E5E7EB] bg-white px-2.5 py-1.5 text-[10px] shadow-sm"
+                                          className="pointer-events-none absolute z-30 rounded-lg border border-[#E5E7EB] bg-white px-3 py-2 text-[12px] shadow-[0_4px_14px_rgba(15,23,42,0.08)]"
                                           style={{
                                             left: `${
                                               (analyticsChartHover /
@@ -7594,17 +7715,17 @@ export default function App() {
                                                 )) *
                                               100
                                             }%`,
-                                            top: 6,
+                                            top: 8,
                                             transform: "translateX(-50%)",
                                           }}
                                         >
-                                          <div className="font-medium text-[#111827]">
+                                          <div className="font-medium text-[#111827] leading-tight">
                                             {
                                               currentData[analyticsChartHover]
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-[#00AEEF] mt-0.5 font-semibold">
+                                          <div className="tabular-nums text-[#6366F1] mt-1 text-[13px] font-semibold leading-tight">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -7652,8 +7773,8 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#00AEEF"
-                                            stopOpacity="0.22"
+                                            stopColor="#6366F1"
+                                            stopOpacity="0.18"
                                           />
                                           <stop
                                             offset="100%"
@@ -7676,24 +7797,24 @@ export default function App() {
                                         />
                                       ))}
                                       <path
-                                        d={buildAnalyticsSmoothAreaD(
+                                        d={buildAnalyticsLinearAreaD(
                                           currentData,
                                         )}
                                         fill="url(#analyticsAreaFillGrad)"
                                         stroke="none"
-                                        className="transition-all duration-700 ease-out"
+                                        className="transition-[d] duration-300 ease-out"
                                       />
                                       <path
-                                        d={buildAnalyticsSmoothLineD(
+                                        d={generateAnalyticsLinePath(
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#00AEEF"
-                                        strokeWidth="0.62"
+                                        stroke="#6366F1"
+                                        strokeWidth="0.55"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                         vectorEffect="non-scaling-stroke"
-                                        className="transition-all duration-700 ease-out"
+                                        className="transition-[d] duration-300 ease-out"
                                       />
                                       {getAnalyticsChartPoints(
                                         currentData,
@@ -7709,8 +7830,8 @@ export default function App() {
                                           }
                                           fill={
                                             analyticsChartHover === i
-                                              ? "#33C7F7"
-                                              : "#00AEEF"
+                                              ? "#818CF8"
+                                              : "#6366F1"
                                           }
                                           stroke="#ffffff"
                                           strokeWidth="0.22"
@@ -7736,21 +7857,21 @@ export default function App() {
                             </section>
 
                             <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6 pt-0.5">
-                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-2">
-                                <div className="mb-5 border-b border-[#E5E7EB] pb-4">
+                              <div className="lg:col-span-2 min-w-0">
+                                <div className="mb-5">
                                   <h2 className="text-[15px] font-bold text-[#111827] tracking-tight">
                                     Insights
                                   </h2>
-                                  <p className="text-[13px] text-[#6B7280] mt-1 font-normal">
+                                  <p className="text-[13px] text-[#6B7280] mt-1 leading-snug">
                                     Patterns based on your focus data
                                   </p>
                                 </div>
                                 {focusInsights.length === 0 ? (
-                                  <div className="py-14 sm:py-16 text-center px-4">
-                                    <p className="text-[15px] font-semibold text-[#4B5563]">
+                                  <div className="py-10 sm:py-12 max-w-lg">
+                                    <p className="text-[15px] font-semibold text-[#374151]">
                                       Not enough data yet
                                     </p>
-                                    <p className="text-[13px] text-[#9CA3AF] mt-2 max-w-md mx-auto leading-relaxed font-normal">
+                                    <p className="text-[13px] text-[#9CA3AF] mt-2 leading-relaxed">
                                       Complete a few focus sessions to unlock
                                       insights
                                     </p>
@@ -7781,7 +7902,7 @@ export default function App() {
                                     })}
                                   </div>
                                 )}
-                              </section>
+                              </div>
 
                               <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-1">
                                 <h2 className="text-[15px] font-bold text-[#111827] mb-4 pb-3 border-b border-[#E5E7EB] tracking-tight">
