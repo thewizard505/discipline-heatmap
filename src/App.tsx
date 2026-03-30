@@ -1575,6 +1575,40 @@ function filterHistoryPointsByRange(
   return kept.map((x) => x.p);
 }
 
+function sortHistoryPointsByDate(
+  points: HistoryPoint[],
+  ref: Date,
+): HistoryPoint[] {
+  return [...points].sort((a, b) => {
+    const da = parseHistoryPointDateLabel(a.date, ref)?.getTime() ?? 0;
+    const db = parseHistoryPointDateLabel(b.date, ref)?.getTime() ?? 0;
+    return da - db;
+  });
+}
+
+/** If the date window removes everything (e.g. legacy dates), still show recent sessions. */
+function filterHistoryPointsByRangeWithFallback(
+  points: HistoryPoint[],
+  rangeDays: number,
+  ref: Date,
+): HistoryPoint[] {
+  const filtered = filterHistoryPointsByRange(points, rangeDays, ref);
+  if (filtered.length > 0) return filtered;
+  if (points.length === 0) return [];
+  const sorted = sortHistoryPointsByDate(points, ref);
+  return sorted.slice(-Math.min(60, sorted.length));
+}
+
+function mergeAllTaskSpeedPoints(
+  th: Record<string, HistoryPoint[]>,
+): HistoryPoint[] {
+  const all: HistoryPoint[] = [];
+  for (const pts of Object.values(th)) {
+    if (Array.isArray(pts)) all.push(...pts);
+  }
+  return all;
+}
+
 /** Logged when a focus session ends (reflection or quit) for analytics insights. */
 type FocusSessionRecord = {
   id: string;
@@ -1594,6 +1628,7 @@ type FocusInsight = {
 };
 
 const FOCUS_SESSION_LOG_KEY = "tunnelvision_focus_session_log_v1";
+const TASK_INTEGRITY_HISTORY_KEY = "tunnelvision_task_integrity_history";
 
 function toLocalDateIso(d: Date): string {
   const y = d.getFullYear();
@@ -1918,6 +1953,21 @@ function mergeTaskHistoryByNormalizedKeys(
     out[nk].sort((a, b) => a.date.localeCompare(b.date));
   }
   return out;
+}
+
+/** Resolve task key for analytics series (normalized storage + legacy key variants). */
+function getTaskSeriesPoints(
+  taskKey: string,
+  series: Record<string, HistoryPoint[]>,
+): HistoryPoint[] {
+  const nk = normalizeTaskKey(taskKey);
+  if (!nk) return [];
+  const direct = series[nk];
+  if (direct && direct.length) return direct;
+  for (const [k, pts] of Object.entries(series)) {
+    if (normalizeTaskKey(k) === nk && pts.length) return pts;
+  }
+  return [];
 }
 
 /** Unified log for Completed view (list check-offs + focus session completes) */
@@ -2493,6 +2543,10 @@ export default function App() {
   const [taskHistory, setTaskHistory] = useState<{
     [task: string]: HistoryPoint[];
   }>({});
+  /** Per-task focus integrity points (syncs with Speed task keys). */
+  const [taskIntegrityHistory, setTaskIntegrityHistory] = useState<
+    Record<string, HistoryPoint[]>
+  >({});
   const [selectedTaskGraph, setSelectedTaskGraph] = useState<string>("");
   const [analyticsChartHover, setAnalyticsChartHover] = useState<
     number | null
@@ -4049,13 +4103,23 @@ export default function App() {
       }
     }
 
+    let mergedTaskH: Record<string, HistoryPoint[]> = {};
     if (savedTaskHistory) {
       const parsed = JSON.parse(savedTaskHistory);
-      const merged = mergeTaskHistoryByNormalizedKeys(parsed);
-      setTaskHistory(merged);
-      const taskKeys = Object.keys(merged);
-      if (taskKeys.length > 0 && !selectedTaskGraph) {
-        setSelectedTaskGraph(taskKeys[taskKeys.length - 1]);
+      mergedTaskH = mergeTaskHistoryByNormalizedKeys(parsed);
+      setTaskHistory(mergedTaskH);
+    }
+
+    const savedTaskIntegrity = localStorage.getItem(TASK_INTEGRITY_HISTORY_KEY);
+    let mergedTi: Record<string, HistoryPoint[]> = {};
+    if (savedTaskIntegrity) {
+      try {
+        mergedTi = mergeTaskHistoryByNormalizedKeys(
+          JSON.parse(savedTaskIntegrity) as Record<string, HistoryPoint[]>,
+        );
+        setTaskIntegrityHistory(mergedTi);
+      } catch {
+        setTaskIntegrityHistory({});
       }
     }
 
@@ -4131,6 +4195,10 @@ export default function App() {
         JSON.stringify(taskHistory),
       );
       localStorage.setItem(
+        TASK_INTEGRITY_HISTORY_KEY,
+        JSON.stringify(taskIntegrityHistory),
+      );
+      localStorage.setItem(
         "tunnelvision_discipline_heatmap",
         JSON.stringify(heatmapData),
       );
@@ -4158,6 +4226,7 @@ export default function App() {
   }, [
     history,
     taskHistory,
+    taskIntegrityHistory,
     streak,
     focusSessionRecords,
     isSimulation,
@@ -4305,6 +4374,8 @@ export default function App() {
   /** Log current focus integrity when leaving a session early (no task time stored). */
   const logIntegrityOnFocusQuit = () => {
     if (isSimulation) return;
+    const now = new Date();
+    const dateIso = toLocalDateIso(now);
     const todayStr = getTodayStr();
     const v = Math.round(Math.max(0, Math.min(100, integrityScoreNum)));
     setBestFocusIntegrity((prev) => Math.max(prev, v));
@@ -4312,9 +4383,27 @@ export default function App() {
       ...prev,
       "Focus Integrity": [
         ...(prev["Focus Integrity"] || []),
-        { value: v, date: toLocalDateIso(now) },
+        { value: v, date: dateIso },
       ],
     }));
+    if (focusSessionEntries.length > 0) {
+      setTaskIntegrityHistory((prev) => {
+        const next = { ...prev };
+        for (const e of focusSessionEntries) {
+          const list = tasksByListId[e.listId] ?? [];
+          const task = list.find((t) => t.id === e.taskId && !t.removing);
+          if (!task) continue;
+          const preserveSource = FOCUS_SESSION_PRESERVE_SOURCE_LIST_IDS.has(
+            e.listId,
+          );
+          const sessionLabel = getFocusSessionDisplayLabel(e.listId, task.text);
+          const analyticsName = preserveSource ? sessionLabel : task.text;
+          const taskKey = normalizeTaskKey(analyticsName);
+          next[taskKey] = [...(next[taskKey] || []), { value: v, date: dateIso }];
+        }
+        return next;
+      });
+    }
     setHeatmapData((prev) => {
       const idx = prev.findIndex((d) => d.date === todayStr);
       if (idx === -1) return prev;
@@ -4334,7 +4423,6 @@ export default function App() {
       0,
       Math.floor(initialSecondsRef.current - secondsRef.current),
     );
-    const now = new Date();
     setFocusSessionRecords((prev) => [
       ...prev,
       {
@@ -4862,6 +4950,7 @@ export default function App() {
     localStorage.clear();
     setHistory({});
     setTaskHistory({});
+    setTaskIntegrityHistory({});
     setCompletedActivityLog([]);
     setHeatmapData([]);
     setTodayTotalFocusMinutes(0);
@@ -5375,6 +5464,9 @@ export default function App() {
       setFloatingTime({ text: `${durationSecs}s`, id: Date.now() });
       setTimeout(() => setFloatingTime(null), 1500);
       const mins = Math.round(durationSecs / 60);
+      const integritySnap = Math.round(
+        Math.max(0, Math.min(100, integrityScoreNum)),
+      );
       setTaskHistory((prev) => ({
         ...prev,
         [taskKey]: [
@@ -5382,10 +5474,15 @@ export default function App() {
           { value: durationSecs, date: sessionDateIso },
         ],
       }));
+      setTaskIntegrityHistory((prev) => ({
+        ...prev,
+        [taskKey]: [
+          ...(prev[taskKey] || []),
+          { value: integritySnap, date: sessionDateIso },
+        ],
+      }));
       appendCompletedActivity(analyticsName, mins, listId, listLabel);
-      setBestFocusIntegrity((prev) =>
-        Math.max(prev, Math.min(100, Math.round(integrityScoreNum))),
-      );
+      setBestFocusIntegrity((prev) => Math.max(prev, integritySnap));
       setSelectedTaskGraph(taskKey);
       setSelectedStat("Speed");
     } else {
@@ -5496,6 +5593,14 @@ export default function App() {
   }
 
   /* ------------------- GRAPH ENGINE ------------------- */
+  const analyticsGraphTaskKeys = useMemo(() => {
+    const u = new Set([
+      ...Object.keys(taskHistory),
+      ...Object.keys(taskIntegrityHistory),
+    ]);
+    return [...u].sort((a, b) => a.localeCompare(b));
+  }, [taskHistory, taskIntegrityHistory]);
+
   const currentData = useMemo(() => {
     if (isSimulation) return heroGraphData;
     const rangeDays =
@@ -5506,22 +5611,39 @@ export default function App() {
         value: p.value,
         date: formatHistoryDateForDisplay(p.date),
       }));
+
     if (selectedStat === "Speed") {
-      const nk = normalizeTaskKey(selectedTaskGraph);
-      const raw =
-        taskHistory[nk] ||
-        (selectedTaskGraph ? taskHistory[selectedTaskGraph] : undefined) ||
-        [];
-      const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
-      return filtered.length > 0 ? mapChart(filtered) : [{ value: 0, date: "N/A" }];
+      const rawAll = selectedTaskGraph
+        ? getTaskSeriesPoints(selectedTaskGraph, taskHistory)
+        : mergeAllTaskSpeedPoints(taskHistory);
+      const sorted = sortHistoryPointsByDate(rawAll, ref);
+      const filtered = filterHistoryPointsByRangeWithFallback(
+        sorted,
+        rangeDays,
+        ref,
+      );
+      return filtered.length > 0
+        ? mapChart(filtered)
+        : [{ value: 0, date: "N/A" }];
     }
-    const raw = history["Focus Integrity"] || [];
-    const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
-    return filtered.length > 0 ? mapChart(filtered) : [{ value: 0, date: "N/A" }];
+
+    const rawInt = selectedTaskGraph
+      ? getTaskSeriesPoints(selectedTaskGraph, taskIntegrityHistory)
+      : history["Focus Integrity"] || [];
+    const sortedInt = sortHistoryPointsByDate(rawInt, ref);
+    const filteredInt = filterHistoryPointsByRangeWithFallback(
+      sortedInt,
+      rangeDays,
+      ref,
+    );
+    return filteredInt.length > 0
+      ? mapChart(filteredInt)
+      : [{ value: 0, date: "N/A" }];
   }, [
     selectedStat,
     history,
     taskHistory,
+    taskIntegrityHistory,
     selectedTaskGraph,
     isSimulation,
     analyticsRange,
@@ -7466,62 +7588,7 @@ export default function App() {
                           <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12 space-y-6">
                             <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                               <div>
-                                <h1 className="text-[1.75rem] sm:text-[2rem] font-bold text-[#111827] tracking-[-0.035em] flex items-center gap-3">
-                                  <span
-                                    className="text-[#6366F1] shrink-0"
-                                    aria-hidden
-                                  >
-                                    <svg
-                                      className="w-8 h-8 sm:w-9 sm:h-9"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                    >
-                                      <path
-                                        d="M4 19h16"
-                                        stroke="currentColor"
-                                        strokeWidth="1.5"
-                                        strokeLinecap="round"
-                                        opacity={0.35}
-                                      />
-                                      <rect
-                                        x="5"
-                                        y="13"
-                                        width="3.5"
-                                        height="6"
-                                        rx="1"
-                                        fill="currentColor"
-                                        opacity={0.2}
-                                      />
-                                      <rect
-                                        x="10.25"
-                                        y="9"
-                                        width="3.5"
-                                        height="10"
-                                        rx="1"
-                                        fill="currentColor"
-                                        opacity={0.45}
-                                      />
-                                      <rect
-                                        x="15.5"
-                                        y="5"
-                                        width="3.5"
-                                        height="14"
-                                        rx="1"
-                                        fill="currentColor"
-                                        opacity={0.85}
-                                      />
-                                      <path
-                                        d="M5 11l4-3 4 3.5 6-5"
-                                        stroke="currentColor"
-                                        strokeWidth="1.65"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        fill="none"
-                                        opacity={0.9}
-                                      />
-                                    </svg>
-                                  </span>
+                                <h1 className="text-[1.35rem] sm:text-[1.45rem] font-semibold text-[#202020] tracking-[-0.02em] font-[family-name:Inter,system-ui,-apple-system,sans-serif]">
                                   Analytics
                                 </h1>
                                 <p className="text-[15px] text-[#6B7280] mt-2 max-w-xl leading-relaxed font-normal">
@@ -7540,7 +7607,7 @@ export default function App() {
                                     onClick={() =>
                                       setAnalyticsRangeOpen((o) => !o)
                                     }
-                                    className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] shadow-sm outline-none transition-colors hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-[#6366F1]/25"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] shadow-sm outline-none transition-colors hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/25"
                                   >
                                     {analyticsRange === "7d"
                                       ? "Last 7 days"
@@ -7583,7 +7650,7 @@ export default function App() {
                                           }}
                                           className={`flex w-full items-center px-3 py-2 text-left text-[13px] font-medium transition-colors ${
                                             analyticsRange === val
-                                              ? "bg-[#F5F3FF] text-[#4338CA]"
+                                              ? "bg-[#E0F2FE] text-[#0369A1]"
                                               : "text-[#374151] hover:bg-[#F9FAFB]"
                                           }`}
                                         >
@@ -7607,14 +7674,15 @@ export default function App() {
                                     </h2>
                                     <p className="text-[15px] text-[#6B7280] mt-1.5 leading-snug font-normal">
                                       {selectedStat === "Integrity"
-                                        ? "Consistency over time"
+                                        ? selectedTaskGraph
+                                          ? `${formatTaskTitleForGraph(normalizeTaskKey(selectedTaskGraph))} · Focus integrity per session`
+                                          : "Consistency over time · all focus sessions"
                                         : selectedTaskGraph
                                           ? `${formatTaskTitleForGraph(normalizeTaskKey(selectedTaskGraph))} · Completion time per session`
-                                          : "Completion time per session"}
+                                          : "All tasks · completion time per session"}
                                     </p>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2.5">
-                                    {selectedStat === "Speed" && (
                                       <div
                                         ref={analyticsTaskPickerRef}
                                         className="relative z-[400] min-w-[12rem] max-w-[min(18rem,92vw)]"
@@ -7628,7 +7696,7 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-colors duration-150 hover:border-[#D1D5DB] focus-visible:border-[#6366F1] focus-visible:ring-2 focus-visible:ring-[#6366F1]/20"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-colors duration-150 hover:border-[#D1D5DB] focus-visible:border-[#0EA5E9] focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/20"
                                         >
                                           <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
@@ -7637,7 +7705,7 @@ export default function App() {
                                                     selectedTaskGraph,
                                                   ),
                                                 )
-                                              : "Select task"}
+                                              : "All tasks"}
                                           </span>
                                           <svg
                                             className={`h-4 w-4 shrink-0 text-[#6B7280] transition-transform duration-200 ${analyticsTaskPickerOpen ? "rotate-180" : ""}`}
@@ -7670,7 +7738,7 @@ export default function App() {
                                                 }}
                                                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
-                                                    ? "bg-[#EEF2FF] text-[#111827]"
+                                                    ? "bg-[#E0F2FE] text-[#111827]"
                                                     : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                 }`}
                                               >
@@ -7695,14 +7763,10 @@ export default function App() {
                                                   </svg>
                                                 </span>
                                                 <span className="min-w-0 flex-1 truncate">
-                                                  Select task
+                                                  All tasks
                                                 </span>
                                               </button>
-                                              {Object.keys(taskHistory)
-                                                .sort((a, b) =>
-                                                  a.localeCompare(b),
-                                                )
-                                                .map((task) => {
+                                              {analyticsGraphTaskKeys.map((task) => {
                                                   const isSel =
                                                     selectedTaskGraph === task;
                                                   return (
@@ -7723,7 +7787,7 @@ export default function App() {
                                                       }}
                                                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                         isSel
-                                                          ? "bg-[#EEF2FF] text-[#111827]"
+                                                          ? "bg-[#E0F2FE] text-[#111827]"
                                                           : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                       }`}
                                                     >
@@ -7753,24 +7817,18 @@ export default function App() {
                                           </div>
                                         )}
                                       </div>
-                                    )}
                                     <div className="inline-flex h-10 shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1 shadow-sm">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
                                             key={type}
                                             type="button"
-                                            onClick={() => {
-                                              setSelectedStat(type);
-                                              if (type === "Integrity") {
-                                                setAnalyticsTaskPickerOpen(
-                                                  false,
-                                                );
-                                              }
-                                            }}
+                                            onClick={() =>
+                                              setSelectedStat(type)
+                                            }
                                             className={`flex min-w-[6rem] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
                                               selectedStat === type
-                                                ? "bg-[#6366F1] text-white"
+                                                ? "bg-[#0EA5E9] text-white"
                                                 : "bg-transparent text-[#374151] hover:bg-[#F9FAFB]"
                                             }`}
                                           >
@@ -7821,7 +7879,7 @@ export default function App() {
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-[#6366F1] mt-1 text-[13px] font-semibold leading-tight">
+                                          <div className="tabular-nums text-[#0EA5E9] mt-1 text-[13px] font-semibold leading-tight">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -7869,7 +7927,7 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#6366F1"
+                                            stopColor="#0EA5E9"
                                             stopOpacity="0.18"
                                           />
                                           <stop
@@ -7933,7 +7991,7 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#6366F1"
+                                        stroke="#0EA5E9"
                                         strokeWidth="0.58"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
@@ -7952,8 +8010,8 @@ export default function App() {
                                             }
                                             fill={
                                               analyticsChartHover === i
-                                                ? "#818CF8"
-                                                : "#6366F1"
+                                                ? "#38BDF8"
+                                                : "#0EA5E9"
                                             }
                                             stroke="#ffffff"
                                             strokeWidth="0.24"
