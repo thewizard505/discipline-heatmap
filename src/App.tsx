@@ -1604,7 +1604,7 @@ function generateFocusInsights(
           id: "weekly-trend-up",
           headline: `You're improving +${Math.abs(rounded)}% this week`,
           description:
-            "Your focus integrity has increased week-on-week.",
+            "Your focus integrity has increased week-over-week.",
           tone: "positive",
         });
       } else if (pct <= -1) {
@@ -1773,6 +1773,44 @@ function generateFocusInsights(
     }
   }
   return ordered;
+}
+
+/** Insight card chrome to match reference (green / rose / indigo tints). */
+function focusInsightCardVisuals(id: string): {
+  wrap: string;
+  title: string;
+  description: string;
+} {
+  switch (id) {
+    case "time-of-day":
+    case "dow-strongest":
+      return {
+        wrap: "bg-[#ECFDF5] border-emerald-100/90",
+        title: "text-[#14532D]",
+        description: "text-[#15803D]/90",
+      };
+    case "weekly-trend-down":
+    case "dow-weakest":
+      return {
+        wrap: "bg-[#FFF1F2] border-rose-100/90",
+        title: "text-[#881337]",
+        description: "text-[#BE123C]/90",
+      };
+    case "weekly-trend-up":
+      return {
+        wrap: "bg-[#EEF2FF] border-indigo-100/90",
+        title: "text-[#1e3a8a]",
+        description: "text-[#4338CA]/90",
+      };
+    case "session-short":
+    case "session-long-afternoon":
+    default:
+      return {
+        wrap: "bg-[#F8FAFC] border-[#E5E7EB]",
+        title: "text-[#111827]",
+        description: "text-[#6B7280]",
+      };
+  }
 }
 
 /** Canonical key for task speed graphs (case-insensitive, trimmed). */
@@ -3887,6 +3925,24 @@ export default function App() {
     [focusSessionRecords, isSimulation],
   );
 
+  /** Performance tiles: 2×2 grid matching reference (Total, Best, Tasks, Avg completion). */
+  const analyticsPerformanceQuad = useMemo(() => {
+    const byLabel = Object.fromEntries(stats.map((s) => [s.label, s])) as Record<
+      string,
+      { label: string; val: string }
+    >;
+    const order = [
+      "TOTAL FOCUS TIME",
+      "BEST INTEGRITY",
+      "ALL-TIME TASKS",
+      "AVG COMPLETION",
+    ] as const;
+    return order.map((label) => ({
+      label,
+      val: byLabel[label]?.val ?? "—",
+    }));
+  }, [stats]);
+
   /* -----------------------------------------------------------
      DATA PERSISTENCE & COMPUTATION
   ----------------------------------------------------------- */
@@ -5404,13 +5460,9 @@ export default function App() {
     }
     const sorted = [...picks].sort((a, b) => a - b);
     const out: { key: string; text: string }[] = [];
-    let prevDate = "";
     for (const i of sorted) {
       const date = d[i].date;
-      const text =
-        date === prevDate ? `${date} (#${i + 1})` : date;
-      out.push({ key: `x-${i}`, text });
-      prevDate = date;
+      out.push({ key: `x-${i}`, text: date });
     }
     return out;
   }, [currentData]);
@@ -7269,18 +7321,18 @@ export default function App() {
                         onCompleteTask={completeTaskFromSchedule}
                       />
                     ) : activeView === "analytics" ? (
-                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA] text-[#111827] [text-rendering:optimizeLegibility] font-[family-name:Inter,system-ui,-apple-system,sans-serif] antialiased">
+                      <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#F9FAFB] text-[#111827] [text-rendering:optimizeLegibility] font-[family-name:Inter,system-ui,-apple-system,sans-serif] antialiased">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-none mx-auto px-3 sm:px-5 lg:px-6 py-5 pb-10 space-y-5">
-                            <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                          <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12 space-y-6">
+                            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                               <div>
-                                <h1 className="text-[22px] sm:text-[23px] font-semibold text-[#111827] tracking-[-0.02em] flex items-center gap-2.5">
+                                <h1 className="text-xl font-bold text-[#111827] tracking-tight flex items-center gap-2.5">
                                   <span
                                     className="text-[#6B7280] shrink-0"
                                     aria-hidden
                                   >
                                     <svg
-                                      className="w-7 h-7 sm:w-[1.65rem] sm:h-[1.65rem]"
+                                      className="w-6 h-6 sm:w-7 sm:h-7"
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -7297,31 +7349,46 @@ export default function App() {
                                   </span>
                                   Analytics
                                 </h1>
-                                <p className="text-[13px] text-[#6B7280] mt-1.5 max-w-lg leading-relaxed font-medium">
+                                <p className="text-sm text-[#6B7280] mt-1 max-w-lg leading-relaxed font-normal">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
                               <div className="shrink-0 flex items-center gap-2">
-                                <span className="inline-flex items-center gap-1.5 rounded-full border border-[#E5E7EB] bg-white px-3 py-1.5 text-[12px] font-medium text-[#6B7280] tabular-nums shadow-sm">
+                                <span
+                                  className="inline-flex items-center gap-2 rounded-full border border-[#E5E7EB] bg-white px-3.5 py-2 text-[12px] font-medium text-[#6B7280] tabular-nums shadow-sm"
+                                  role="status"
+                                >
                                   <span
-                                    className="h-1.5 w-1.5 rounded-full bg-[#0EA5E9]"
+                                    className="h-1.5 w-1.5 rounded-full bg-[#00AEEF]"
                                     aria-hidden
                                   />
                                   Last 7 days
+                                  <svg
+                                    className="h-3.5 w-3.5 text-[#9CA3AF] shrink-0"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    aria-hidden
+                                  >
+                                    <path d="M6 9l6 6 6-6" />
+                                  </svg>
                                 </span>
                               </div>
                             </header>
 
-                            <section className="rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_1px_3px_rgba(15,23,42,0.06)] transition-[background-color] duration-150">
-                              <div className="flex flex-col gap-1.5 p-3 sm:p-4 border-b border-[#E5E7EB]">
-                                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-3">
+                            <section className="rounded-2xl border border-[#E5E7EB] bg-white shadow-sm transition-[background-color] duration-150">
+                              <div className="flex flex-col gap-1 p-5 sm:p-6 border-b border-[#E5E7EB]">
+                                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                                   <div className="min-w-0">
-                                    <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
+                                    <h2 className="text-[15px] font-bold text-[#111827] tracking-tight">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
                                         : "Task Speed"}
                                     </h2>
-                                    <p className="text-[13px] text-[#6B7280] mt-0.5 leading-snug font-medium">
+                                    <p className="text-[13px] text-[#6B7280] mt-1 leading-snug font-normal">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
                                         : selectedTaskGraph
@@ -7344,7 +7411,7 @@ export default function App() {
                                               (o) => !o,
                                             )
                                           }
-                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#0EA5E9] focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/20"
+                                          className="flex h-9 w-full cursor-pointer items-center justify-between gap-2.5 rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-1.5 text-left text-[13px] font-semibold text-[#111827] outline-none ring-0 transition-all duration-100 hover:border-[#D1D5DB] focus-visible:border-[#00AEEF] focus-visible:ring-2 focus-visible:ring-[#00AEEF]/20"
                                         >
                                           <span className="min-w-0 flex-1 truncate tracking-tight">
                                             {selectedTaskGraph
@@ -7386,7 +7453,7 @@ export default function App() {
                                                 }}
                                                 className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                   selectedTaskGraph === ""
-                                                    ? "bg-sky-50 text-[#111827]"
+                                                    ? "bg-[#E6F7FD] text-[#111827]"
                                                     : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                 }`}
                                               >
@@ -7439,7 +7506,7 @@ export default function App() {
                                                       }}
                                                       className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] font-medium tracking-tight transition-colors ${
                                                         isSel
-                                                          ? "bg-sky-50 text-[#111827]"
+                                                          ? "bg-[#E6F7FD] text-[#111827]"
                                                           : "text-[#6B7280] hover:bg-[#F8FAFC] hover:text-[#111827]"
                                                       }`}
                                                     >
@@ -7470,7 +7537,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-lg border border-[#E5E7EB] bg-white p-1">
+                                    <div className="inline-flex h-9 shrink-0 rounded-[10px] border border-[#E5E7EB] bg-[#F3F4F6] p-1 gap-1">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -7484,10 +7551,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`rounded-md px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
+                                            className={`rounded-lg px-3.5 py-1.5 text-[13px] font-semibold tracking-tight transition-all duration-200 ${
                                               selectedStat === type
-                                                ? "bg-[#0EA5E9] text-white shadow-sm"
-                                                : "text-[#6B7280] hover:text-[#111827]"
+                                                ? "bg-[#00AEEF] text-white shadow-sm"
+                                                : "border border-[#E5E7EB] bg-white text-[#6B7280] hover:text-[#111827]"
                                             }`}
                                           >
                                             {type}
@@ -7499,9 +7566,9 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <div className="p-3 sm:p-4 pt-2">
-                                <div className="flex gap-2">
-                                    <div className="flex shrink-0 flex-col justify-between py-1 text-[10px] tabular-nums text-[#6B7280] w-12 sm:w-14 text-right leading-none">
+                              <div className="p-5 sm:p-6 pt-2">
+                                <div className="flex gap-3">
+                                    <div className="flex shrink-0 flex-col justify-between py-1 text-[11px] tabular-nums text-[#6B7280] w-12 sm:w-14 text-right leading-none font-medium">
                                     {analyticsYTickValues.map((v, i) => (
                                       <span key={`y-${i}-${v}`}>
                                         {formatAnalyticsYTick(v)}
@@ -7509,7 +7576,7 @@ export default function App() {
                                     ))}
                                   </div>
                                   <div
-                                    className="relative min-h-[236px] w-full max-h-[260px] flex-1"
+                                    className="relative min-h-[280px] w-full max-h-[300px] flex-1"
                                     onMouseLeave={() =>
                                       setAnalyticsChartHover(null)
                                     }
@@ -7537,7 +7604,7 @@ export default function App() {
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-[#0EA5E9] mt-0.5">
+                                          <div className="tabular-nums text-[#00AEEF] mt-0.5 font-semibold">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -7585,8 +7652,8 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#0EA5E9"
-                                            stopOpacity="0.14"
+                                            stopColor="#00AEEF"
+                                            stopOpacity="0.22"
                                           />
                                           <stop
                                             offset="100%"
@@ -7621,8 +7688,8 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#0EA5E9"
-                                        strokeWidth="0.5"
+                                        stroke="#00AEEF"
+                                        strokeWidth="0.62"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                         vectorEffect="non-scaling-stroke"
@@ -7642,8 +7709,8 @@ export default function App() {
                                           }
                                           fill={
                                             analyticsChartHover === i
-                                              ? "#38BDF8"
-                                              : "#0EA5E9"
+                                              ? "#33C7F7"
+                                              : "#00AEEF"
                                           }
                                           stroke="#ffffff"
                                           strokeWidth="0.22"
@@ -7654,7 +7721,7 @@ export default function App() {
                                     </svg>
                                   </div>
                                 </div>
-                                <div className="mt-1 flex justify-between gap-1.5 pl-14 sm:pl-[3.75rem] pr-0 text-[10px] text-[#6B7280] tabular-nums">
+                                <div className="mt-2 flex justify-between gap-1.5 pl-14 sm:pl-[3.75rem] pr-0 text-[11px] text-[#6B7280] tabular-nums font-medium">
                                   {analyticsGraphXLabels.map((lab) => (
                                     <span
                                       key={lab.key}
@@ -7668,70 +7735,65 @@ export default function App() {
                               </div>
                             </section>
 
-                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 pt-0.5">
-                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:col-span-2">
-                                <div className="mb-4 border-b border-[#E5E7EB] pb-3">
-                                  <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 lg:gap-6 pt-0.5">
+                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-2">
+                                <div className="mb-5 border-b border-[#E5E7EB] pb-4">
+                                  <h2 className="text-[15px] font-bold text-[#111827] tracking-tight">
                                     Insights
                                   </h2>
-                                  <p className="text-[13px] text-[#6B7280] mt-1 font-medium">
+                                  <p className="text-[13px] text-[#6B7280] mt-1 font-normal">
                                     Patterns based on your focus data
                                   </p>
                                 </div>
                                 {focusInsights.length === 0 ? (
-                                  <div className="py-12 sm:py-14 text-center px-2">
-                                    <p className="text-[15px] font-medium text-[#4B5563]">
+                                  <div className="py-14 sm:py-16 text-center px-4">
+                                    <p className="text-[15px] font-semibold text-[#4B5563]">
                                       Not enough data yet
                                     </p>
-                                    <p className="text-[13px] text-[#9CA3AF] mt-2 max-w-md mx-auto leading-relaxed">
+                                    <p className="text-[13px] text-[#9CA3AF] mt-2 max-w-md mx-auto leading-relaxed font-normal">
                                       Complete a few focus sessions to unlock
                                       insights
                                     </p>
                                   </div>
                                 ) : (
                                   <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                                    {focusInsights.map((ins) => (
-                                      <div
-                                        key={ins.id}
-                                        className={`min-w-0 flex-1 rounded-[14px] border px-4 py-3.5 shadow-sm ${
-                                          ins.tone === "positive"
-                                            ? "bg-[#F0F9FF] border-sky-100/90"
-                                            : ins.tone === "negative"
-                                              ? "bg-[#FFF5F5] border-red-100/80"
-                                              : "bg-[#F8FAFC] border-[#E5E7EB]"
-                                        }`}
-                                      >
-                                        <p
-                                          className={`text-[14px] font-semibold leading-snug tracking-[-0.01em] ${
-                                            ins.tone === "positive"
-                                              ? "text-[#0C4A6E]"
-                                              : ins.tone === "negative"
-                                                ? "text-[#7F1D1D]"
-                                                : "text-[#111827]"
-                                          }`}
+                                    {focusInsights.map((ins) => {
+                                      const vis = focusInsightCardVisuals(
+                                        ins.id,
+                                      );
+                                      return (
+                                        <div
+                                          key={ins.id}
+                                          className={`min-w-0 flex-1 rounded-2xl border px-4 py-4 shadow-sm ${vis.wrap}`}
                                         >
-                                          {ins.headline}
-                                        </p>
-                                        <p className="text-[12px] text-[#6B7280] mt-1.5 leading-snug">
-                                          {ins.description}
-                                        </p>
-                                      </div>
-                                    ))}
+                                          <p
+                                            className={`text-[14px] font-semibold leading-snug ${vis.title}`}
+                                          >
+                                            {ins.headline}
+                                          </p>
+                                          <p
+                                            className={`text-[12px] mt-1.5 leading-snug ${vis.description}`}
+                                          >
+                                            {ins.description}
+                                          </p>
+                                        </div>
+                                      );
+                                    })}
                                   </div>
                                 )}
                               </section>
 
-                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-3 sm:p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)] lg:col-span-1">
-                                <h2 className="text-[15px] font-semibold text-[#111827] mb-2.5 pb-2 border-b border-[#E5E7EB] tracking-[-0.01em]">
+                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-1">
+                                <h2 className="text-[15px] font-bold text-[#111827] mb-4 pb-3 border-b border-[#E5E7EB] tracking-tight">
                                   Performance
                                 </h2>
-                                <div className="grid grid-cols-2 gap-2 sm:gap-2.5">
-                                  {stats.map((stat, i) => (
+                                <div className="grid grid-cols-2 gap-3">
+                                  {analyticsPerformanceQuad.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-[#F8FAFC] px-2.5 py-2.5 transition-all duration-150 hover:bg-white sm:px-3 sm:py-3"
+                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-3 transition-colors duration-150 hover:bg-white"
                                     >
-                                      <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-[#6B7280] leading-snug line-clamp-2">
+                                      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#6B7280] leading-snug line-clamp-2">
                                         {stat.label}
                                       </p>
                                       <p className="text-[15px] sm:text-base font-semibold tabular-nums tracking-tight text-[#111827] leading-none">
@@ -7743,7 +7805,11 @@ export default function App() {
                               </section>
                             </div>
 
-                            <section className="rounded-2xl border border-[#E5E7EB] bg-white p-3 sm:p-4 shadow-[0_1px_3px_rgba(15,23,42,0.06)]">
+                            {/* Discipline heatmap — hidden until re-enabled; keep markup for later */}
+                            <section
+                              className="hidden rounded-2xl border border-[#E5E7EB] bg-white p-3 sm:p-4 shadow-sm"
+                              aria-hidden
+                            >
                               <div className="flex items-baseline justify-between gap-3 mb-2 pb-2 border-b border-[#E5E7EB]">
                                 <h2 className="text-[15px] font-semibold text-[#111827] tracking-[-0.01em]">
                                   Discipline
