@@ -512,9 +512,9 @@ function focusForTodayRowVisuals(
 ): { bar: string } {
   switch (urgency) {
     case "overdue":
-      return { bar: "bg-red-100" };
+      return { bar: "bg-[#EDE7FA]" };
     case "critical":
-      return { bar: "bg-red-50" };
+      return { bar: "bg-[#F3EEFC]" };
     case "soon":
       return { bar: "bg-amber-50" };
     default:
@@ -914,7 +914,7 @@ type TaskPriorityLevel = 1 | 2 | 3 | 4;
 function priorityCheckboxRingClass(p: TaskPriorityLevel | undefined): string {
   switch (p ?? 4) {
     case 1:
-      return "border-[#d1453c] bg-[#fcf4f4]";
+      return "border-[#8e6fd0] bg-[#f7f4fc]";
     case 2:
       return "border-[#eb8a0a] bg-[#fff8f0]";
     case 3:
@@ -952,7 +952,7 @@ function PriorityPickerPopover({
   const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 210));
 
   const rows: { p: TaskPriorityLevel; label: string; stroke: string }[] = [
-    { p: 1, label: "Priority 1", stroke: "#d1453c" },
+    { p: 1, label: "Priority 1", stroke: "#8e6fd0" },
     { p: 2, label: "Priority 2", stroke: "#eb8a0a" },
     { p: 3, label: "Priority 3", stroke: "#246fe0" },
     { p: 4, label: "Priority 4", stroke: "#9ca3af" },
@@ -990,7 +990,7 @@ function PriorityPickerPopover({
           </svg>
           <span className="flex-1 min-w-0">{r.label}</span>
           {selected === r.p ? (
-            <span className="text-[#db4c3f] text-[14px]" aria-hidden>
+            <span className="text-[#9d84d8] text-[14px]" aria-hidden>
               ✓
             </span>
           ) : (
@@ -1571,8 +1571,8 @@ function upcomingTaskCardStyles(p: TaskPriorityLevel): {
   switch (p) {
     case 1:
       return {
-        strip: "bg-[#d1453c]",
-        card: "border-[#f0d6d4] bg-[#fcf4f4]",
+        strip: "bg-[#8e6fd0]",
+        card: "border-[#ddd6f0] bg-[#f7f4fc]",
       };
     case 2:
       return {
@@ -1694,7 +1694,7 @@ function TasksDueUpcomingSchedule({
                 </span>
                 {isRealToday ? (
                   <span
-                    className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#db4c3f] px-1.5 text-[13px] font-semibold tabular-nums text-white"
+                    className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#9d84d8] px-1.5 text-[13px] font-semibold tabular-nums text-white shadow-sm shadow-[rgba(122,95,190,0.25)]"
                     title="Today"
                   >
                     {d.dayNum}
@@ -2222,9 +2222,9 @@ function focusInsightCardVisuals(id: string): {
     case "weekly-trend-down":
     case "dow-weakest":
       return {
-        wrap: "bg-[#FFF1F2] border-rose-100/90",
-        title: "text-[#881337]",
-        description: "text-[#BE123C]/90",
+        wrap: "bg-[#F3EEFC] border-[#DDD6F0]",
+        title: "text-[#5B21B6]",
+        description: "text-[#7C3AED]/90",
       };
     case "weekly-trend-up":
       return {
@@ -2309,7 +2309,7 @@ const LIST_COLOR_SWATCHES: (string | null)[] = [
   null,
   "#eab308",
   "#f97316",
-  "#ef4444",
+  "#9d84d8",
   "#22c55e",
   "#3b82f6",
   "#a855f7",
@@ -2464,10 +2464,11 @@ const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string }[] = [
   { id: SYS_LIST_LONGTERM, label: "Long-Term" },
 ];
 
-const SIDEBAR_RED = "#db4c3f";
+/** Tunnel Vision brand lavender (active nav / filled icons). */
+const SIDEBAR_ACCENT = "#9d84d8";
 /** Wireframe nav icons (Todoist secondary). */
 const SIDEBAR_ICON_OUTLINE = "#666666";
-/** Todoist-like list icons: muted outline when idle, solid red when active. */
+/** List icons: muted outline when idle, solid accent when active. */
 function SidebarPrimaryListIcon({
   listId,
   active,
@@ -2484,7 +2485,7 @@ function SidebarPrimaryListIcon({
       <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
         {active ? (
           <path
-            fill={SIDEBAR_RED}
+            fill={SIDEBAR_ACCENT}
             fillRule="evenodd"
             d="M5 3a2 2 0 00-2 2v1h18V5a2 2 0 00-2-2H5zm16 6H3v10a2 2 0 002 2h14a2 2 0 002-2V9z"
             clipRule="evenodd"
@@ -2506,7 +2507,7 @@ function SidebarPrimaryListIcon({
       <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
         {active ? (
           <>
-            <circle cx="12" cy="13" r="8" fill={SIDEBAR_RED} />
+            <circle cx="12" cy="13" r="8" fill={SIDEBAR_ACCENT} />
             <path d="M12 9v4l2.5 1.5" stroke="white" strokeWidth="1.5" strokeLinecap="round" />
             <circle cx="12" cy="5" r="1.5" fill="white" />
           </>
@@ -2526,7 +2527,7 @@ function SidebarPrimaryListIcon({
       <svg className={className} viewBox="0 0 24 24" aria-hidden>
         {active ? (
           <>
-            <rect x="4" y="4" width="16" height="16" rx="1.5" fill={SIDEBAR_RED} />
+            <rect x="4" y="4" width="16" height="16" rx="1.5" fill={SIDEBAR_ACCENT} />
             <text
               x="12"
               y="16"
@@ -2553,7 +2554,7 @@ function SidebarPrimaryListIcon({
       <svg className={className} viewBox="0 0 24 24" aria-hidden>
         {active ? (
           <path
-            fill={SIDEBAR_RED}
+            fill={SIDEBAR_ACCENT}
             d="M3 7a2 2 0 012-2h5l2 2h7a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
           />
         ) : (
@@ -2574,7 +2575,7 @@ function SidebarPrimaryListIcon({
         {active ? (
           <>
             <path
-              fill={SIDEBAR_RED}
+              fill={SIDEBAR_ACCENT}
               d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z"
             />
             <path
@@ -2603,7 +2604,7 @@ function SidebarPrimaryListIcon({
       <svg className={className} viewBox="0 0 24 24" aria-hidden>
         {active ? (
           <path
-            fill={SIDEBAR_RED}
+            fill={SIDEBAR_ACCENT}
             d="M6 2h12a2 2 0 012 2v16l-8-4-8 4V4a2 2 0 012-2z"
           />
         ) : (
@@ -2638,7 +2639,7 @@ function SidebarCompletedIcon({
     <svg className={className} viewBox="0 0 24 24" aria-hidden>
       {active ? (
         <path
-          fill={SIDEBAR_RED}
+          fill={SIDEBAR_ACCENT}
           d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1.5 14.5l-3.5-3.5 1.41-1.41L10.5 13.17l5.09-5.09L17 9.5l-6.5 6.5z"
         />
       ) : (
@@ -2651,7 +2652,7 @@ function SidebarCompletedIcon({
   );
 }
 
-/** Matches primary nav icon language: outline @ #666, solid red + white detail when active. */
+/** Matches primary nav icon language: outline @ #666, solid accent + white detail when active. */
 function SidebarToolsIcon({
   kind,
   active,
@@ -2663,7 +2664,7 @@ function SidebarToolsIcon({
 }) {
   const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
   const sw = active ? 0 : 1.5;
-  const fill = active ? SIDEBAR_RED : "none";
+  const fill = active ? SIDEBAR_ACCENT : "none";
   if (kind === "timer") {
     return (
       <svg className={className} viewBox="0 0 24 24" fill="none" aria-hidden>
@@ -2740,7 +2741,7 @@ function SidebarToolsIcon({
 }
 
 const DEFAULT_USER_TODAY_LISTS: TodayList[] = [
-  { id: "work", label: "Work", icon: "🗂️", color: "#ef4444" },
+  { id: "work", label: "Work", icon: "🗂️", color: "#9d84d8" },
   { id: "wishlist", label: "Wishlist", icon: "✨", color: "#c084fc" },
   { id: "shopping", label: "Shopping", icon: "🧾", color: "#e4e4e7" },
   { id: "exercise", label: "Exercise", icon: "🏃‍♂️", color: "#f97316" },
@@ -6330,8 +6331,8 @@ export default function App() {
           100%{ opacity:1; transform:translateY(0) scale(1) }
         }
         @keyframes app-notif-urgency {
-          0%,100%{ box-shadow:0 0 0 0 rgba(239,68,68,0) }
-          50%{ box-shadow:0 0 0 1px rgba(239,68,68,0.12),0 8px 28px -12px rgba(239,68,68,0.18) }
+          0%,100%{ box-shadow:0 0 0 0 rgba(157,132,216,0) }
+          50%{ box-shadow:0 0 0 1px rgba(157,132,216,0.18),0 8px 28px -12px rgba(122,95,190,0.2) }
         }
         .focus-zen-mist-overlay{
           animation:focus-zen-mist 5.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
@@ -6678,7 +6679,7 @@ export default function App() {
                         aria-expanded={sidebarUserMenuOpen}
                         aria-haspopup="menu"
                       >
-                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#db4c3f] text-[12px] font-semibold text-white ring-2 ring-[#db4c3f] ring-offset-2 ring-offset-white">
+                        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#9d84d8] text-[12px] font-semibold text-white ring-2 ring-[#9d84d8] ring-offset-2 ring-offset-white shadow-sm shadow-[rgba(122,95,190,0.25)]">
                           U
                         </span>
                         <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-[#202020]">
@@ -6714,7 +6715,7 @@ export default function App() {
                       className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[5px] text-[#666666] transition-colors hover:bg-[#eeeeee]"
                     >
                       {hasUnreadNotifications && (
-                        <span className="absolute right-1.5 top-1.5 z-[1] h-1.5 w-1.5 rounded-full bg-[#db4c3f] ring-2 ring-white" aria-hidden />
+                        <span className="absolute right-1.5 top-1.5 z-[1] h-1.5 w-1.5 rounded-full bg-[#9d84d8] ring-2 ring-white" aria-hidden />
                       )}
                       <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />
@@ -7300,7 +7301,7 @@ export default function App() {
                                       <button
                                         type="button"
                                         onClick={submitQuickAddComposer}
-                                        className="rounded-md bg-[#db4c3f] px-4 py-1.5 text-[13px] font-semibold text-white hover:opacity-95"
+                                        className="rounded-md bg-[#9d84d8] px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm shadow-[rgba(122,95,190,0.2)] transition-colors hover:bg-[#8a6fcc]"
                                       >
                                         Add task
                                       </button>
@@ -7310,7 +7311,7 @@ export default function App() {
                                   <button
                                     type="button"
                                     onClick={openQuickAddComposer}
-                                    className="mb-4 flex items-center gap-2 py-0.5 text-left text-[14px] text-[#db4c3f] hover:opacity-90"
+                                    className="mb-4 flex items-center gap-2 py-0.5 text-left text-[14px] text-[#9d84d8] transition-colors hover:text-[#8a6fcc]"
                                   >
                                     <span className="text-[20px] font-light leading-none">+</span>
                                     Add task
@@ -7531,7 +7532,7 @@ export default function App() {
                                           <button
                                             type="button"
                                             onClick={saveEditDraft}
-                                            className="rounded-md bg-[#db4c3f] px-4 py-1.5 text-[13px] font-semibold text-white hover:opacity-95"
+                                            className="rounded-md bg-[#9d84d8] px-4 py-1.5 text-[13px] font-semibold text-white shadow-sm shadow-[rgba(122,95,190,0.2)] transition-colors hover:bg-[#8a6fcc]"
                                           >
                                             Save
                                           </button>
@@ -7590,8 +7591,8 @@ export default function App() {
                                       } ${isSelected ? "bg-[#FAFAFA]" : "hover:bg-[#FAFAFA]"}`}
                                     >
                                       {dropBeforeTaskId === t.id && draggingTaskId !== t.id ? (
-                                        <div className="pointer-events-none absolute -top-px left-0 right-0 z-[2] flex h-0.5 items-center bg-[#db4c3f]">
-                                          <span className="absolute -left-0.5 h-2 w-2 rounded-full bg-[#db4c3f]" />
+                                        <div className="pointer-events-none absolute -top-px left-0 right-0 z-[2] flex h-0.5 items-center bg-[#9d84d8]">
+                                          <span className="absolute -left-0.5 h-2 w-2 rounded-full bg-[#9d84d8]" />
                                         </div>
                                       ) : null}
                                       {!noReorder ? (
@@ -7762,11 +7763,11 @@ export default function App() {
                                 }}
                                 className={`mt-4 flex min-h-[72px] items-center justify-center gap-2 rounded-lg border-2 border-dashed px-4 text-[13px] transition-colors ${
                                   dragOverPostpone
-                                    ? "border-[#db4c3f] bg-[#fff5f5]"
+                                    ? "border-[#9d84d8] bg-[#f7f4fc]"
                                     : "border-[#D1D5DB] bg-[#FAFAFA] text-[#6B7280]"
                                 }`}
                               >
-                                <svg className="h-5 w-5 text-[#db4c3f]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                                <svg className="h-5 w-5 text-[#9d84d8]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                                   <path d="M23 4v6h-6" />
                                   <path d="M20.49 15a9 9 0 11-2.12-9.36L23 10" />
                                 </svg>
@@ -8848,7 +8849,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="btn-press-instant rounded border border-[#c5372f] bg-[#db4c3f] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#c5372f]"
+                            className="btn-press-instant rounded border border-[#7a5fbe] bg-[#9d84d8] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#7a5fbe]"
                           >
                             Start
                           </button>
