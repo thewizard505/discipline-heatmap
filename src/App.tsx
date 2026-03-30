@@ -6021,9 +6021,7 @@ export default function App() {
         : [{ value: 0, date: "N/A" }];
     }
 
-    const rawInt = selectedTaskGraph
-      ? getTaskSeriesPoints(selectedTaskGraph, taskIntegrityHistory)
-      : history["Focus Integrity"] || [];
+    const rawInt = history["Focus Integrity"] || [];
     const sortedInt = sortHistoryPointsByDate(rawInt, ref);
     const filteredInt = filterHistoryPointsByRangeWithFallback(
       sortedInt,
@@ -6037,7 +6035,6 @@ export default function App() {
     selectedStat,
     history,
     taskHistory,
-    taskIntegrityHistory,
     selectedTaskGraph,
     isSimulation,
     analyticsRange,
@@ -8101,15 +8098,14 @@ export default function App() {
                                     </h2>
                                     <p className="text-[15px] text-[#6B7280] mt-1.5 leading-snug font-normal">
                                       {selectedStat === "Integrity"
-                                        ? selectedTaskGraph
-                                          ? `${formatTaskTitleForGraph(normalizeTaskKey(selectedTaskGraph))} · Focus integrity per session`
-                                          : "Consistency over time · all focus sessions"
+                                        ? "Consistency over time · all focus sessions"
                                         : selectedTaskGraph
                                           ? `${formatTaskTitleForGraph(normalizeTaskKey(selectedTaskGraph))} · Completion time per session`
                                           : "All tasks · completion time per session"}
                                     </p>
                                   </div>
                                   <div className="flex flex-wrap items-center gap-2.5">
+                                    {selectedStat === "Speed" && (
                                       <div
                                         ref={analyticsTaskPickerRef}
                                         className="relative z-[400] min-w-[12rem] max-w-[min(18rem,92vw)]"
@@ -8244,15 +8240,21 @@ export default function App() {
                                           </div>
                                         )}
                                       </div>
+                                    )}
                                     <div className="inline-flex h-10 shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1 shadow-sm">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
                                             key={type}
                                             type="button"
-                                            onClick={() =>
-                                              setSelectedStat(type)
-                                            }
+                                            onClick={() => {
+                                              setSelectedStat(type);
+                                              if (type === "Integrity") {
+                                                setAnalyticsTaskPickerOpen(
+                                                  false,
+                                                );
+                                              }
+                                            }}
                                             className={`flex min-w-[6rem] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
                                               selectedStat === type
                                                 ? "bg-[#0EA5E9] text-white"
