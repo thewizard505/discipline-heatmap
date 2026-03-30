@@ -1500,16 +1500,61 @@ function TasksDueUpcomingSchedule({
 type HistoryPoint = { value: number; date: string };
 type HistoryData = { [taskName: string]: HistoryPoint[] };
 
-/** Parse labels from `toLocaleDateString` (e.g. "Mar 29") for analytics range filtering. */
+/**
+ * Parse history `date` values: ISO `YYYY-MM-DD`, or legacy `toLocaleDateString` ("Mar 29").
+ * Used for analytics range filtering so graphs stay in sync with stored sessions.
+ */
 function parseHistoryPointDateLabel(label: string, ref: Date): Date | null {
   if (label === "N/A") return null;
-  const y = ref.getFullYear();
-  let d = new Date(`${label} ${y}`);
-  if (Number.isNaN(d.getTime())) return null;
-  if (d.getTime() > ref.getTime() + 864e5 * 3) {
-    d = new Date(`${label} ${y - 1}`);
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(label.trim());
+  if (iso) {
+    const y = Number(iso[1]);
+    const m = Number(iso[2]) - 1;
+    const day = Number(iso[3]);
+    const d = new Date(y, m, day);
+    return Number.isNaN(d.getTime()) ? null : d;
   }
-  return d;
+  const clean = label.replace(/,/g, "").trim();
+  const m = clean.match(/^([A-Za-z]+)\s+(\d{1,2})$/);
+  if (m) {
+    const monthStr = m[1];
+    const day = parseInt(m[2], 10);
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const mi = months.findIndex((x) => monthStr.startsWith(x));
+    if (mi >= 0 && day >= 1 && day <= 31) {
+      let d = new Date(ref.getFullYear(), mi, day);
+      if (d.getTime() > ref.getTime() + 864e5 * 3) {
+        d = new Date(ref.getFullYear() - 1, mi, day);
+      }
+      return d;
+    }
+  }
+  const tryParse = Date.parse(`${clean} ${ref.getFullYear()}`);
+  if (!Number.isNaN(tryParse)) {
+    const d = new Date(tryParse);
+    if (!Number.isNaN(d.getTime())) return d;
+  }
+  return null;
+}
+
+/** Short label for chart axis / tooltips (matches reference: "Mar 22"). */
+function formatHistoryDateForDisplay(label: string): string {
+  const d = parseHistoryPointDateLabel(label, new Date());
+  if (!d) return label;
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 function filterHistoryPointsByRange(
@@ -4267,7 +4312,7 @@ export default function App() {
       ...prev,
       "Focus Integrity": [
         ...(prev["Focus Integrity"] || []),
-        { value: v, date: todayStr },
+        { value: v, date: toLocalDateIso(now) },
       ],
     }));
     setHeatmapData((prev) => {
@@ -4903,7 +4948,10 @@ export default function App() {
       ...prev,
       "Focus Integrity": [
         ...(prev["Focus Integrity"] || []),
-        { value: integrityRounded, date: todayStr },
+        {
+          value: integrityRounded,
+          date: toLocalDateIso(new Date()),
+        },
       ],
     }));
 
@@ -5314,7 +5362,7 @@ export default function App() {
       FOCUS_SESSION_PRESERVE_SOURCE_LIST_IDS.has(listId);
     const sessionLabel = getFocusSessionDisplayLabel(listId, task.text);
     const now = Date.now();
-    const today = getTodayStr();
+    const sessionDateIso = toLocalDateIso(new Date());
     const analyticsName = preserveSource ? sessionLabel : task.text;
     const taskKey = normalizeTaskKey(analyticsName);
     const listLabel =
@@ -5329,7 +5377,10 @@ export default function App() {
       const mins = Math.round(durationSecs / 60);
       setTaskHistory((prev) => ({
         ...prev,
-        [taskKey]: [...(prev[taskKey] || []), { value: durationSecs, date: today }],
+        [taskKey]: [
+          ...(prev[taskKey] || []),
+          { value: durationSecs, date: sessionDateIso },
+        ],
       }));
       appendCompletedActivity(analyticsName, mins, listId, listLabel);
       setBestFocusIntegrity((prev) =>
@@ -5340,7 +5391,7 @@ export default function App() {
     } else {
       setTaskHistory((prev) => ({
         ...prev,
-        [taskKey]: [...(prev[taskKey] || []), { value: 0, date: today }],
+        [taskKey]: [...(prev[taskKey] || []), { value: 0, date: sessionDateIso }],
       }));
       appendCompletedActivity(analyticsName, 0, listId, listLabel);
     }
@@ -5450,6 +5501,11 @@ export default function App() {
     const rangeDays =
       analyticsRange === "7d" ? 7 : analyticsRange === "14d" ? 14 : 30;
     const ref = new Date();
+    const mapChart = (pts: HistoryPoint[]) =>
+      pts.map((p) => ({
+        value: p.value,
+        date: formatHistoryDateForDisplay(p.date),
+      }));
     if (selectedStat === "Speed") {
       const nk = normalizeTaskKey(selectedTaskGraph);
       const raw =
@@ -5457,11 +5513,11 @@ export default function App() {
         (selectedTaskGraph ? taskHistory[selectedTaskGraph] : undefined) ||
         [];
       const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
-      return filtered.length > 0 ? filtered : [{ value: 0, date: "N/A" }];
+      return filtered.length > 0 ? mapChart(filtered) : [{ value: 0, date: "N/A" }];
     }
     const raw = history["Focus Integrity"] || [];
     const filtered = filterHistoryPointsByRange(raw, rangeDays, ref);
-    return filtered.length > 0 ? filtered : [{ value: 0, date: "N/A" }];
+    return filtered.length > 0 ? mapChart(filtered) : [{ value: 0, date: "N/A" }];
   }, [
     selectedStat,
     history,
@@ -5664,6 +5720,11 @@ export default function App() {
     d += ` L ${last[0]} 100 L ${pts[0][0]} 100 Z`;
     return d;
   }
+
+  const analyticsPlotPoints = useMemo(
+    () => getAnalyticsChartPoints(currentData),
+    [currentData, graphScale],
+  );
 
   /* ------------------- UI STYLING ------------------- */
   const titleOpacity = isSimulation ? Math.max(0.4 - scrollY / 600, 0) : 0.1;
@@ -7405,30 +7466,65 @@ export default function App() {
                           <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12 space-y-6">
                             <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                               <div>
-                                <h1 className="text-xl font-bold text-[#111827] tracking-tight flex items-center gap-2.5">
+                                <h1 className="text-[1.75rem] sm:text-[2rem] font-bold text-[#111827] tracking-[-0.035em] flex items-center gap-3">
                                   <span
-                                    className="text-[#6B7280] shrink-0"
+                                    className="text-[#6366F1] shrink-0"
                                     aria-hidden
                                   >
                                     <svg
-                                      className="w-6 h-6 sm:w-7 sm:h-7"
+                                      className="w-8 h-8 sm:w-9 sm:h-9"
                                       viewBox="0 0 24 24"
                                       fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="1.7"
-                                      strokeLinecap="round"
-                                      strokeLinejoin="round"
+                                      xmlns="http://www.w3.org/2000/svg"
                                     >
-                                      <path d="M4 19h16" />
-                                      <polyline points="5 15 10 10 14 14 19 8" />
-                                      <circle cx="10" cy="10" r="0.9" />
-                                      <circle cx="14" cy="14" r="0.9" />
-                                      <circle cx="19" cy="8" r="0.9" />
+                                      <path
+                                        d="M4 19h16"
+                                        stroke="currentColor"
+                                        strokeWidth="1.5"
+                                        strokeLinecap="round"
+                                        opacity={0.35}
+                                      />
+                                      <rect
+                                        x="5"
+                                        y="13"
+                                        width="3.5"
+                                        height="6"
+                                        rx="1"
+                                        fill="currentColor"
+                                        opacity={0.2}
+                                      />
+                                      <rect
+                                        x="10.25"
+                                        y="9"
+                                        width="3.5"
+                                        height="10"
+                                        rx="1"
+                                        fill="currentColor"
+                                        opacity={0.45}
+                                      />
+                                      <rect
+                                        x="15.5"
+                                        y="5"
+                                        width="3.5"
+                                        height="14"
+                                        rx="1"
+                                        fill="currentColor"
+                                        opacity={0.85}
+                                      />
+                                      <path
+                                        d="M5 11l4-3 4 3.5 6-5"
+                                        stroke="currentColor"
+                                        strokeWidth="1.65"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        fill="none"
+                                        opacity={0.9}
+                                      />
                                     </svg>
                                   </span>
                                   Analytics
                                 </h1>
-                                <p className="text-sm text-[#6B7280] mt-1 max-w-lg leading-relaxed font-normal">
+                                <p className="text-[15px] text-[#6B7280] mt-2 max-w-xl leading-relaxed font-normal">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
@@ -7504,12 +7600,12 @@ export default function App() {
                               <div className="flex flex-col gap-1 p-5 sm:p-6 border-b border-[#E5E7EB]">
                                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                                   <div className="min-w-0">
-                                    <h2 className="text-[15px] font-bold text-[#111827] tracking-tight">
+                                    <h2 className="text-[17px] sm:text-lg font-bold text-[#111827] tracking-tight">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
                                         : "Task Speed"}
                                     </h2>
-                                    <p className="text-[13px] text-[#6B7280] mt-1 leading-snug font-normal">
+                                    <p className="text-[15px] text-[#6B7280] mt-1.5 leading-snug font-normal">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time"
                                         : selectedTaskGraph
@@ -7658,7 +7754,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-9 shrink-0 rounded-xl border border-[#E5E7EB] bg-[#F3F4F6] p-1">
+                                    <div className="inline-flex h-10 shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1 shadow-sm">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -7672,10 +7768,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`flex min-w-[5.5rem] items-center justify-center rounded-lg px-3 py-1.5 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
+                                            className={`flex min-w-[6rem] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
                                               selectedStat === type
                                                 ? "bg-[#6366F1] text-white"
-                                                : "bg-white text-[#111827] shadow-sm"
+                                                : "bg-transparent text-[#374151] hover:bg-[#F9FAFB]"
                                             }`}
                                           >
                                             {type}
@@ -7796,8 +7892,36 @@ export default function App() {
                                           vectorEffect="non-scaling-stroke"
                                         />
                                       ))}
+                                      {analyticsChartHover !== null &&
+                                        analyticsPlotPoints[
+                                          analyticsChartHover
+                                        ] &&
+                                        currentData.length > 1 && (
+                                          <line
+                                            x1={
+                                              analyticsPlotPoints[
+                                                analyticsChartHover
+                                              ][0]
+                                            }
+                                            y1={
+                                              analyticsPlotPoints[
+                                                analyticsChartHover
+                                              ][1]
+                                            }
+                                            x2={
+                                              analyticsPlotPoints[
+                                                analyticsChartHover
+                                              ][0]
+                                            }
+                                            y2="100"
+                                            stroke="#E5E7EB"
+                                            strokeWidth="0.12"
+                                            strokeOpacity={0.95}
+                                            vectorEffect="non-scaling-stroke"
+                                          />
+                                        )}
                                       <path
-                                        d={buildAnalyticsLinearAreaD(
+                                        d={buildAnalyticsSmoothAreaD(
                                           currentData,
                                         )}
                                         fill="url(#analyticsAreaFillGrad)"
@@ -7805,39 +7929,47 @@ export default function App() {
                                         className="transition-[d] duration-300 ease-out"
                                       />
                                       <path
-                                        d={generateAnalyticsLinePath(
+                                        d={buildAnalyticsSmoothLineD(
                                           currentData,
                                         )}
                                         fill="none"
                                         stroke="#6366F1"
-                                        strokeWidth="0.55"
+                                        strokeWidth="0.58"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
                                         vectorEffect="non-scaling-stroke"
                                         className="transition-[d] duration-300 ease-out"
                                       />
-                                      {getAnalyticsChartPoints(
-                                        currentData,
-                                      ).map(([cx, cy], i) => (
-                                        <circle
-                                          key={i}
-                                          cx={cx}
-                                          cy={cy}
-                                          r={
-                                            analyticsChartHover === i
-                                              ? 1.35
-                                              : 0.85
-                                          }
-                                          fill={
-                                            analyticsChartHover === i
-                                              ? "#818CF8"
-                                              : "#6366F1"
-                                          }
-                                          stroke="#ffffff"
-                                          strokeWidth="0.22"
-                                          className="transition-all duration-100"
-                                          vectorEffect="non-scaling-stroke"
-                                        />
+                                      {analyticsPlotPoints.map(([cx, cy], i) => (
+                                        <g key={i}>
+                                          <circle
+                                            cx={cx}
+                                            cy={cy}
+                                            r={
+                                              analyticsChartHover === i
+                                                ? 1.45
+                                                : 0.9
+                                            }
+                                            fill={
+                                              analyticsChartHover === i
+                                                ? "#818CF8"
+                                                : "#6366F1"
+                                            }
+                                            stroke="#ffffff"
+                                            strokeWidth="0.24"
+                                            className="transition-all duration-100"
+                                            vectorEffect="non-scaling-stroke"
+                                          />
+                                          {analyticsChartHover === i && (
+                                            <circle
+                                              cx={cx}
+                                              cy={cy}
+                                              r={0.42}
+                                              fill="#EF4444"
+                                              vectorEffect="non-scaling-stroke"
+                                            />
+                                          )}
+                                        </g>
                                       ))}
                                     </svg>
                                   </div>
