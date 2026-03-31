@@ -1,5 +1,6 @@
 import React from "react";
 import { Analytics } from "@vercel/analytics/react";
+import { motion } from "framer-motion";
 import {
   useState,
   useEffect,
@@ -1605,6 +1606,11 @@ type FocusInsight = {
   strength: number;
 };
 
+type InsightCardItem = FocusInsight & {
+  locked?: boolean;
+  variant?: "green" | "red" | "blue";
+};
+
 const FOCUS_SESSION_LOG_KEY = "tunnelvision_focus_session_log_v1";
 const TASK_INTEGRITY_HISTORY_KEY = "tunnelvision_task_integrity_history";
 
@@ -1959,29 +1965,45 @@ function generateInsights(records: FocusSessionRecord[]): FocusInsight[] {
   return deduped.sort((a, b) => b.strength - a.strength).slice(0, 4);
 }
 
-function focusInsightCardVisuals(
-  type: FocusInsight["type"],
-): {
-  dot: string;
-  edge: string;
-} {
-  switch (type) {
-    case "positive":
-      return {
-        dot: "bg-emerald-500",
-        edge: "border-l-emerald-300",
-      };
-    case "negative":
-      return {
-        dot: "bg-rose-500",
-        edge: "border-l-rose-300",
-      };
-    default:
-      return {
-        dot: "bg-slate-400",
-        edge: "border-l-slate-300",
-      };
-  }
+function InsightCard({
+  insight,
+  index,
+}: {
+  insight: InsightCardItem;
+  index: number;
+}) {
+  const variantClass =
+    insight.variant === "green"
+      ? "tv-insight-card--green"
+      : insight.variant === "red"
+        ? "tv-insight-card--red"
+        : insight.variant === "blue"
+          ? "tv-insight-card--blue"
+          : "tv-insight-card--neutral";
+  const lockedClass = insight.locked ? "tv-insight-card--locked" : "";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20, scale: 0.985, boxShadow: "0 0 0 rgba(0,0,0,0)" }}
+      animate={{
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        boxShadow:
+          "0 10px 30px rgba(0,0,0,0.16), 0 0 40px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.38)",
+      }}
+      transition={{
+        delay: index * 0.15,
+        type: "spring",
+        stiffness: 120,
+        damping: 12,
+      }}
+      className={`tv-insight-card ${variantClass} ${lockedClass}`}
+    >
+      <p className="tv-insight-card__title">{insight.title}</p>
+      <p className="tv-insight-card__description">{insight.description}</p>
+    </motion.div>
+  );
 }
 
 /** Canonical key for task speed graphs (case-insensitive, trimmed). */
@@ -4128,33 +4150,57 @@ export default function App() {
       isSimulation ? [] : generateInsights(focusSessionRecords),
     [focusSessionRecords, isSimulation],
   );
-  const hasInsightsData =
-    focusInsights.length > 0 && !focusInsights.some((i) => i.id.startsWith("not-enough"));
-  const displayedInsightCards = hasInsightsData
-    ? focusInsights.slice(0, 4)
+  const sessionCountForInsights = focusSessionRecords.length;
+  const isEmptyInsightsState = sessionCountForInsights < 3;
+  const realInsights = focusInsights.filter((i) => !i.id.startsWith("not-enough"));
+  const insightFallbacks: InsightCardItem[] = [
+    {
+      id: "not-enough-data",
+      title: "Not enough data yet",
+      description: "Complete a few focus sessions to unlock insights.",
+      type: "neutral",
+      strength: 0,
+      variant: "blue",
+      locked: false,
+    },
+    {
+      id: "pending-morning",
+      title: "You focus better in the morning",
+      description: "This will appear once enough sessions confirm the pattern.",
+      type: "neutral",
+      strength: 0,
+      variant: "green",
+      locked: true,
+    },
+    {
+      id: "pending-trend",
+      title: "You're improving +3% this week",
+      description: "Weekly trend unlocks after two weeks of session data.",
+      type: "neutral",
+      strength: 0,
+      variant: "blue",
+      locked: true,
+    },
+  ];
+  const displayedInsightCards: InsightCardItem[] = isEmptyInsightsState
+    ? insightFallbacks
     : [
-        focusInsights[0] ?? {
-          id: "not-enough-data",
-          title: "Not enough data yet",
-          description: "Complete a few focus sessions to unlock insights",
-          type: "neutral" as const,
-          strength: 100,
-        },
-        {
-          id: "pending-morning",
-          title: "You focus better in the morning",
-          description: "This will appear once enough sessions confirm the pattern",
-          type: "neutral" as const,
-          strength: 0,
-        },
-        {
-          id: "pending-trend",
-          title: "You're improving +3% this week",
-          description: "Weekly trend unlocks after two weeks of session data",
-          type: "neutral" as const,
-          strength: 0,
-        },
+        ...realInsights.slice(0, 3).map((ins) => ({
+          ...ins,
+          locked: false,
+          variant:
+            ins.type === "positive"
+              ? "green"
+              : ins.type === "negative"
+                ? "red"
+                : "blue",
+        })),
       ];
+  while (displayedInsightCards.length < 3) {
+    const nextFallback = insightFallbacks[displayedInsightCards.length];
+    if (!nextFallback) break;
+    displayedInsightCards.push(nextFallback);
+  }
 
   /** Performance tiles: 2×2 grid matching reference (Total, Best, Tasks, Avg completion). */
   const analyticsPerformanceQuad = useMemo(() => {
@@ -6043,24 +6089,73 @@ export default function App() {
           0%,100%{ box-shadow:0 0 0 0 rgba(157,132,216,0) }
           50%{ box-shadow:0 0 0 1px rgba(157,132,216,0.18),0 8px 28px -12px rgba(122,95,190,0.2) }
         }
-        @keyframes insight-card-enter {
-          0% { opacity:0; transform:translateY(8px) scale(0.985); }
-          100% { opacity:1; transform:translateY(0) scale(1); }
+        .tv-insights-grid{
+          display:grid;
+          grid-template-columns:repeat(3,minmax(0,1fr));
+          gap:16px;
+          position:relative;
+          z-index:2;
         }
-        @keyframes insight-card-float {
-          0%,100% { transform:translateY(0px); }
-          50% { transform:translateY(-2px); }
-        }
-        @keyframes insight-card-wisp {
-          0%,100% { box-shadow:0 8px 22px rgba(15,23,42,0.07), 0 0 0 rgba(122,95,190,0); }
-          50% { box-shadow:0 14px 32px rgba(15,23,42,0.09), 0 0 24px rgba(122,95,190,0.12); }
+        @media (max-width: 1024px){
+          .tv-insights-grid{ grid-template-columns:1fr; }
         }
         .tv-insight-card{
-          animation:
-            insight-card-enter .36s cubic-bezier(0.22,0.61,0.36,1) both,
-            insight-card-float 3.6s ease-in-out infinite,
-            insight-card-wisp 4.6s ease-in-out infinite;
-          will-change: transform, box-shadow, opacity;
+          border-radius:16px;
+          padding:20px;
+          background:rgba(255,255,255,0.04);
+          backdrop-filter:blur(12px);
+          -webkit-backdrop-filter:blur(12px);
+          box-shadow:
+            0 4px 20px rgba(0,0,0,0.14),
+            inset 0 1px 0 rgba(255,255,255,0.38);
+          transition:all .25s ease;
+          will-change:transform, box-shadow, filter, opacity;
+        }
+        .tv-insight-card--green{ background:rgba(34,197,94,0.10); }
+        .tv-insight-card--red{ background:rgba(239,68,68,0.10); }
+        .tv-insight-card--blue{ background:rgba(59,130,246,0.10); }
+        .tv-insight-card--neutral{ background:rgba(148,163,184,0.12); }
+        .tv-insight-card--locked{
+          opacity:.7;
+          filter:saturate(.8);
+          pointer-events:none;
+        }
+        .tv-insight-card__title{
+          font-size:16px;
+          line-height:1.35;
+          font-weight:600;
+          color:#1f2937;
+        }
+        .tv-insight-card__description{
+          margin-top:8px;
+          font-size:13px;
+          line-height:1.45;
+          color:rgba(31,41,55,.60);
+        }
+        .tv-insight-card:hover{
+          transform:translateY(-2px);
+          box-shadow:
+            0 12px 32px rgba(0,0,0,0.20),
+            inset 0 1px 0 rgba(255,255,255,0.40);
+        }
+        .tv-insight-card:active{ transform:scale(.98); }
+        .tv-insight-wisp{
+          position:absolute;
+          width:120px;
+          height:120px;
+          background:radial-gradient(circle, rgba(255,255,255,0.13), transparent 68%);
+          filter:blur(20px);
+          animation:tv-insight-float 6s ease-in-out infinite;
+          pointer-events:none;
+          z-index:1;
+        }
+        .tv-insight-wisp--a{ left:4%; top:6%; animation-delay:0s; }
+        .tv-insight-wisp--b{ right:8%; top:14%; animation-delay:1.1s; }
+        .tv-insight-wisp--c{ left:46%; bottom:-8px; animation-delay:2.2s; }
+        @keyframes tv-insight-float{
+          0%{ transform:translateY(0px); }
+          50%{ transform:translateY(-12px); }
+          100%{ transform:translateY(0px); }
         }
         .focus-zen-mist-overlay{
           animation:focus-zen-mist 5.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
@@ -8181,39 +8276,28 @@ export default function App() {
                                     Patterns based on your focus data
                                   </p>
                                 </div>
-                                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                                  {displayedInsightCards.map((ins, idx) => {
-                                    const vis = focusInsightCardVisuals(
-                                      ins.type,
-                                    );
-                                    const isPending =
-                                      !hasInsightsData &&
-                                      ins.id !== "not-enough-data";
-                                    return (
-                                      <div
+                                <div className="relative">
+                                  <span
+                                    className="tv-insight-wisp tv-insight-wisp--a"
+                                    aria-hidden
+                                  />
+                                  <span
+                                    className="tv-insight-wisp tv-insight-wisp--b"
+                                    aria-hidden
+                                  />
+                                  <span
+                                    className="tv-insight-wisp tv-insight-wisp--c"
+                                    aria-hidden
+                                  />
+                                  <div className="tv-insights-grid">
+                                    {displayedInsightCards.map((ins, idx) => (
+                                      <InsightCard
                                         key={ins.id}
-                                        className={`tv-insight-card min-w-0 flex-1 rounded-2xl border border-[#E5E7EB] border-l-4 bg-white px-4 py-4 shadow-[0_8px_22px_rgba(15,23,42,0.07)] ${vis.edge} ${
-                                          isPending ? "opacity-70" : ""
-                                        }`}
-                                        style={{
-                                          animationDelay: `${idx * 120}ms`,
-                                        }}
-                                      >
-                                        <div className="mb-2 flex items-center gap-2">
-                                          <span
-                                            className={`h-2 w-2 rounded-full ${vis.dot}`}
-                                            aria-hidden
-                                          />
-                                        </div>
-                                        <p className="text-[14px] font-semibold leading-snug text-[#111827]">
-                                          {ins.title}
-                                        </p>
-                                        <p className="mt-1.5 text-[12px] leading-snug text-[#6B7280]">
-                                          {ins.description}
-                                        </p>
-                                      </div>
-                                    );
-                                  })}
+                                        insight={ins}
+                                        index={idx}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
 
