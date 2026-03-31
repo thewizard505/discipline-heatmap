@@ -1419,55 +1419,54 @@ function TasksDueUpcomingSchedule({
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-5 mb-5 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white sm:mx-8">
-          {days.map((d, idx) => {
-            const isRealToday = d.iso === todayIso;
-            const sorted = [...(tasksByDate[d.iso] ?? [])].sort((a, b) => {
-              const pa = a.priority ?? 4;
-              const pb = b.priority ?? 4;
-              if (pa !== pb) return pa - pb;
-              const byCat = a.categoryLabel.localeCompare(b.categoryLabel);
-              if (byCat !== 0) return byCat;
-              return a.text.localeCompare(b.text);
-            });
-            return (
-              <div
-                key={d.iso}
-                className={`grid grid-cols-[88px_minmax(0,1fr)] ${idx > 0 ? "border-t border-[#E5E7EB]" : ""}`}
-              >
-                <div className="flex min-h-[132px] flex-col items-center justify-center gap-1 border-r border-[#E5E7EB] bg-white px-2 py-3">
-                  <span
-                    className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
-                  >
-                    {d.dow}
-                  </span>
-                  {isRealToday ? (
+          <div className="grid grid-cols-5 divide-x divide-[#E5E7EB]">
+            {days.map((d) => {
+              const isRealToday = d.iso === todayIso;
+              const sorted = [...(tasksByDate[d.iso] ?? [])].sort((a, b) => {
+                const pa = a.priority ?? 4;
+                const pb = b.priority ?? 4;
+                if (pa !== pb) return pa - pb;
+                const byCat = a.categoryLabel.localeCompare(b.categoryLabel);
+                if (byCat !== 0) return byCat;
+                return a.text.localeCompare(b.text);
+              });
+              return (
+                <div key={d.iso} className="min-w-0 bg-white">
+                  <div className="flex min-h-[64px] flex-col items-center justify-center gap-1 border-b border-[#E5E7EB] px-2 py-3">
                     <span
-                      className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#9d84d8] px-1.5 text-[13px] font-semibold tabular-nums text-white shadow-sm shadow-[rgba(122,95,190,0.25)]"
-                      title="Today"
+                      className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
                     >
-                      {d.dayNum}
+                      {d.dow}
                     </span>
-                  ) : (
-                    <span className="text-[15px] font-semibold tabular-nums text-[#111827]">
-                      {d.dayNum}
-                    </span>
-                  )}
-                </div>
-                <div className="min-h-[132px] bg-white px-2 py-2 sm:px-3">
-                  <div className="flex min-h-[40px] flex-col gap-1.5">
-                    {sorted.map((t) => (
-                      <ScheduleTaskCard
-                        key={`${t.listId}-${t.id}`}
-                        t={t}
-                        onTaskPick={onTaskPick}
-                        onCompleteTask={onCompleteTask}
-                      />
-                    ))}
+                    {isRealToday ? (
+                      <span
+                        className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#9d84d8] px-1.5 text-[13px] font-semibold tabular-nums text-white shadow-sm shadow-[rgba(122,95,190,0.25)]"
+                        title="Today"
+                      >
+                        {d.dayNum}
+                      </span>
+                    ) : (
+                      <span className="text-[15px] font-semibold tabular-nums text-[#111827]">
+                        {d.dayNum}
+                      </span>
+                    )}
+                  </div>
+                  <div className="min-h-[420px] px-2 py-2 sm:px-3">
+                    <div className="flex min-h-[40px] flex-col gap-1.5">
+                      {sorted.map((t) => (
+                        <ScheduleTaskCard
+                          key={`${t.listId}-${t.id}`}
+                          t={t}
+                          onTaskPick={onTaskPick}
+                          onCompleteTask={onCompleteTask}
+                        />
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -2894,6 +2893,7 @@ export default function App() {
     () => loadNotificationReadIds(),
   );
   const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
+  const [notificationsFilter, setNotificationsFilter] = useState<"all" | "unread">("all");
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
   const notificationsPanelRef = useRef<HTMLDivElement>(null);
   const sidebarUserMenuRef = useRef<HTMLDivElement>(null);
@@ -3228,6 +3228,13 @@ export default function App() {
       read: notificationReadIds.has(n.id),
     }));
   }, [tasksByListId, notificationDay, notificationReadIds]);
+  const filteredNotificationItems = useMemo(
+    () =>
+      notificationsFilter === "unread"
+        ? notificationItems.filter((n) => !n.read)
+        : notificationItems,
+    [notificationItems, notificationsFilter],
+  );
 
   const hasUnreadNotifications = useMemo(
     () => notificationItems.some((n) => !n.read),
@@ -3445,22 +3452,8 @@ export default function App() {
   }, [sidebarCollapsed]);
 
   const handleNotificationsButtonClick = () => {
-    setNotificationsPanelOpen((prev) => {
-      if (!prev) {
-        setNotificationReadIds((r) => {
-          const s = new Set(r);
-          for (const n of buildAllNotificationPayloads(
-            tasksByListId,
-            notificationDay,
-          )) {
-            s.add(n.id);
-          }
-          return s;
-        });
-        return true;
-      }
-      return false;
-    });
+    setNotificationsPanelOpen((prev) => !prev);
+    setNotificationsFilter("all");
   };
 
   const completedEntries = useMemo(() => {
@@ -6719,46 +6712,20 @@ export default function App() {
 
             {/* ── Main content column ── */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {/* Top bar — centered Todoist-style pill search */}
-              <div className="relative z-[260] flex h-[56px] shrink-0 items-center justify-center border-b border-[#E5E7EB] bg-[#FAFAFA] px-4">
-                {!isFocusSessionActive && sidebarCollapsed ? (
-                  <button
-                    type="button"
-                    onClick={() => setSidebarCollapsed(false)}
-                    className="absolute left-4 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-[#5C5C5C] transition-colors hover:bg-[#F0F0F0]"
-                    aria-label="Expand sidebar"
-                    title="Expand sidebar"
-                  >
-                    <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <rect x="4" y="5" width="16" height="14" rx="1.5" />
-                      <line x1="9" y1="5" x2="9" y2="19" />
-                    </svg>
-                  </button>
-                ) : null}
-                <div className="relative w-full max-w-[520px] px-2">
-                  <svg
-                    className="pointer-events-none absolute left-4 top-1/2 h-[17px] w-[17px] -translate-y-1/2 text-[#5C5C5C]"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    aria-hidden
-                  >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="M21 21l-4.35-4.35" />
+              {!isFocusSessionActive && sidebarCollapsed ? (
+                <button
+                  type="button"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="absolute left-3 top-3 z-[260] flex h-9 w-9 items-center justify-center rounded-md border border-[#E5E7EB] bg-white text-[#5C5C5C] shadow-sm transition-colors hover:bg-[#F8FAFC]"
+                  aria-label="Expand sidebar"
+                  title="Expand sidebar"
+                >
+                  <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <rect x="4" y="5" width="16" height="14" rx="1.5" />
+                    <line x1="9" y1="5" x2="9" y2="19" />
                   </svg>
-                  <input
-                    ref={taskSearchInputRef}
-                    value={taskSearchQuery}
-                    onChange={(e) => setTaskSearchQuery(e.target.value)}
-                    placeholder="Search..."
-                    className="h-10 w-full rounded-full border border-[#E5E7EB] bg-white pl-11 pr-4 text-[14px] text-[#202020] shadow-sm outline-none transition-all placeholder:text-[#9CA3AF] hover:border-[#D1D5DB] focus:border-[#C8C8C8] focus:shadow-[0_1px_4px_rgba(0,0,0,0.06)]"
-                  />
-                </div>
-              </div>
-
+                </button>
+              ) : null}
               {/* Notifications dropdown panel */}
               {notificationsPanelOpen && (
                 <div
@@ -6766,19 +6733,40 @@ export default function App() {
                   id="app-notifications-panel"
                   role="dialog"
                   aria-label="Notifications"
-                  className="pointer-events-auto fixed z-[280] w-[min(420px,calc(100vw-20px))] max-h-[min(560px,calc(100vh-72px))] flex flex-col rounded-[12px] border border-[#E5E7EB] bg-white shadow-[0_8px_28px_rgba(0,0,0,0.1)] overflow-hidden"
+                  className="pointer-events-auto fixed z-[280] w-[min(320px,calc(100vw-20px))] max-h-[min(680px,calc(100vh-72px))] flex flex-col rounded-[14px] border border-[#E5E7EB] bg-white shadow-[0_12px_34px_rgba(0,0,0,0.12)] overflow-hidden"
                   style={{
                     left: notificationsPanelPos.left,
                     top: notificationsPanelPos.bottom,
                   }}
                 >
-                  <div className="shrink-0 px-4 pt-3.5 pb-2.5 border-b border-[#E5E7EB]">
-                    <h2 className="text-[14px] font-semibold text-[#111827] tracking-tight">
-                      Notifications
-                    </h2>
+                  <div className="shrink-0 px-4 pt-3 pb-2">
+                    <div className="inline-flex h-9 items-center rounded-full border border-[#E5E7EB] bg-[#F8FAFC] p-1 shadow-sm">
+                      <button
+                        type="button"
+                        onClick={() => setNotificationsFilter("all")}
+                        className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
+                          notificationsFilter === "all"
+                            ? "bg-white text-[#111827]"
+                            : "text-[#6B7280] hover:text-[#111827]"
+                        }`}
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setNotificationsFilter("unread")}
+                        className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
+                          notificationsFilter === "unread"
+                            ? "bg-white text-[#111827]"
+                            : "text-[#6B7280] hover:text-[#111827]"
+                        }`}
+                      >
+                        Unread {notificationItems.filter((n) => !n.read).length}
+                      </button>
+                    </div>
                   </div>
                   <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-                    {notificationItems.length === 0 ? (
+                    {filteredNotificationItems.length === 0 ? (
                       <div className="flex flex-col items-center justify-center px-8 py-10 text-center">
                         <img
                           src="/notifications-empty.png"
@@ -6787,7 +6775,9 @@ export default function App() {
                           draggable={false}
                         />
                         <p className="text-[15px] font-semibold text-[#111827]">
-                          No notifications
+                          {notificationsFilter === "unread"
+                            ? "No unread notifications"
+                            : "No notifications"}
                         </p>
                         <p className="text-[13px] text-[#6B7280] mt-2 max-w-[280px] leading-relaxed">
                           Overdue alerts and due-date reminders will show up here.
@@ -6795,7 +6785,7 @@ export default function App() {
                       </div>
                     ) : (
                       <ul className="py-1">
-                        {notificationItems.map((n, idx) => (
+                        {filteredNotificationItems.map((n, idx) => (
                           <li
                             key={n.id}
                             className="border-b border-[#F1F5F9] last:border-b-0"
@@ -6803,6 +6793,13 @@ export default function App() {
                             <div
                               className={`px-4 py-3 hover:bg-[#F8FAFC] transition-colors ${!n.read ? "app-notif-item--unread" : "app-notif-item"}`}
                               style={{ animationDelay: `${idx * 45}ms` }}
+                              onClick={() =>
+                                setNotificationReadIds((prev) => {
+                                  const next = new Set(prev);
+                                  next.add(n.id);
+                                  return next;
+                                })
+                              }
                             >
                               <p className="text-[13px] leading-snug text-[#111827] font-medium">
                                 {n.message}
