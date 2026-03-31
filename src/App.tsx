@@ -1588,19 +1588,21 @@ function mergeAllTaskSpeedPoints(
 /** Logged when a focus session ends (reflection or quit) for analytics insights. */
 type FocusSessionRecord = {
   id: string;
-  /** Local calendar date YYYY-MM-DD */
-  dateIso: string;
-  /** Local hour 0–23 when session ended */
-  hourEnded: number;
-  integrity: number;
-  durationSeconds: number;
+  startTime: number;
+  endTime: number;
+  /** Session duration in minutes */
+  duration: number;
+  focusIntegrity: number;
+  taskId?: number;
+  completed: boolean;
 };
 
 type FocusInsight = {
   id: string;
-  headline: string;
+  title: string;
   description: string;
-  tone: "positive" | "negative" | "neutral";
+  type: "positive" | "negative" | "neutral";
+  strength: number;
 };
 
 const FOCUS_SESSION_LOG_KEY = "tunnelvision_focus_session_log_v1";
@@ -1626,13 +1628,151 @@ function startOfWeekMonday(d: Date): Date {
   return x;
 }
 
+type FocusTimeBucket = "morning" | "afternoon" | "evening";
+type FocusDurationBucket = "short" | "medium" | "long";
+
 function hourBucket(
   h: number,
-): "morning" | "afternoon" | "evening" | null {
+): FocusTimeBucket | null {
   if (h >= 5 && h < 12) return "morning";
   if (h >= 12 && h < 17) return "afternoon";
   if (h >= 17 && h < 22) return "evening";
   return null;
+}
+
+function durationBucket(mins: number): FocusDurationBucket {
+  if (mins < 10) return "short";
+  if (mins < 25) return "medium";
+  return "long";
+}
+
+type DerivedSession = FocusSessionRecord & {
+  dayOfWeek: number;
+  hourOfDay: number;
+  timeBucket: FocusTimeBucket | null;
+  durationBucket: FocusDurationBucket;
+};
+
+function normalizeFocusSessionRecord(raw: unknown): FocusSessionRecord | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id =
+    typeof r.id === "string" && r.id.trim()
+      ? r.id
+      : `fs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+
+  const startTime =
+    typeof r.startTime === "number" && Number.isFinite(r.startTime)
+      ? r.startTime
+      : typeof r.endTime === "number" && Number.isFinite(r.endTime)
+        ? r.endTime
+        : typeof r.dateIso === "string"
+          ? parseLocalDateIso(r.dateIso).getTime()
+          : Date.now();
+
+  const endTime =
+    typeof r.endTime === "number" && Number.isFinite(r.endTime)
+      ? r.endTime
+      : startTime + 60_000;
+
+  const duration =
+    typeof r.duration === "number" && Number.isFinite(r.duration)
+      ? Math.max(0, r.duration)
+      : typeof r.durationSeconds === "number" && Number.isFinite(r.durationSeconds)
+        ? Math.max(0, r.durationSeconds / 60)
+        : Math.max(0, (endTime - startTime) / 60_000);
+
+  const focusIntegrity =
+    typeof r.focusIntegrity === "number" && Number.isFinite(r.focusIntegrity)
+      ? Math.max(0, Math.min(100, r.focusIntegrity))
+      : typeof r.integrity === "number" && Number.isFinite(r.integrity)
+        ? Math.max(0, Math.min(100, r.integrity))
+        : 0;
+
+  return {
+    id,
+    startTime,
+    endTime: Math.max(endTime, startTime + 1),
+    duration,
+    focusIntegrity,
+    taskId: typeof r.taskId === "number" ? r.taskId : undefined,
+    completed: typeof r.completed === "boolean" ? r.completed : true,
+  };
+}
+
+function normalizeFocusSessionRecords(raw: unknown): FocusSessionRecord[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map(normalizeFocusSessionRecord)
+    .filter((x): x is FocusSessionRecord => x != null);
+}
+
+function deriveSessionFields(rec: FocusSessionRecord): DerivedSession {
+  const start = new Date(rec.startTime);
+  const hour = start.getHours();
+  return {
+    ...rec,
+    dayOfWeek: start.getDay(),
+    hourOfDay: hour,
+    timeBucket: hourBucket(hour),
+    durationBucket: durationBucket(rec.duration),
+  };
+}
+
+function avg(nums: number[]): number {
+  if (nums.length === 0) return 0;
+  return nums.reduce((s, n) => s + n, 0) / nums.length;
+}
+
+function groupSessionsByTime(
+  sessions: DerivedSession[],
+): Record<FocusTimeBucket, DerivedSession[]> {
+  return {
+    morning: sessions.filter((s) => s.timeBucket === "morning"),
+    afternoon: sessions.filter((s) => s.timeBucket === "afternoon"),
+    evening: sessions.filter((s) => s.timeBucket === "evening"),
+  };
+}
+
+function groupSessionsByDuration(
+  sessions: DerivedSession[],
+): Record<FocusDurationBucket, DerivedSession[]> {
+  return {
+    short: sessions.filter((s) => s.durationBucket === "short"),
+    medium: sessions.filter((s) => s.durationBucket === "medium"),
+    long: sessions.filter((s) => s.durationBucket === "long"),
+  };
+}
+
+function computeTrendPercent(
+  sessions: DerivedSession[],
+  now = new Date(),
+): { percent: number; thisWeekN: number; prevWeekN: number } | null {
+  const end = new Date(now);
+  end.setHours(23, 59, 59, 999);
+  const startThis = new Date(end);
+  startThis.setDate(end.getDate() - 6);
+  startThis.setHours(0, 0, 0, 0);
+  const startPrev = new Date(startThis);
+  startPrev.setDate(startThis.getDate() - 7);
+
+  const thisWeek = sessions.filter(
+    (s) => s.startTime >= startThis.getTime() && s.startTime <= end.getTime(),
+  );
+  const prevWeek = sessions.filter(
+    (s) => s.startTime >= startPrev.getTime() && s.startTime < startThis.getTime(),
+  );
+  if (thisWeek.length < 2 || prevWeek.length < 2) return null;
+
+  const tw = avg(thisWeek.map((s) => s.focusIntegrity));
+  const pw = avg(prevWeek.map((s) => s.focusIntegrity));
+  if (pw <= 0) return null;
+
+  return {
+    percent: ((tw - pw) / pw) * 100,
+    thisWeekN: thisWeek.length,
+    prevWeekN: prevWeek.length,
+  };
 }
 
 const WEEKDAY_NAMES = [
@@ -1645,256 +1785,201 @@ const WEEKDAY_NAMES = [
   "Saturday",
 ];
 
-/** Max 4 insights; priority: weekly trend → time-of-day → weekday consistency → session length. */
-function generateFocusInsights(
-  records: FocusSessionRecord[],
-): FocusInsight[] {
-  const MIN_SESSIONS = 4;
-  const MIN_DISTINCT_DAYS = 2;
-  if (records.length < MIN_SESSIONS) return [];
-  const distinctDays = new Set(records.map((r) => r.dateIso));
-  if (distinctDays.size < MIN_DISTINCT_DAYS) return [];
+function generateInsights(records: FocusSessionRecord[]): FocusInsight[] {
+  const normalized = records
+    .filter(
+      (r) =>
+        Number.isFinite(r.startTime) &&
+        Number.isFinite(r.endTime) &&
+        Number.isFinite(r.duration) &&
+        Number.isFinite(r.focusIntegrity),
+    )
+    .map((r) => ({
+      ...r,
+      duration: Math.max(0, r.duration),
+      focusIntegrity: Math.max(0, Math.min(100, r.focusIntegrity)),
+    }))
+    .map(deriveSessionFields);
 
-  const out: FocusInsight[] = [];
-
-  const avgIntegrity = (arr: FocusSessionRecord[]) =>
-    arr.reduce((s, r) => s + r.integrity, 0) / Math.max(1, arr.length);
-
-  const overallAvg = avgIntegrity(records);
-
-  // 1) Weekly trend (this calendar week vs previous, Mon–Sun)
-  const now = new Date();
-  const thisWeekStart = startOfWeekMonday(now);
-  const nextWeekStart = new Date(thisWeekStart);
-  nextWeekStart.setDate(nextWeekStart.getDate() + 7);
-  const lastWeekStart = new Date(thisWeekStart);
-  lastWeekStart.setDate(lastWeekStart.getDate() - 7);
-
-  const thisWeekRecs = records.filter((r) => {
-    const d = parseLocalDateIso(r.dateIso);
-    return d >= thisWeekStart && d < nextWeekStart;
-  });
-  const lastWeekRecs = records.filter((r) => {
-    const d = parseLocalDateIso(r.dateIso);
-    return d >= lastWeekStart && d < thisWeekStart;
-  });
-
-  if (thisWeekRecs.length >= 1 && lastWeekRecs.length >= 1) {
-    const tw = avgIntegrity(thisWeekRecs);
-    const lw = avgIntegrity(lastWeekRecs);
-    if (lw > 1e-6) {
-      const pct = ((tw - lw) / lw) * 100;
-      const rounded = Math.round(pct);
-      if (pct >= 1) {
-        out.push({
-          id: "weekly-trend-up",
-          headline: `You're improving +${Math.abs(rounded)}% this week`,
-          description:
-            "Your focus integrity has increased week-over-week.",
-          tone: "positive",
-        });
-      } else if (pct <= -1) {
-        out.push({
-          id: "weekly-trend-down",
-          headline: "Your focus dropped slightly this week",
-          description:
-            "Your focus integrity has decreased compared to last week.",
-          tone: "negative",
-        });
-      }
-    }
+  if (normalized.length < 4) {
+    return [
+      {
+        id: "not-enough-data",
+        title: "Not enough data yet",
+        description: "Complete a few focus sessions to unlock insights",
+        type: "neutral",
+        strength: 100,
+      },
+    ];
   }
 
-  // 2) Time of day
-  const buckets: Record<
-    "morning" | "afternoon" | "evening",
-    { sum: number; n: number }
-  > = {
-    morning: { sum: 0, n: 0 },
-    afternoon: { sum: 0, n: 0 },
-    evening: { sum: 0, n: 0 },
-  };
-  for (const r of records) {
-    const b = hourBucket(r.hourEnded);
-    if (b) {
-      buckets[b].sum += r.integrity;
-      buckets[b].n += 1;
-    }
-  }
-  const withData = (
-    ["morning", "afternoon", "evening"] as const
-  ).filter((k) => buckets[k].n >= 1);
-  if (withData.length >= 2) {
-    const ranked = withData
-      .map((k) => ({
-        k,
-        avg: buckets[k].sum / buckets[k].n,
-      }))
-      .sort((a, b) => b.avg - a.avg);
-    const bestK = ranked[0]?.k ?? null;
-    const bestAvg = ranked[0]?.avg ?? 0;
-    const secondAvg = ranked[1]?.avg ?? 0;
-    if (bestK !== null && bestAvg - secondAvg >= 5) {
+  const candidates: FocusInsight[] = [];
+
+  // A) Time of day
+  const byTime = groupSessionsByTime(normalized);
+  const timeRows = (Object.keys(byTime) as FocusTimeBucket[])
+    .filter((k) => byTime[k].length >= 2)
+    .map((k) => ({
+      key: k,
+      avg: avg(byTime[k].map((s) => s.focusIntegrity)),
+      n: byTime[k].length,
+    }))
+    .sort((a, b) => b.avg - a.avg);
+  if (timeRows.length >= 2) {
+    const best = timeRows[0];
+    const worst = timeRows[timeRows.length - 1];
+    const delta = best.avg - worst.avg;
+    if (delta > 5) {
       const label =
-        bestK === "morning"
-          ? "the morning"
-          : bestK === "afternoon"
-            ? "the afternoon"
-            : "the evening";
-      const sub =
-        bestK === "morning"
-          ? "Highest consistency before 12 PM"
-          : bestK === "afternoon"
-            ? "Highest consistency between 12 PM and 5 PM"
-            : "Highest consistency between 5 PM and 10 PM";
-      out.push({
+        best.key === "morning"
+          ? "before 12 PM"
+          : best.key === "afternoon"
+            ? "in the afternoon"
+            : "in the evening";
+      candidates.push({
         id: "time-of-day",
-        headline: `You focus best in ${label}`,
-        description: sub,
-        tone: "positive",
+        title: `You focus best ${label}`,
+        description: `${best.key[0].toUpperCase()}${best.key.slice(1)} sessions average ${Math.round(best.avg)}% integrity`,
+        type: "positive",
+        strength: delta,
       });
     }
   }
 
-  // 3) Weekday consistency (weakest / strongest)
-  const byDow: Record<number, { sum: number; n: number }> = {};
-  for (const r of records) {
-    const dow = parseLocalDateIso(r.dateIso).getDay();
-    if (!byDow[dow]) byDow[dow] = { sum: 0, n: 0 };
-    byDow[dow].sum += r.integrity;
-    byDow[dow].n += 1;
-  }
-  const entries = Object.entries(byDow).map(([d, v]) => ({
-    dow: Number(d),
-    avg: v.sum / v.n,
-    n: v.n,
-  }));
-  const multi = entries.filter((e) => e.n >= 2);
-  const pool = multi.length >= 2 ? multi : entries;
-  if (pool.length >= 2) {
-    let worst = pool[0];
-    let best = pool[0];
-    for (const e of pool) {
-      if (e.avg < worst.avg) worst = e;
-      if (e.avg > best.avg) best = e;
-    }
-    if (worst.avg + 3 <= overallAvg) {
-      out.push({
-        id: "dow-weakest",
-        headline: `Your consistency dropped on ${WEEKDAY_NAMES[worst.dow]}`,
-        description: `${WEEKDAY_NAMES[worst.dow]} had the lowest focus integrity.`,
-        tone: "negative",
-      });
-    } else if (best.avg >= overallAvg + 5 && best.dow !== worst.dow) {
-      out.push({
-        id: "dow-strongest",
-        headline: `You are most consistent on ${WEEKDAY_NAMES[best.dow]}s`,
-        description: `${WEEKDAY_NAMES[best.dow]} has your highest average focus integrity.`,
-        tone: "positive",
-      });
-    }
-  }
-
-  // 4) Session length (one card max)
-  const avgDur =
-    records.reduce((s, r) => s + r.durationSeconds, 0) / records.length;
-  const under10 = records.filter((r) => r.durationSeconds < 600).length;
-  if (under10 / records.length >= 0.6 && avgDur < 600) {
-    out.push({
-      id: "session-short",
-      headline: "Most sessions last under 10 minutes",
-      description: "Average session length is below ten minutes.",
-      tone: "neutral",
+  // B) Weekly trend
+  const trend = computeTrendPercent(normalized);
+  if (trend && Math.abs(trend.percent) > 3) {
+    const rounded = Math.round(Math.abs(trend.percent));
+    candidates.push({
+      id: trend.percent > 0 ? "weekly-trend-up" : "weekly-trend-down",
+      title:
+        trend.percent > 0
+          ? `You're improving +${rounded}% this week`
+          : `Your focus dropped by ${rounded}% this week`,
+      description: `Compared with the previous 7 days (${trend.thisWeekN} vs ${trend.prevWeekN} sessions).`,
+      type: trend.percent > 0 ? "positive" : "negative",
+      strength: Math.abs(trend.percent),
     });
-  } else {
-    const durByBucket: Record<
-      "morning" | "afternoon" | "evening",
-      number[]
-    > = { morning: [], afternoon: [], evening: [] };
-    for (const r of records) {
-      const b = hourBucket(r.hourEnded);
-      if (b) durByBucket[b].push(r.durationSeconds);
-    }
-    const median = (arr: number[]) => {
-      if (arr.length === 0) return 0;
-      const s = [...arr].sort((a, b) => a - b);
-      return s[Math.floor(s.length / 2)];
-    };
-    const ma = median(durByBucket.morning);
-    const aa = median(durByBucket.afternoon);
-    const ea = median(durByBucket.evening);
-    if (
-      durByBucket.afternoon.length >= 2 &&
-      aa > ma &&
-      aa > ea &&
-      aa > 0
-    ) {
-      out.push({
-        id: "session-long-afternoon",
-        headline: "Your longest sessions happen in the afternoon",
-        description:
-          "Median session length is highest between 12 PM and 5 PM.",
-        tone: "neutral",
+  }
+
+  // C) Worst day of week
+  const byDow = new Map<number, number[]>();
+  for (const s of normalized) {
+    if (!byDow.has(s.dayOfWeek)) byDow.set(s.dayOfWeek, []);
+    byDow.get(s.dayOfWeek)!.push(s.focusIntegrity);
+  }
+  const dowRows = [...byDow.entries()]
+    .filter(([, vals]) => vals.length >= 2)
+    .map(([dow, vals]) => ({ dow, avg: avg(vals), n: vals.length }))
+    .sort((a, b) => a.avg - b.avg);
+  if (dowRows.length >= 2) {
+    const worst = dowRows[0];
+    const best = dowRows[dowRows.length - 1];
+    const gap = best.avg - worst.avg;
+    if (gap >= 4) {
+      candidates.push({
+        id: "worst-day",
+        title: `Your consistency drops on ${WEEKDAY_NAMES[worst.dow]}`,
+        description: `Average integrity is ${Math.round(worst.avg)}% on that day`,
+        type: "negative",
+        strength: gap,
       });
     }
   }
 
-  const priority = [
-    "weekly-trend-up",
-    "weekly-trend-down",
-    "time-of-day",
-    "dow-weakest",
-    "dow-strongest",
-    "session-short",
-    "session-long-afternoon",
-  ];
-  const seen = new Set<string>();
-  const ordered: FocusInsight[] = [];
-  for (const pid of priority) {
-    const found = out.find((o) => o.id === pid);
-    if (found && !seen.has(found.id)) {
-      seen.add(found.id);
-      ordered.push(found);
-      if (ordered.length >= 4) break;
+  // D) Session length effect
+  const byDuration = groupSessionsByDuration(normalized);
+  const durRows = (Object.keys(byDuration) as FocusDurationBucket[])
+    .filter((k) => byDuration[k].length >= 2)
+    .map((k) => ({ key: k, avg: avg(byDuration[k].map((s) => s.focusIntegrity)) }))
+    .sort((a, b) => b.avg - a.avg);
+  if (durRows.length >= 2) {
+    const best = durRows[0];
+    const worst = durRows[durRows.length - 1];
+    const gap = best.avg - worst.avg;
+    if (gap >= 4) {
+      const label =
+        best.key === "short" ? "under 10 minutes" : best.key === "medium" ? "10–25 minute" : "25+ minute";
+      candidates.push({
+        id: "session-length",
+        title: `You focus best in ${label} sessions`,
+        description: `Average integrity is ${Math.round(best.avg)}% for this duration range`,
+        type: "neutral",
+        strength: gap,
+      });
     }
   }
-  return ordered;
+
+  // E) Peak focus window (2-hour)
+  const hourVals: Record<number, number[]> = {};
+  for (const s of normalized) {
+    if (!hourVals[s.hourOfDay]) hourVals[s.hourOfDay] = [];
+    hourVals[s.hourOfDay].push(s.focusIntegrity);
+  }
+  let bestWindow: { start: number; avgVal: number; n: number } | null = null;
+  for (let h = 0; h < 24; h++) {
+    const vals = [...(hourVals[h] ?? []), ...(hourVals[(h + 1) % 24] ?? [])];
+    if (vals.length < 2) continue;
+    const v = avg(vals);
+    if (!bestWindow || v > bestWindow.avgVal) {
+      bestWindow = { start: h, avgVal: v, n: vals.length };
+    }
+  }
+  if (bestWindow && bestWindow.n >= 2) {
+    const hh = (n: number) => {
+      const h = ((n % 24) + 24) % 24;
+      const display = h % 12 === 0 ? 12 : h % 12;
+      const suffix = h < 12 ? "AM" : "PM";
+      return `${display} ${suffix}`;
+    };
+    candidates.push({
+      id: "peak-window",
+      title: `Your peak focus time is ${hh(bestWindow.start)}–${hh(bestWindow.start + 2)}`,
+      description: `This window averages ${Math.round(bestWindow.avgVal)}% integrity`,
+      type: "positive",
+      strength: Math.max(1, bestWindow.avgVal - avg(normalized.map((s) => s.focusIntegrity))),
+    });
+  }
+
+  const deduped = candidates.filter(
+    (c, i) => candidates.findIndex((x) => x.id === c.id) === i,
+  );
+  if (deduped.length === 0) {
+    return [
+      {
+        id: "not-enough-signal",
+        title: "Not enough data yet",
+        description: "Complete a few focus sessions to unlock insights",
+        type: "neutral",
+        strength: 100,
+      },
+    ];
+  }
+
+  return deduped.sort((a, b) => b.strength - a.strength).slice(0, 4);
 }
 
-/** Insight card chrome to match reference (green / rose / indigo tints). */
-function focusInsightCardVisuals(id: string): {
-  wrap: string;
-  title: string;
-  description: string;
+function focusInsightCardVisuals(
+  type: FocusInsight["type"],
+): {
+  dot: string;
+  edge: string;
 } {
-  switch (id) {
-    case "time-of-day":
-    case "dow-strongest":
+  switch (type) {
+    case "positive":
       return {
-        wrap: "bg-[#ECFDF5] border-emerald-100/90",
-        title: "text-[#14532D]",
-        description: "text-[#15803D]/90",
+        dot: "bg-emerald-500",
+        edge: "border-l-emerald-300",
       };
-    case "weekly-trend-down":
-    case "dow-weakest":
+    case "negative":
       return {
-        wrap: "bg-[#F3EEFC] border-[#DDD6F0]",
-        title: "text-[#5B21B6]",
-        description: "text-[#7C3AED]/90",
+        dot: "bg-rose-500",
+        edge: "border-l-rose-300",
       };
-    case "weekly-trend-up":
-      return {
-        wrap: "bg-[#EEF2FF] border-indigo-100/90",
-        title: "text-[#1e3a8a]",
-        description: "text-[#4338CA]/90",
-      };
-    case "session-short":
-    case "session-long-afternoon":
     default:
       return {
-        wrap: "bg-[#F8FAFC] border-[#E5E7EB]",
-        title: "text-[#111827]",
-        description: "text-[#6B7280]",
+        dot: "bg-slate-400",
+        edge: "border-l-slate-300",
       };
   }
 }
@@ -4040,9 +4125,36 @@ export default function App() {
 
   const focusInsights = useMemo(
     () =>
-      isSimulation ? [] : generateFocusInsights(focusSessionRecords),
+      isSimulation ? [] : generateInsights(focusSessionRecords),
     [focusSessionRecords, isSimulation],
   );
+  const hasInsightsData =
+    focusInsights.length > 0 && !focusInsights.some((i) => i.id.startsWith("not-enough"));
+  const displayedInsightCards = hasInsightsData
+    ? focusInsights.slice(0, 4)
+    : [
+        focusInsights[0] ?? {
+          id: "not-enough-data",
+          title: "Not enough data yet",
+          description: "Complete a few focus sessions to unlock insights",
+          type: "neutral" as const,
+          strength: 100,
+        },
+        {
+          id: "pending-morning",
+          title: "You focus better in the morning",
+          description: "This will appear once enough sessions confirm the pattern",
+          type: "neutral" as const,
+          strength: 0,
+        },
+        {
+          id: "pending-trend",
+          title: "You're improving +3% this week",
+          description: "Weekly trend unlocks after two weeks of session data",
+          type: "neutral" as const,
+          strength: 0,
+        },
+      ];
 
   /** Performance tiles: 2×2 grid matching reference (Total, Best, Tasks, Avg completion). */
   const analyticsPerformanceQuad = useMemo(() => {
@@ -4081,8 +4193,8 @@ export default function App() {
 
     if (savedFocusSessions) {
       try {
-        const parsed = JSON.parse(savedFocusSessions) as FocusSessionRecord[];
-        if (Array.isArray(parsed)) setFocusSessionRecords(parsed);
+        const parsed = JSON.parse(savedFocusSessions);
+        setFocusSessionRecords(normalizeFocusSessionRecords(parsed));
       } catch {
         setFocusSessionRecords([]);
       }
@@ -4408,6 +4520,8 @@ export default function App() {
       0,
       Math.floor(initialSecondsRef.current - secondsRef.current),
     );
+    const startMs = now.getTime() - elapsedSecs * 1000;
+    const activeTaskId = focusSessionEntries[0]?.taskId;
     setFocusSessionRecords((prev) => [
       ...prev,
       {
@@ -4415,10 +4529,12 @@ export default function App() {
           typeof crypto !== "undefined" && crypto.randomUUID
             ? crypto.randomUUID()
             : `fs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-        dateIso: toLocalDateIso(now),
-        hourEnded: now.getHours(),
-        integrity: v,
-        durationSeconds: elapsedSecs,
+        startTime: startMs,
+        endTime: now.getTime(),
+        duration: elapsedSecs / 60,
+        focusIntegrity: v,
+        taskId: activeTaskId,
+        completed: false,
       },
     ]);
   };
@@ -4975,6 +5091,7 @@ export default function App() {
 
     if (!isSimulation) {
       const now = new Date();
+      const startMs = now.getTime() - durationLogged * 1000;
       setFocusSessionRecords((prev) => [
         ...prev,
         {
@@ -4982,10 +5099,12 @@ export default function App() {
             typeof crypto !== "undefined" && crypto.randomUUID
               ? crypto.randomUUID()
               : `fs-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-          dateIso: toLocalDateIso(now),
-          hourEnded: now.getHours(),
-          integrity: integrityRounded,
-          durationSeconds: durationLogged,
+          startTime: startMs,
+          endTime: now.getTime(),
+          duration: durationLogged / 60,
+          focusIntegrity: integrityRounded,
+          taskId: undefined,
+          completed: true,
         },
       ]);
     }
@@ -5923,6 +6042,25 @@ export default function App() {
         @keyframes app-notif-urgency {
           0%,100%{ box-shadow:0 0 0 0 rgba(157,132,216,0) }
           50%{ box-shadow:0 0 0 1px rgba(157,132,216,0.18),0 8px 28px -12px rgba(122,95,190,0.2) }
+        }
+        @keyframes insight-card-enter {
+          0% { opacity:0; transform:translateY(8px) scale(0.985); }
+          100% { opacity:1; transform:translateY(0) scale(1); }
+        }
+        @keyframes insight-card-float {
+          0%,100% { transform:translateY(0px); }
+          50% { transform:translateY(-2px); }
+        }
+        @keyframes insight-card-wisp {
+          0%,100% { box-shadow:0 8px 22px rgba(15,23,42,0.07), 0 0 0 rgba(122,95,190,0); }
+          50% { box-shadow:0 14px 32px rgba(15,23,42,0.09), 0 0 24px rgba(122,95,190,0.12); }
+        }
+        .tv-insight-card{
+          animation:
+            insight-card-enter .36s cubic-bezier(0.22,0.61,0.36,1) both,
+            insight-card-float 3.6s ease-in-out infinite,
+            insight-card-wisp 4.6s ease-in-out infinite;
+          will-change: transform, box-shadow, opacity;
         }
         .focus-zen-mist-overlay{
           animation:focus-zen-mist 5.5s cubic-bezier(0.22,0.61,0.36,1) forwards;
@@ -7570,10 +7708,10 @@ export default function App() {
                           <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12 space-y-6">
                             <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                               <div>
-                                <h1 className="text-[1.35rem] sm:text-[1.45rem] font-semibold text-[#202020] tracking-[-0.02em] font-[family-name:Inter,system-ui,-apple-system,sans-serif]">
+                                <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
                                   Analytics
                                 </h1>
-                                <p className="text-[15px] text-[#6B7280] mt-2 max-w-xl leading-relaxed font-normal">
+                                <p className="mt-1 text-[14px] font-medium text-[#4B5563]">
                                   Focus trends and discipline at a glance
                                 </p>
                               </div>
@@ -7589,7 +7727,7 @@ export default function App() {
                                     onClick={() =>
                                       setAnalyticsRangeOpen((o) => !o)
                                     }
-                                    className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] shadow-sm outline-none transition-colors hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-[#0EA5E9]/25"
+                                    className="inline-flex items-center gap-2 rounded-lg border border-[#E5E7EB] bg-white px-3.5 py-2 text-[13px] font-medium text-[#374151] shadow-sm outline-none transition-colors hover:bg-[#FAFAFA] focus-visible:ring-2 focus-visible:ring-[#9d84d8]/25"
                                   >
                                     {analyticsRange === "7d"
                                       ? "Last 7 days"
@@ -7632,7 +7770,7 @@ export default function App() {
                                           }}
                                           className={`flex w-full items-center px-3 py-2 text-left text-[13px] font-medium transition-colors ${
                                             analyticsRange === val
-                                              ? "bg-[#E0F2FE] text-[#0369A1]"
+                                              ? "bg-[#F3EEFC] text-[#5B21B6]"
                                               : "text-[#374151] hover:bg-[#F9FAFB]"
                                           }`}
                                         >
@@ -7649,12 +7787,12 @@ export default function App() {
                               <div className="flex flex-col gap-1 p-5 sm:p-6 border-b border-[#E5E7EB]">
                                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
                                   <div className="min-w-0">
-                                    <h2 className="text-[17px] sm:text-lg font-bold text-[#111827] tracking-tight">
+                                    <h2 className="text-[20px] font-bold leading-tight tracking-[-0.02em] text-[#111827]">
                                       {selectedStat === "Integrity"
                                         ? "Focus Integrity"
                                         : "Task Speed"}
                                     </h2>
-                                    <p className="text-[15px] text-[#6B7280] mt-1.5 leading-snug font-normal">
+                                    <p className="mt-1 text-[14px] font-medium text-[#4B5563]">
                                       {selectedStat === "Integrity"
                                         ? "Consistency over time · all focus sessions"
                                         : selectedTaskGraph
@@ -7799,7 +7937,7 @@ export default function App() {
                                         )}
                                       </div>
                                     )}
-                                    <div className="inline-flex h-10 shrink-0 rounded-full border border-[#E5E7EB] bg-white p-1 shadow-sm">
+                                    <div className="inline-flex h-10 shrink-0 rounded-full border border-[#DDD6F0] bg-white p-1 shadow-[0_8px_20px_rgba(122,95,190,0.10)]">
                                       {(["Integrity", "Speed"] as const).map(
                                         (type) => (
                                           <button
@@ -7813,10 +7951,10 @@ export default function App() {
                                                 );
                                               }
                                             }}
-                                            className={`flex min-w-[6rem] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold tracking-tight transition-colors duration-150 ${
+                                            className={`flex min-w-[6rem] items-center justify-center rounded-full px-4 py-2 text-[13px] font-semibold tracking-tight transition-all duration-200 active:scale-[0.98] ${
                                               selectedStat === type
-                                                ? "bg-[#0EA5E9] text-white"
-                                                : "bg-transparent text-[#374151] hover:bg-[#F9FAFB]"
+                                                ? "bg-[#9d84d8] text-white shadow-[0_6px_16px_rgba(122,95,190,0.35)]"
+                                                : "bg-transparent text-[#4B5563] hover:bg-[#F6F3FC]"
                                             }`}
                                           >
                                             {type}
@@ -7866,7 +8004,7 @@ export default function App() {
                                                 .date
                                             }
                                           </div>
-                                          <div className="tabular-nums text-[#0EA5E9] mt-1 text-[13px] font-semibold leading-tight">
+                                          <div className="tabular-nums text-[#7a5fbe] mt-1 text-[13px] font-semibold leading-tight">
                                             {selectedStat === "Integrity"
                                               ? `${currentData[analyticsChartHover].value.toFixed(1)}%`
                                               : `${currentData[analyticsChartHover].value.toFixed(0)}s`}
@@ -7914,8 +8052,8 @@ export default function App() {
                                         >
                                           <stop
                                             offset="0%"
-                                            stopColor="#0EA5E9"
-                                            stopOpacity="0.18"
+                                            stopColor="#7a5fbe"
+                                            stopOpacity="0.22"
                                           />
                                           <stop
                                             offset="100%"
@@ -7978,7 +8116,7 @@ export default function App() {
                                           currentData,
                                         )}
                                         fill="none"
-                                        stroke="#0EA5E9"
+                                        stroke="#7a5fbe"
                                         strokeWidth="0.58"
                                         strokeLinejoin="round"
                                         strokeLinecap="round"
@@ -7997,8 +8135,8 @@ export default function App() {
                                             }
                                             fill={
                                               analyticsChartHover === i
-                                                ? "#38BDF8"
-                                                : "#0EA5E9"
+                                                ? "#7a5fbe"
+                                                : "#8e6fd0"
                                             }
                                             stroke="#ffffff"
                                             strokeWidth="0.24"
@@ -8043,42 +8181,40 @@ export default function App() {
                                     Patterns based on your focus data
                                   </p>
                                 </div>
-                                {focusInsights.length === 0 ? (
-                                  <div className="py-10 sm:py-12 max-w-lg">
-                                    <p className="text-[15px] font-semibold text-[#374151]">
-                                      Not enough data yet
-                                    </p>
-                                    <p className="text-[13px] text-[#9CA3AF] mt-2 leading-relaxed">
-                                      Complete a few focus sessions to unlock
-                                      insights
-                                    </p>
-                                  </div>
-                                ) : (
-                                  <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-                                    {focusInsights.map((ins) => {
-                                      const vis = focusInsightCardVisuals(
-                                        ins.id,
-                                      );
-                                      return (
-                                        <div
-                                          key={ins.id}
-                                          className={`min-w-0 flex-1 rounded-2xl border px-4 py-4 shadow-sm ${vis.wrap}`}
-                                        >
-                                          <p
-                                            className={`text-[14px] font-semibold leading-snug ${vis.title}`}
-                                          >
-                                            {ins.headline}
-                                          </p>
-                                          <p
-                                            className={`text-[12px] mt-1.5 leading-snug ${vis.description}`}
-                                          >
-                                            {ins.description}
-                                          </p>
+                                <div className="flex flex-col sm:flex-row flex-wrap gap-3">
+                                  {displayedInsightCards.map((ins, idx) => {
+                                    const vis = focusInsightCardVisuals(
+                                      ins.type,
+                                    );
+                                    const isPending =
+                                      !hasInsightsData &&
+                                      ins.id !== "not-enough-data";
+                                    return (
+                                      <div
+                                        key={ins.id}
+                                        className={`tv-insight-card min-w-0 flex-1 rounded-2xl border border-[#E5E7EB] border-l-4 bg-white px-4 py-4 shadow-[0_8px_22px_rgba(15,23,42,0.07)] ${vis.edge} ${
+                                          isPending ? "opacity-70" : ""
+                                        }`}
+                                        style={{
+                                          animationDelay: `${idx * 120}ms`,
+                                        }}
+                                      >
+                                        <div className="mb-2 flex items-center gap-2">
+                                          <span
+                                            className={`h-2 w-2 rounded-full ${vis.dot}`}
+                                            aria-hidden
+                                          />
                                         </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
+                                        <p className="text-[14px] font-semibold leading-snug text-[#111827]">
+                                          {ins.title}
+                                        </p>
+                                        <p className="mt-1.5 text-[12px] leading-snug text-[#6B7280]">
+                                          {ins.description}
+                                        </p>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
                               </div>
 
                               <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-1">
