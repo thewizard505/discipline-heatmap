@@ -53,9 +53,6 @@ type Task = {
   estimatedMinutes?: number | null;
   /** User skipped or answered inline estimate prompt — do not ask again */
   estimatePromptDismissed?: boolean;
-  /** Minutes from midnight; both set with end > start → timed block on schedule (else all-day). */
-  scheduledStartMinutes?: number | null;
-  scheduledEndMinutes?: number | null;
 };
 
 const SYS_LIST_OVERDUE = "sys-overdue";
@@ -1264,45 +1261,6 @@ type CalendarPlacedTask = {
   priority: TaskPriorityLevel;
 };
 
-type CalendarTimedTask = CalendarPlacedTask & {
-  startMinutes: number;
-  endMinutes: number;
-};
-
-const SCHEDULE_HOUR_ROW_PX = 52;
-const SCHEDULE_FIRST_HOUR = 9;
-/** Hour labels 09:00 … 18:00 — 10 rows (9:00–19:00 visible range). */
-const UPCOMING_SCHEDULE_HOURS = Array.from(
-  { length: 10 },
-  (_, i) => i + SCHEDULE_FIRST_HOUR,
-);
-const SCHEDULE_VISIBLE_START_MINUTES = SCHEDULE_FIRST_HOUR * 60;
-const SCHEDULE_VISIBLE_END_MINUTES =
-  (SCHEDULE_FIRST_HOUR + UPCOMING_SCHEDULE_HOURS.length) * 60;
-
-function timedTaskPixelLayout(
-  startMin: number,
-  endMin: number,
-): { top: number; height: number } {
-  const pxPerMin = SCHEDULE_HOUR_ROW_PX / 60;
-  const clipStart = Math.max(startMin, SCHEDULE_VISIBLE_START_MINUTES);
-  const clipEnd = Math.min(endMin, SCHEDULE_VISIBLE_END_MINUTES);
-  if (clipEnd <= clipStart) return { top: 0, height: 0 };
-  return {
-    top: (clipStart - SCHEDULE_VISIBLE_START_MINUTES) * pxPerMin,
-    height: Math.max(4, (clipEnd - clipStart) * pxPerMin),
-  };
-}
-
-function formatScheduleTimeRangeLabel(start: number, end: number): string {
-  const fmt = (m: number) => {
-    const h = Math.floor(m / 60) % 24;
-    const min = m % 60;
-    return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-  };
-  return `${fmt(start)} – ${fmt(end)}`;
-}
-
 function ScheduleTaskCard({
   t,
   onTaskPick,
@@ -1351,218 +1309,6 @@ function ScheduleTaskCard({
   );
 }
 
-function minutesFromHourMinute(h: number, min: number): number {
-  return Math.max(0, Math.min(23, h)) * 60 + Math.max(0, Math.min(59, min));
-}
-
-const HOUR_LIST_24 = Array.from({ length: 24 }, (_, i) => i);
-const MINUTE_LIST_60 = Array.from({ length: 60 }, (_, i) => i);
-
-function ScheduleTimeRangeModal({
-  open,
-  initialStart,
-  initialEnd,
-  onConfirm,
-  onClose,
-  onRemoveTime,
-}: {
-  open: boolean;
-  initialStart: number;
-  initialEnd: number;
-  onConfirm: (start: number, end: number) => void;
-  onClose: () => void;
-  onRemoveTime?: () => void;
-}) {
-  const [sh, setSh] = useState(() => Math.floor(initialStart / 60) % 24);
-  const [sm, setSm] = useState(() => initialStart % 60);
-  const [eh, setEh] = useState(() => Math.floor(initialEnd / 60) % 24);
-  const [em, setEm] = useState(() => initialEnd % 60);
-
-  useEffect(() => {
-    if (!open) return;
-    setSh(Math.floor(initialStart / 60) % 24);
-    setSm(initialStart % 60);
-    setEh(Math.floor(initialEnd / 60) % 24);
-    setEm(initialEnd % 60);
-  }, [open, initialStart, initialEnd]);
-
-  const ITEM_H = 36;
-  const WHEEL_H = 168;
-  const PAD = (WHEEL_H - ITEM_H) / 2;
-
-  const Wheel = ({
-    values,
-    selected,
-    setSelected,
-  }: {
-    values: number[];
-    selected: number;
-    setSelected: (n: number) => void;
-  }) => {
-    const ref = useRef<HTMLDivElement>(null);
-    const scrollEnd = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    useEffect(() => {
-      const el = ref.current;
-      if (!el) return;
-      const idx = values.indexOf(selected);
-      if (idx < 0) return;
-      el.scrollTop = idx * ITEM_H;
-    }, [selected, values, open]);
-
-    const snap = () => {
-      const el = ref.current;
-      if (!el) return;
-      const idx = Math.round(el.scrollTop / ITEM_H);
-      const clamped = Math.max(0, Math.min(values.length - 1, idx));
-      const v = values[clamped];
-      if (v !== undefined) {
-        setSelected(v);
-        el.scrollTo({ top: clamped * ITEM_H, behavior: "smooth" });
-      }
-    };
-
-    return (
-      <div
-        ref={ref}
-        className="w-14 shrink-0 overflow-y-auto scroll-smooth"
-        style={{ height: WHEEL_H, scrollbarWidth: "thin" }}
-        onScroll={() => {
-          if (scrollEnd.current) clearTimeout(scrollEnd.current);
-          scrollEnd.current = setTimeout(snap, 80);
-        }}
-        onPointerUp={snap}
-        onPointerLeave={snap}
-      >
-        <div style={{ height: PAD }} aria-hidden />
-        {values.map((n) => (
-          <div
-            key={n}
-            className={`flex shrink-0 items-center justify-center text-[15px] font-semibold tabular-nums ${
-              n === selected ? "text-[#111827]" : "text-[#9CA3AF]"
-            }`}
-            style={{ height: ITEM_H }}
-          >
-            {String(n).padStart(2, "0")}
-          </div>
-        ))}
-        <div style={{ height: PAD }} aria-hidden />
-      </div>
-    );
-  };
-
-  if (!open) return null;
-
-  const startTotal = minutesFromHourMinute(sh, sm);
-  const endTotal = minutesFromHourMinute(eh, em);
-
-  return (
-    <div
-      className="fixed inset-0 z-[650] flex items-end justify-center bg-black/35 p-4 sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Choose start and end time"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-md overflow-hidden rounded-2xl border border-[#E5E7EB] bg-white shadow-[0_16px_48px_rgba(0,0,0,0.18)] font-['Inter',system-ui,sans-serif]"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="border-b border-[#E5E7EB] px-4 py-3 text-center">
-          <p className="text-[15px] font-bold text-[#111827]">Time</p>
-          <p className="mt-0.5 text-[12px] text-[#6B7280]">
-            Start and end
-          </p>
-        </div>
-        <div className="relative flex justify-center gap-6 px-4 py-2">
-          <div
-            className="pointer-events-none absolute left-0 right-0 top-1/2 z-10 h-[36px] -translate-y-1/2 border-y border-[#E5E7EB] bg-[#F9FAFB]/90"
-            aria-hidden
-          />
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-              Start
-            </span>
-            <div className="flex items-stretch gap-1">
-              <Wheel
-                values={HOUR_LIST_24}
-                selected={sh}
-                setSelected={setSh}
-              />
-              <span className="flex items-center pb-8 text-[18px] font-bold text-[#D1D5DB]">
-                :
-              </span>
-              <Wheel
-                values={MINUTE_LIST_60}
-                selected={sm}
-                setSelected={setSm}
-              />
-            </div>
-          </div>
-          <div className="flex flex-col items-center gap-1">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-              End
-            </span>
-            <div className="flex items-stretch gap-1">
-              <Wheel
-                values={HOUR_LIST_24}
-                selected={eh}
-                setSelected={setEh}
-              />
-              <span className="flex items-center pb-8 text-[18px] font-bold text-[#D1D5DB]">
-                :
-              </span>
-              <Wheel
-                values={MINUTE_LIST_60}
-                selected={em}
-                setSelected={setEm}
-              />
-            </div>
-          </div>
-        </div>
-        <p className="px-4 pb-2 text-center text-[12px] text-[#6B7280]">
-          {formatScheduleTimeRangeLabel(startTotal, endTotal)}
-        </p>
-        <div className="flex flex-col gap-2 border-t border-[#E5E7EB] p-3">
-          {onRemoveTime ? (
-            <button
-              type="button"
-              onClick={() => {
-                onRemoveTime();
-                onClose();
-              }}
-              className="w-full rounded-lg py-2 text-[13px] font-semibold text-[#6B7280] transition hover:bg-[#F9FAFB] hover:text-[#111827]"
-            >
-              Remove time
-            </button>
-          ) : null}
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="flex-1 rounded-full border border-[#E5E7EB] bg-white py-2.5 text-[13px] font-semibold text-[#374151] shadow-sm transition hover:bg-[#F9FAFB]"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                let s = startTotal;
-                let e = endTotal;
-                if (e <= s) e = s + 15;
-                onConfirm(s, e);
-              }}
-              className="flex-1 rounded-full border border-[#E5E7EB] bg-[#111827] py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#1f2937]"
-            >
-              Done
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /** Pastel card + left strip for Upcoming schedule (priority-driven). */
 function upcomingTaskCardStyles(p: TaskPriorityLevel): {
   strip: string;
@@ -1595,7 +1341,6 @@ function upcomingTaskCardStyles(p: TaskPriorityLevel): {
 function TasksDueUpcomingSchedule({
   rangeStartIso,
   tasksByDate,
-  timedTasksByDate,
   todayIso,
   onPrevDay,
   onNextDay,
@@ -1605,7 +1350,6 @@ function TasksDueUpcomingSchedule({
 }: {
   rangeStartIso: string;
   tasksByDate: Record<string, CalendarPlacedTask[]>;
-  timedTasksByDate: Record<string, CalendarTimedTask[]>;
   todayIso: string;
   onPrevDay: () => void;
   onNextDay: () => void;
@@ -1672,145 +1416,57 @@ function TasksDueUpcomingSchedule({
         </div>
       </header>
 
-      <div className="shrink-0 border-b border-[#E5E7EB] px-5 sm:px-8">
-        <div
-          className="grid gap-0"
-          style={{
-            gridTemplateColumns: `72px repeat(5, minmax(0, 1fr))`,
-          }}
-        >
-          <div className="min-h-[52px]" aria-hidden />
-          {days.map((d) => {
-            const isRealToday = d.iso === todayIso;
-            return (
-              <div
-                key={d.iso}
-                className="flex min-h-[52px] flex-col items-center justify-center gap-1 border-l border-[#E5E7EB] py-2 first:border-l-0"
-              >
-                <span
-                  className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
-                >
-                  {d.dow}
-                </span>
-                {isRealToday ? (
-                  <span
-                    className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#9d84d8] px-1.5 text-[13px] font-semibold tabular-nums text-white shadow-sm shadow-[rgba(122,95,190,0.25)]"
-                    title="Today"
-                  >
-                    {d.dayNum}
-                  </span>
-                ) : (
-                  <span className="text-[15px] font-semibold tabular-nums text-[#111827]">
-                    {d.dayNum}
-                  </span>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <div
-          className="grid gap-0 border-b border-[#E5E7EB]"
-          style={{
-            gridTemplateColumns: `72px repeat(5, minmax(0, 1fr))`,
-          }}
-        >
-          <div className="flex items-start justify-end bg-white py-2.5 pr-2 text-right text-[11px] font-medium leading-none text-[#9CA3AF]">
-            All day
-          </div>
-          {days.map((d) => {
-            const raw = tasksByDate[d.iso] ?? [];
-            const sorted = [...raw].sort((a, b) => {
+        <div className="mx-5 mb-5 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white sm:mx-8">
+          {days.map((d, idx) => {
+            const isRealToday = d.iso === todayIso;
+            const sorted = [...(tasksByDate[d.iso] ?? [])].sort((a, b) => {
               const pa = a.priority ?? 4;
               const pb = b.priority ?? 4;
               if (pa !== pb) return pa - pb;
+              const byCat = a.categoryLabel.localeCompare(b.categoryLabel);
+              if (byCat !== 0) return byCat;
               return a.text.localeCompare(b.text);
             });
             return (
               <div
-                key={`allday-${d.iso}`}
-                className="border-l border-[#E5E7EB] bg-white px-1.5 py-2 first:border-l-0 sm:px-2"
+                key={d.iso}
+                className={`grid grid-cols-[88px_minmax(0,1fr)] ${idx > 0 ? "border-t border-[#E5E7EB]" : ""}`}
               >
-                <div className="flex min-h-[40px] flex-col gap-1.5">
-                  {sorted.map((t) => (
-                    <ScheduleTaskCard
-                      key={`${t.listId}-${t.id}`}
-                      t={t}
-                      onTaskPick={onTaskPick}
-                      onCompleteTask={onCompleteTask}
-                    />
-                  ))}
+                <div className="flex min-h-[132px] flex-col items-center justify-center gap-1 border-r border-[#E5E7EB] bg-white px-2 py-3">
+                  <span
+                    className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
+                  >
+                    {d.dow}
+                  </span>
+                  {isRealToday ? (
+                    <span
+                      className="flex h-7 min-w-[1.75rem] items-center justify-center rounded-full bg-[#9d84d8] px-1.5 text-[13px] font-semibold tabular-nums text-white shadow-sm shadow-[rgba(122,95,190,0.25)]"
+                      title="Today"
+                    >
+                      {d.dayNum}
+                    </span>
+                  ) : (
+                    <span className="text-[15px] font-semibold tabular-nums text-[#111827]">
+                      {d.dayNum}
+                    </span>
+                  )}
+                </div>
+                <div className="min-h-[132px] bg-white px-2 py-2 sm:px-3">
+                  <div className="flex min-h-[40px] flex-col gap-1.5">
+                    {sorted.map((t) => (
+                      <ScheduleTaskCard
+                        key={`${t.listId}-${t.id}`}
+                        t={t}
+                        onTaskPick={onTaskPick}
+                        onCompleteTask={onCompleteTask}
+                      />
+                    ))}
+                  </div>
                 </div>
               </div>
             );
           })}
-        </div>
-
-        <div className="flex w-full min-w-0">
-          <div
-            className="shrink-0 border-r border-[#E5E7EB] bg-white"
-            style={{ width: 72 }}
-          >
-            {UPCOMING_SCHEDULE_HOURS.map((hour) => (
-              <div
-                key={hour}
-                className="box-border flex items-start justify-end border-b border-[#E5E7EB] bg-white pr-2 text-right text-[11px] font-medium tabular-nums text-[#9CA3AF]"
-                style={{ height: SCHEDULE_HOUR_ROW_PX }}
-              >
-                <span className="pt-0.5 leading-none">{`${String(hour).padStart(2, "0")}:00`}</span>
-              </div>
-            ))}
-          </div>
-          <div className="flex min-w-0 flex-1">
-            {days.map((d) => {
-              const timed = [...(timedTasksByDate[d.iso] ?? [])].sort(
-                (a, b) => a.startMinutes - b.startMinutes,
-              );
-              const totalH =
-                UPCOMING_SCHEDULE_HOURS.length * SCHEDULE_HOUR_ROW_PX;
-              return (
-                <div
-                  key={`time-${d.iso}`}
-                  className="relative min-w-0 flex-1 border-l border-[#E5E7EB] bg-white first:border-l-0"
-                  style={{ height: totalH }}
-                >
-                  {UPCOMING_SCHEDULE_HOURS.map((hour) => (
-                    <div
-                      key={hour}
-                      className="pointer-events-none absolute left-0 right-0 border-b border-[#E5E7EB] bg-white"
-                      style={{
-                        top: (hour - SCHEDULE_FIRST_HOUR) * SCHEDULE_HOUR_ROW_PX,
-                        height: SCHEDULE_HOUR_ROW_PX,
-                      }}
-                    />
-                  ))}
-                  {timed.map((t) => {
-                    const { top, height } = timedTaskPixelLayout(
-                      t.startMinutes,
-                      t.endMinutes,
-                    );
-                    if (height <= 0) return null;
-                    return (
-                      <div
-                        key={`${t.listId}-${t.id}-timed`}
-                        className="absolute left-0.5 right-0.5 z-[2]"
-                        style={{ top, height }}
-                      >
-                        <ScheduleTaskCard
-                          t={t}
-                          onTaskPick={onTaskPick}
-                          onCompleteTask={onCompleteTask}
-                          compact
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
-              );
-            })}
-          </div>
         </div>
       </div>
     </div>
@@ -2758,24 +2414,9 @@ function normalizeLoadedTask(t: Task): Task {
   const raw = (t as Task & { priority?: number }).priority;
   const priority: 1 | 2 | 3 | 4 =
     raw === 1 || raw === 2 || raw === 3 || raw === 4 ? raw : 4;
-  const ts = (t as Task).scheduledStartMinutes;
-  const te = (t as Task).scheduledEndMinutes;
   const out: Task = { ...t, priority };
-  if (
-    typeof ts === "number" &&
-    typeof te === "number" &&
-    Number.isFinite(ts) &&
-    Number.isFinite(te) &&
-    te > ts &&
-    ts >= 0 &&
-    te <= 1440
-  ) {
-    out.scheduledStartMinutes = Math.floor(ts);
-    out.scheduledEndMinutes = Math.floor(te);
-  } else {
-    delete out.scheduledStartMinutes;
-    delete out.scheduledEndMinutes;
-  }
+  delete (out as Task & { scheduledStartMinutes?: number }).scheduledStartMinutes;
+  delete (out as Task & { scheduledEndMinutes?: number }).scheduledEndMinutes;
   return out;
 }
 
@@ -3204,11 +2845,6 @@ export default function App() {
   const [composerPriorityOpen, setComposerPriorityOpen] = useState(false);
   const [composerPriorityAnchor, setComposerPriorityAnchor] =
     useState<DOMRect | null>(null);
-  const [composerTimeModalOpen, setComposerTimeModalOpen] = useState(false);
-  const [composerTimeStart, setComposerTimeStart] = useState<number | null>(
-    null,
-  );
-  const [composerTimeEnd, setComposerTimeEnd] = useState<number | null>(null);
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
   /** When Focus Today is selected, edits apply to this source list. */
@@ -3409,11 +3045,10 @@ export default function App() {
     };
   }, [name]);
 
-  const { tasksByDueDate, timedTasksByDueDate } = useMemo(() => {
+  const { tasksByDueDate } = useMemo(() => {
     if (isSimulation) {
       return {
         tasksByDueDate: {} as Record<string, CalendarPlacedTask[]>,
-        timedTasksByDueDate: {} as Record<string, CalendarTimedTask[]>,
       };
     }
     const allowedListIds = new Set<string>();
@@ -3428,7 +3063,6 @@ export default function App() {
     }
 
     const map: Record<string, CalendarPlacedTask[]> = {};
-    const timedMap: Record<string, CalendarTimedTask[]> = {};
     for (const [listId, arr] of Object.entries(tasksByListId)) {
       if (!allowedListIds.has(listId)) continue;
       if (!Array.isArray(arr)) continue;
@@ -3436,14 +3070,6 @@ export default function App() {
       for (const t of arr) {
         if (t.removing || t.completed || !t.dueDate) continue;
         const k = t.dueDate;
-        const ss = t.scheduledStartMinutes;
-        const se = t.scheduledEndMinutes;
-        const isTimed =
-          typeof ss === "number" &&
-          typeof se === "number" &&
-          Number.isFinite(ss) &&
-          Number.isFinite(se) &&
-          se > ss;
         const base: CalendarPlacedTask = {
           id: t.id,
           text: t.text,
@@ -3451,17 +3077,8 @@ export default function App() {
           categoryLabel,
           priority: (t.priority ?? 4) as TaskPriorityLevel,
         };
-        if (isTimed) {
-          if (!timedMap[k]) timedMap[k] = [];
-          timedMap[k].push({
-            ...base,
-            startMinutes: ss,
-            endMinutes: se,
-          });
-        } else {
-          if (!map[k]) map[k] = [];
-          map[k].push(base);
-        }
+        if (!map[k]) map[k] = [];
+        map[k].push(base);
       }
     }
     for (const k of Object.keys(map)) {
@@ -3474,18 +3091,7 @@ export default function App() {
         return a.text.localeCompare(b.text);
       });
     }
-    for (const k of Object.keys(timedMap)) {
-      timedMap[k].sort((a, b) => {
-        if (a.startMinutes !== b.startMinutes) {
-          return a.startMinutes - b.startMinutes;
-        }
-        const pa = a.priority ?? 4;
-        const pb = b.priority ?? 4;
-        if (pa !== pb) return pa - pb;
-        return a.text.localeCompare(b.text);
-      });
-    }
-    return { tasksByDueDate: map, timedTasksByDueDate: timedMap };
+    return { tasksByDueDate: map };
   }, [tasksByListId, isSimulation, todayLists]);
 
   const [notificationDay, setNotificationDay] = useState(() =>
@@ -5140,9 +4746,6 @@ export default function App() {
     setComposerDuePopover(null);
     setComposerPriorityOpen(false);
     setComposerPriorityAnchor(null);
-    setComposerTimeModalOpen(false);
-    setComposerTimeStart(null);
-    setComposerTimeEnd(null);
   };
 
   const openQuickAddComposer = () => {
@@ -5166,9 +4769,6 @@ export default function App() {
       setComposerDue(null);
     }
     setComposerPriority(4);
-    setComposerTimeModalOpen(false);
-    setComposerTimeStart(null);
-    setComposerTimeEnd(null);
   };
 
   const submitQuickAddComposer = () => {
@@ -5193,10 +4793,6 @@ export default function App() {
     } else if (DUE_DATE_PICKER_LIST_IDS.has(selectedListId)) {
       dueDate = composerDue;
     }
-    const hasScheduleTime =
-      composerTimeStart != null &&
-      composerTimeEnd != null &&
-      composerTimeEnd > composerTimeStart;
     const newTask: Task = {
       id,
       text: trimmed,
@@ -5207,12 +4803,6 @@ export default function App() {
       completed: false,
       dueDate,
       priority: composerPriority,
-      ...(hasScheduleTime
-        ? {
-            scheduledStartMinutes: composerTimeStart,
-            scheduledEndMinutes: composerTimeEnd,
-          }
-        : {}),
     };
     const flushAdd = () => {
       setTasks((prev) => [...prev, newTask]);
@@ -7262,19 +6852,6 @@ export default function App() {
                                       )}
                                       <button
                                         type="button"
-                                        onClick={() => setComposerTimeModalOpen(true)}
-                                        className="inline-flex shrink-0 items-center overflow-hidden rounded-full border border-[#E5E7EB] bg-white px-4 py-2 text-[13px] font-semibold text-[#111827] shadow-sm transition-colors hover:bg-[#F9FAFB]"
-                                      >
-                                        {composerTimeStart != null &&
-                                        composerTimeEnd != null
-                                          ? formatScheduleTimeRangeLabel(
-                                              composerTimeStart,
-                                              composerTimeEnd,
-                                            )
-                                          : "Time"}
-                                      </button>
-                                      <button
-                                        type="button"
                                         onClick={(e) => {
                                           setComposerPriorityAnchor(
                                             e.currentTarget.getBoundingClientRect(),
@@ -7882,25 +7459,6 @@ export default function App() {
                       }}
                       onClose={() => setEditDraftPriorityOpen(false)}
                     />
-                    <ScheduleTimeRangeModal
-                      open={composerTimeModalOpen}
-                      initialStart={composerTimeStart ?? 9 * 60}
-                      initialEnd={composerTimeEnd ?? 10 * 60}
-                      onClose={() => setComposerTimeModalOpen(false)}
-                      onConfirm={(s, e) => {
-                        setComposerTimeStart(s);
-                        setComposerTimeEnd(e);
-                        setComposerTimeModalOpen(false);
-                      }}
-                      onRemoveTime={
-                        composerTimeStart != null && composerTimeEnd != null
-                          ? () => {
-                              setComposerTimeStart(null);
-                              setComposerTimeEnd(null);
-                            }
-                          : undefined
-                      }
-                    />
                     {taskDetailModalId != null && taskDetailModalTask ? (
                       <div
                         className="fixed inset-0 z-[600] flex items-center justify-center bg-black/25 p-4 font-['Inter',system-ui,sans-serif]"
@@ -7993,7 +7551,6 @@ export default function App() {
                       <TasksDueUpcomingSchedule
                         rangeStartIso={scheduleRangeStartIso}
                         tasksByDate={tasksByDueDate}
-                        timedTasksByDate={timedTasksByDueDate}
                         todayIso={calendarDay}
                         onPrevDay={() =>
                           setScheduleRangeStartIso((s) => addDaysToIso(s, -1))
