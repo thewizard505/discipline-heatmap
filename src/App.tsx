@@ -6102,6 +6102,7 @@ export default function App() {
         .tv-insight-card{
           border-radius:16px;
           padding:20px;
+          min-height:180px;
           background:rgba(255,255,255,0.04);
           backdrop-filter:blur(12px);
           -webkit-backdrop-filter:blur(12px);
