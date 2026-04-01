@@ -2624,6 +2624,68 @@ export default function App() {
   >([]);
   const [bestFocusIntegrity, setBestFocusIntegrity] = useState(0);
 
+  function updateGlow(elapsed: number, total: number) {
+    if (total <= 0) return;
+    const progress = elapsed / total;
+    const canvas = document.querySelector(
+      ".timer-canvas",
+    ) as HTMLDivElement | null;
+    const display = document.querySelector(
+      ".timer-display",
+    ) as HTMLDivElement | null;
+    const overlay = document.getElementById(
+      "tunnelOverlay",
+    ) as HTMLDivElement | null;
+    if (!canvas || !display || !overlay) return;
+
+    canvas.classList.remove("glow-pulse");
+
+    if (progress < 0.3) {
+      canvas.style.boxShadow = "none";
+      canvas.style.borderColor = "rgba(255,255,255,0.06)";
+      display.style.textShadow = "none";
+      overlay.style.opacity = "0";
+    } else if (progress < 0.6) {
+      canvas.style.boxShadow = "0 0 20px rgba(99,102,241,0.12)";
+      canvas.style.borderColor = "rgba(99,102,241,0.2)";
+      display.style.textShadow = "0 0 12px rgba(99,102,241,0.3)";
+      overlay.style.opacity = "0.4";
+    } else if (progress < 0.85) {
+      canvas.style.boxShadow =
+        "0 0 40px rgba(99,102,241,0.22), inset 0 0 30px rgba(99,102,241,0.06)";
+      canvas.style.borderColor = "rgba(99,102,241,0.4)";
+      display.style.textShadow =
+        "0 0 24px rgba(99,102,241,0.6), 0 0 8px rgba(99,102,241,0.3)";
+      overlay.style.opacity = "0.7";
+    } else {
+      canvas.style.boxShadow =
+        "0 0 60px rgba(99,102,241,0.3), inset 0 0 40px rgba(99,102,241,0.1)";
+      canvas.style.borderColor = "rgba(99,102,241,0.6)";
+      display.style.textShadow =
+        "0 0 32px rgba(99,102,241,0.8), 0 0 12px rgba(99,102,241,0.5)";
+      overlay.style.opacity = "1";
+      canvas.classList.add("glow-pulse");
+    }
+  }
+
+  function resetGlow() {
+    const canvas = document.querySelector(
+      ".timer-canvas",
+    ) as HTMLDivElement | null;
+    const display = document.querySelector(
+      ".timer-display",
+    ) as HTMLDivElement | null;
+    const overlay = document.getElementById(
+      "tunnelOverlay",
+    ) as HTMLDivElement | null;
+    if (!canvas || !display || !overlay) return;
+    canvas.style.boxShadow = "none";
+    canvas.style.borderColor = "rgba(255,255,255,0.06)";
+    display.style.textShadow = "none";
+    overlay.style.opacity = "0";
+    canvas.classList.remove("glow-pulse");
+  }
+
   const [selectedStat, setSelectedStat] = useState("Integrity");
   const [history, setHistory] = useState<HistoryData>({});
   const [taskHistory, setTaskHistory] = useState<{
@@ -4177,18 +4239,16 @@ export default function App() {
   ];
   const displayedInsightCards: InsightCardItem[] = isEmptyInsightsState
     ? insightFallbacks
-    : [
-        ...realInsights.slice(0, 3).map((ins) => ({
-          ...ins,
-          locked: false,
-          variant:
-            ins.type === "positive"
-              ? "green"
-              : ins.type === "negative"
-                ? "red"
-                : "blue",
-        })),
-      ];
+    : realInsights.slice(0, 3).map((ins): InsightCardItem => ({
+        ...ins,
+        locked: false,
+        variant:
+          ins.type === "positive"
+            ? "green"
+            : ins.type === "negative"
+              ? "red"
+              : "blue",
+      }));
   while (displayedInsightCards.length < 3) {
     const nextFallback = insightFallbacks[displayedInsightCards.length];
     if (!nextFallback) break;
@@ -4585,6 +4645,7 @@ export default function App() {
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
     setTimerAccumulator(0);
+    resetGlow();
     setRunning(false);
     setIsFocusSessionActive(false);
     setIsTodayPanelCollapsed(false);
@@ -4701,6 +4762,7 @@ export default function App() {
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
     setSeconds(0);
     setRunning(false);
+    resetGlow();
     setIntegrityPenalty(0);
     setTimerAccumulator(0);
     setTimerSessionStart(null);
@@ -5409,7 +5471,15 @@ export default function App() {
   useEffect(() => {
     if (!running || (seconds <= 0 && isSimulation)) return;
     const id = setInterval(() => {
-      setSeconds((s) => s - 1);
+      setSeconds((s) => {
+        const next = s - 1;
+        if (!isSimulation) {
+          const total = Math.max(1, initialSecondsRef.current);
+          const elapsed = Math.max(0, total - Math.max(next, 0));
+          updateGlow(elapsed, total);
+        }
+        return next;
+      });
       if (!isSimulation) {
         setTimerAccumulator((prev) => prev + 1);
       }
@@ -5423,6 +5493,12 @@ export default function App() {
       setTimerAccumulator(0);
     }
   }, [timerAccumulator]);
+
+  useEffect(() => {
+    if (!running && !isSimulation) {
+      resetGlow();
+    }
+  }, [running, isSimulation]);
 
   function startTimer() {
     if (focusSessionEntries.length === 0) {
@@ -6052,6 +6128,15 @@ export default function App() {
   return (
     <>
       <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&display=swap');
+
+        :root {
+          --accent: #6366f1;
+          --accent-glow: rgba(99, 102, 241, 0.15);
+          --accent-ring: rgba(99, 102, 241, 0.12);
+          --canvas-bg: #0a0a0b;
+          --timer-font: 'DM Mono', monospace;
+        }
         .animate-fade-in{ animation:fadein .4s ease; }
         @keyframes fadein{ from{opacity:0;transform:translateY(-10px)} to{opacity:1;transform:translateY(0)} }
         @keyframes chevron-bounce{ 0%,100%{ transform:translateY(0); opacity:0.7 } 50%{ transform:translateY(6px); opacity:1 } }
@@ -6187,6 +6272,242 @@ export default function App() {
         .app-notif-item--unread{
           animation:app-notif-enter 0.42s cubic-bezier(0.22,0.61,0.36,1) both,
             app-notif-urgency 3.2s ease-in-out 0.4s 2;
+        }
+        .timer-canvas{
+          background:var(--canvas-bg);
+          border-radius:20px;
+          padding:2.5rem 2rem;
+          display:flex;
+          flex-direction:column;
+          align-items:center;
+          gap:1.25rem;
+          position:relative;
+          overflow:hidden;
+          border:1px solid rgba(255,255,255,0.06);
+          transition:box-shadow .6s ease,border-color .6s ease;
+        }
+        .session-chip{
+          background:rgba(255,255,255,0.06);
+          border:0.5px solid rgba(255,255,255,0.12);
+          border-radius:999px;
+          padding:4px 14px;
+          font-size:11px;
+          letter-spacing:0.08em;
+          color:rgba(255,255,255,0.4);
+          font-weight:500;
+        }
+        .timer-display{
+          font-family:var(--timer-font);
+          font-size:72px;
+          font-weight:400;
+          letter-spacing:-0.02em;
+          color:#ffffff;
+          line-height:1;
+          position:relative;
+          z-index:2;
+          transition:text-shadow .6s ease;
+        }
+        .timer-display .colon{ opacity:.35; }
+        .timer-task-label{
+          font-size:13px;
+          color:rgba(255,255,255,0.3);
+          text-align:center;
+          max-width:220px;
+          line-height:1.5;
+          z-index:2;
+        }
+        .timer-controls{
+          display:flex;
+          align-items:center;
+          gap:12px;
+          z-index:2;
+        }
+        .btn-play{
+          width:54px;
+          height:54px;
+          border-radius:50%;
+          background:var(--accent);
+          border:none;
+          color:white;
+          font-size:20px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          cursor:pointer;
+          transition:transform .1s,opacity .1s;
+          padding-left:3px;
+        }
+        .btn-play:hover{ opacity:.9; transform:scale(1.04); }
+        .btn-play:active{ transform:scale(.97); }
+        .btn-ghost{
+          width:38px;
+          height:38px;
+          border-radius:50%;
+          background:rgba(255,255,255,0.06);
+          border:0.5px solid rgba(255,255,255,0.1);
+          color:rgba(255,255,255,0.45);
+          font-size:20px;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          cursor:pointer;
+          transition:background .12s;
+        }
+        .btn-ghost:hover{ background:rgba(255,255,255,0.1); }
+        .add-time-btn{
+          background:rgba(255,255,255,0.05);
+          border:0.5px solid rgba(255,255,255,0.1);
+          border-radius:999px;
+          padding:6px 16px;
+          font-size:12px;
+          color:rgba(255,255,255,0.4);
+          cursor:pointer;
+          transition:background .12s;
+          z-index:2;
+        }
+        .add-time-btn:hover{ background:rgba(255,255,255,0.09); }
+        .tunnel-overlay{
+          position:absolute;
+          inset:0;
+          border-radius:20px;
+          background:radial-gradient(ellipse 55% 45% at 50% 45%, var(--accent-glow) 0%, transparent 70%);
+          opacity:0;
+          transition:opacity .8s ease;
+          pointer-events:none;
+          z-index:1;
+        }
+        @keyframes glowPulse{
+          0%,100%{ box-shadow:0 0 60px rgba(99,102,241,0.3), inset 0 0 40px rgba(99,102,241,0.1); }
+          50%{ box-shadow:0 0 80px rgba(99,102,241,0.45), inset 0 0 50px rgba(99,102,241,0.15); }
+        }
+        .glow-pulse{ animation:glowPulse 3s ease-in-out infinite; }
+        .task-input-row{ width:100%; max-width:560px; }
+        .task-input-wrap{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          background:#ffffff;
+          border:0.5px solid #d1d5db;
+          border-radius:10px;
+          padding:10px 14px;
+          transition:border-color .15s,box-shadow .15s;
+        }
+        .task-input-wrap:focus-within{
+          border-color:var(--accent);
+          box-shadow:0 0 0 3px var(--accent-ring);
+        }
+        .input-icon{
+          color:#9ca3af;
+          flex-shrink:0;
+        }
+        .task-input{
+          flex:1;
+          border:none;
+          background:transparent;
+          font-size:14px;
+          color:inherit;
+          outline:none;
+        }
+        .task-input::placeholder{ color:#9ca3af; }
+        .input-kbd{
+          font-size:11px;
+          font-family:monospace;
+          background:#f3f4f6;
+          border:0.5px solid #e5e7eb;
+          border-radius:4px;
+          padding:2px 6px;
+          color:#9ca3af;
+        }
+        .task-item{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          padding:10px 14px;
+          border-radius:10px;
+          background:#ffffff;
+          border:0.5px solid #e5e7eb;
+          transition:border-color .12s,background .12s;
+          cursor:default;
+        }
+        .task-item:hover{
+          border-color:#d1d5db;
+          background:#f9fafb;
+        }
+        .task-check{
+          width:17px;
+          height:17px;
+          border-radius:50%;
+          border:1.5px solid #d1d5db;
+          background:transparent;
+          flex-shrink:0;
+          cursor:pointer;
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          transition:background .12s,border-color .12s;
+          padding:0;
+        }
+        .task-check:hover{ border-color:var(--accent); }
+        .task-item.done .task-check{
+          background:var(--accent);
+          border-color:var(--accent);
+        }
+        .task-item.done .task-check::after{
+          content:'';
+          display:block;
+          width:8px;
+          height:5px;
+          border-left:1.5px solid #fff;
+          border-bottom:1.5px solid #fff;
+          transform:rotate(-45deg) translateY(-1px);
+        }
+        .task-label{
+          flex:1;
+          font-size:14px;
+          color:inherit;
+        }
+        .task-item.done .task-label{
+          text-decoration:line-through;
+          color:#9ca3af;
+        }
+        .task-badge{
+          font-size:11px;
+          font-weight:500;
+          padding:2px 9px;
+          border-radius:999px;
+        }
+        .task-badge.project{
+          background:rgba(99,102,241,0.1);
+          color:#6366f1;
+        }
+        .task-time{
+          font-size:12px;
+          color:#9ca3af;
+        }
+        .queue-row{
+          display:flex;
+          align-items:center;
+          gap:10px;
+          padding:8px 10px;
+          border-radius:8px;
+          cursor:pointer;
+          transition:background .1s;
+        }
+        .queue-row:hover{ background:rgba(0,0,0,0.04); }
+        .queue-row-name{
+          flex:1;
+          font-size:14px;
+        }
+        .queue-count{
+          font-size:12px;
+          font-weight:500;
+          color:#9ca3af;
+        }
+        .queue-count.overdue{
+          background:rgba(239,68,68,0.1);
+          color:#ef4444;
+          border-radius:999px;
+          padding:1px 8px;
         }
       `}</style>
 
@@ -8522,117 +8843,65 @@ export default function App() {
               )}
             </div>
 
-            {/* TIMER — square hero card (reference layout: time top ~2/3, pill +15 MIN bottom) */}
-            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-8 sm:py-10">
-              <div
-                className={`focus-timer-hero-square relative aspect-square w-full max-w-[360px] shrink-0 overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
-                  focusFinaleOpen ? "focus-finale-timer-wrap" : ""
-                } ${focusTimerNudge ? "micro-timer-nudge" : ""} ${
-                  running ? "focus-timer-running-glow focus-timer-breathe" : ""
-                }`}
-              >
-                {focusFinaleOpen && (
-                  <div
-                    className="pointer-events-none absolute -inset-10 z-0 rounded-[3.75rem] focus-finale-streamers-ring"
-                    aria-hidden
-                  />
-                )}
-                <svg
-                  className="absolute inset-0 z-[1] h-full w-full -rotate-90"
-                  viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
-                  aria-hidden
-                >
-                  <defs>
-                    <linearGradient
-                      id="focusTimerRingGradient"
-                      x1="0%"
-                      y1="0%"
-                      x2="100%"
-                      y2="100%"
-                    >
-                      <stop offset="0%" stopColor="#818CF8" />
-                      <stop offset="55%" stopColor="#6366F1" />
-                      <stop offset="100%" stopColor="#4F46E5" />
-                    </linearGradient>
-                  </defs>
-                  <circle
-                    cx={FOCUS_TIMER_SVG_CENTER}
-                    cy={FOCUS_TIMER_SVG_CENTER}
-                    r={FOCUS_TIMER_RING_RADIUS}
-                    stroke="rgba(15, 23, 42, 0.06)"
-                    strokeWidth="10"
-                    fill="none"
-                  />
-                  <circle
-                    cx={FOCUS_TIMER_SVG_CENTER}
-                    cy={FOCUS_TIMER_SVG_CENTER}
-                    r={FOCUS_TIMER_RING_RADIUS}
-                    stroke="url(#focusTimerRingGradient)"
-                    strokeWidth="10"
-                    fill="none"
-                    strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
-                    strokeDashoffset={
-                      FOCUS_TIMER_RING_CIRCUMFERENCE -
-                      focusTimerProgressLength
-                    }
-                    strokeLinecap="round"
-                    style={{
-                      transition:
-                        "stroke-dashoffset 1s linear, stroke 0.5s ease",
-                    }}
-                  />
-                </svg>
-                <div
-                  className={`absolute inset-[11px] z-[2] flex flex-col overflow-hidden rounded-[26px] border border-[#e8e8e8] bg-white transition-all duration-200 ease-out ${
-                    running ? "shadow-none" : "focus-timer-idle-shadow"
-                  } ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
-                >
-                  <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
-                    <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
-                      <div className="text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.03em] text-[#171717] transition-opacity duration-200 ease-out font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
-                        {String(Math.floor(Math.abs(seconds) / 60)).padStart(
-                          2,
-                          "0",
-                        )}
-                        <span className="inline-block translate-y-[-0.03em] text-[#171717]">
-                          :
-                        </span>
-                        {String(Math.abs(seconds) % 60).padStart(2, "0")}
-                      </div>
-                      {running && (
-                        <div
-                          className={`mt-4 text-[10px] tracking-[0.16em] font-semibold uppercase transition-all duration-200 ease-out ${isViolating ? "text-red-500" : "text-[#9CA3AF]"}`}
-                        >
-                          Focus Integrity: {integrityScore}%
-                        </div>
-                      )}
-                    </div>
-                    {!running && (
-                      <div className="flex shrink-0 flex-col items-center gap-2 pb-6 pt-1">
-                        <button
-                          type="button"
-                          disabled={isSimulation}
-                          onClick={() => {
-                            setSeconds((s) => s + 900);
-                            setInitialSeconds((s) => s + 900);
-                          }}
-                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
-                        >
-                          +15 min
-                        </button>
-                        {seconds > 0 && (
-                          <button
-                            type="button"
-                            onClick={startTimer}
-                            className="btn-press-instant rounded border border-[#7a5fbe] bg-[#9d84d8] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#7a5fbe]"
-                          >
-                            Start
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+            {/* TIMER — dark tunnel canvas */}
+            <div className="relative z-[200] flex w-full max-w-[460px] flex-col items-center px-2 py-8 sm:py-10">
+              <div className="timer-canvas">
+                <div className="session-chip">SESSION · FOCUS</div>
+                <div className="timer-display">
+                  {String(Math.floor(Math.abs(seconds) / 60)).padStart(2, "0")}
+                  <span className="colon">:</span>
+                  {String(Math.abs(seconds) % 60).padStart(2, "0")}
                 </div>
+                <p className="timer-task-label">
+                  {activeFocusTaskForIntegrity
+                    ? `Deep work: ${activeFocusTaskForIntegrity.text}`
+                    : "Deep work: current task name"}
+                </p>
+                <div className="timer-controls">
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled
+                    aria-hidden
+                  >
+                    ‹
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-play"
+                    disabled={isSimulation}
+                    onClick={() => {
+                      if (running) {
+                        setRunning(false);
+                      } else {
+                        startTimer();
+                      }
+                    }}
+                    aria-label={running ? "Pause timer" : "Start timer"}
+                  >
+                    {running ? "‖" : "▶"}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-ghost"
+                    disabled
+                    aria-hidden
+                  >
+                    ›
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  disabled={isSimulation}
+                  onClick={() => {
+                    setSeconds((s) => s + 900);
+                    setInitialSeconds((s) => s + 900);
+                  }}
+                  className="add-time-btn"
+                >
+                  + 15 min
+                </button>
+                <div id="tunnelOverlay" className="tunnel-overlay" />
               </div>
             </div>
 
@@ -8641,43 +8910,52 @@ export default function App() {
                 className={`space-y-4 transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="space-y-1.5">
-                  <div
-                    className={`flex gap-2 rounded-[3px] ${
-                      invalidInputTarget === "focus"
-                        ? "micro-input-invalid"
-                        : taskInputShellPress
-                          ? "micro-input-press"
-                          : ""
-                    }`}
-                  >
-                    <input
-                      ref={focusSessionTaskInputRef}
-                      disabled={isSimulation}
-                      value={taskInput}
-                      onChange={(e) => setTaskInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          e.preventDefault();
-                          addTaskFromFocusBar({ fromEnter: true });
-                        }
-                      }}
-                      placeholder={
-                        isSimulation ? "Simulating input..." : "Next objective..."
-                      }
-                      className={`min-h-[38px] flex-1 rounded-[3px] border border-[#ddd] bg-white px-3 py-2 text-[14px] font-normal leading-snug text-[#202020] outline-none transition-colors duration-150 ease-out placeholder:text-[#808080] focus:border-[#999] ${
-                        taskInputClearFlash ? "opacity-50" : ""
-                      } font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]`}
-                    />
-                    <button
-                      disabled={isSimulation}
-                      type="button"
-                      onClick={() =>
-                        addTaskFromFocusBar({ fromButtonClick: true })
-                      }
-                      className="btn-press-instant shrink-0 rounded-[3px] bg-[#1f1f1f] px-4 py-2 text-[13px] font-medium leading-snug text-white transition-colors duration-150 ease-out hover:bg-black disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
+                  <div className="task-input-row">
+                    <div
+                      className={`task-input-wrap ${
+                        invalidInputTarget === "focus"
+                          ? "micro-input-invalid"
+                          : taskInputShellPress
+                            ? "micro-input-press"
+                            : ""
+                      }`}
                     >
-                      Add
-                    </button>
+                      <span className="input-icon" aria-hidden>
+                        <svg
+                          className="h-4 w-4"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          <circle cx="11" cy="11" r="7" />
+                          <path d="M21 21l-3.8-3.8" />
+                        </svg>
+                      </span>
+                      <input
+                        ref={focusSessionTaskInputRef}
+                        disabled={isSimulation}
+                        value={taskInput}
+                        onChange={(e) => setTaskInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addTaskFromFocusBar({ fromEnter: true });
+                          }
+                        }}
+                        placeholder={
+                          isSimulation ? "Simulating input..." : "Next objective..."
+                        }
+                        className={`task-input ${
+                          taskInputClearFlash ? "opacity-50" : ""
+                        }`}
+                      />
+                      <span className="input-kbd" aria-hidden>
+                        ↵
+                      </span>
+                    </div>
                   </div>
                   {taskInputLiveHints.length > 0 && (
                     <div className="pl-1 space-y-0.5" aria-live="polite">
@@ -8716,41 +8994,36 @@ export default function App() {
                           t: Task;
                         } => row !== null,
                       )
-                      .map(({ entry, t }, idx, arr) => (
-                        <div
-                          key={`${entry.listId}-${entry.taskId}`}
-                          className={`flex items-center justify-between gap-2 border-[#E5E5E5] px-3 py-2.5 transition-colors duration-150 hover:bg-[#fafafa] ${
-                            idx < arr.length - 1 ? "border-b" : ""
-                          } ${
-                            t.removing
-                              ? "opacity-0 translate-x-12"
-                              : "opacity-100"
-                          } ${
-                            focusSessionNewRowId === t.id
-                              ? "micro-row-enter"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex min-w-0 flex-1 items-start gap-2">
-                            <span
-                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[#5b9fd9]"
-                              aria-hidden
+                      .map(({ entry, t }) => {
+                        const est = t.estimatedMinutes ?? 25;
+                        const timeLabel = `${est} min`;
+                        const itemDone = t.completed;
+                        return (
+                          <div
+                            key={`${entry.listId}-${entry.taskId}`}
+                            className={`task-item ${
+                              itemDone ? "done" : ""
+                            } ${t.removing ? "opacity-0 translate-x-12" : "opacity-100"} ${
+                              focusSessionNewRowId === t.id ? "micro-row-enter" : ""
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              className="task-check"
+                              disabled={isSimulation}
+                              onClick={() =>
+                                completeFocusTask(entry.listId, entry.taskId)
+                              }
+                              title="Mark complete"
                             />
-                            <span className="min-w-0 flex-1 truncate text-[14px] font-normal leading-snug text-[#202020] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                            <span className="task-label">
                               {getFocusSessionDisplayLabel(entry.listId, t.text)}
                             </span>
+                            <span className="task-badge project">Work</span>
+                            <span className="task-time">{timeLabel}</span>
                           </div>
-                          <button
-                            type="button"
-                            disabled={isSimulation}
-                            onClick={() =>
-                              completeFocusTask(entry.listId, entry.taskId)
-                            }
-                            className="h-4 w-4 shrink-0 rounded-full border border-[#c8c8c8] bg-white transition-colors hover:border-[#808080] disabled:opacity-40"
-                            title="Mark complete"
-                          />
-                        </div>
-                      ))
+                        );
+                      })
                   )}
                 </div>
               </div>
@@ -8824,16 +9097,23 @@ export default function App() {
                                           !prev[section.listId],
                                       }))
                                     }
-                                    className="flex w-full items-center gap-2.5 rounded-[3px] px-2 py-2 text-left transition-colors hover:bg-[#f0f0f0] active:bg-[#ebebeb]"
+                                    className="queue-row text-left"
                                   >
                                     <TaskSystemNavIcon
                                       listId={section.listId}
                                       className="h-5 w-5 shrink-0 text-[#808080]"
                                     />
-                                    <span className="min-w-0 flex-1 truncate text-[13px] font-normal text-[#202020] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                                    <span className="queue-row-name min-w-0 truncate font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                                       {section.label}
                                     </span>
-                                    <span className="shrink-0 tabular-nums text-[12px] font-medium text-[#808080]">
+                                    <span
+                                      className={`queue-count shrink-0 tabular-nums ${
+                                        section.listId === SYS_LIST_OVERDUE &&
+                                        section.tasks.length > 0
+                                          ? "overdue"
+                                          : ""
+                                      }`}
+                                    >
                                       {section.tasks.length}
                                     </span>
                                     <svg
