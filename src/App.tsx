@@ -6190,7 +6190,10 @@ export default function App() {
         .tv-insight-card{
           border-radius:16px;
           padding:20px;
-          min-height:180px;
+          min-height:210px;
+          display:flex;
+          flex-direction:column;
+          justify-content:space-between;
           background:rgba(255,255,255,0.04);
           backdrop-filter:blur(12px);
           -webkit-backdrop-filter:blur(12px);
@@ -8651,7 +8654,7 @@ export default function App() {
                                 </div>
                               </div>
 
-                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-5 sm:p-6 shadow-sm lg:col-span-1">
+                              <section className="rounded-2xl border border-[#E5E7EB] bg-white p-4 sm:p-5 shadow-sm lg:col-span-1 max-w-sm">
                                 <h2 className="text-[15px] font-bold text-[#111827] mb-4 pb-3 border-b border-[#E5E7EB] tracking-tight">
                                   Performance
                                 </h2>
@@ -8659,7 +8662,7 @@ export default function App() {
                                   {analyticsPerformanceQuad.map((stat, i) => (
                                     <div
                                       key={i}
-                                      className="group flex aspect-square min-h-0 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-3 transition-colors duration-150 hover:bg-white"
+                                      className="group flex h-[92px] min-h-0 flex-col justify-between rounded-xl border border-[#E5E7EB] bg-[#F9FAFB] px-3 py-2.5 transition-colors duration-150 hover:bg-white"
                                     >
                                       <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#6B7280] leading-snug line-clamp-2">
                                         {stat.label}
