@@ -1419,7 +1419,7 @@ function TasksDueUpcomingSchedule({
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         <div className="mx-5 mb-5 overflow-hidden rounded-xl border border-[#E5E7EB] bg-white sm:mx-8">
-          <div className="grid grid-cols-5 divide-x divide-[#E5E7EB]">
+          <div className="grid grid-cols-5 divide-x divide-[#E5E7EB] min-h-[calc(100vh-220px)]">
             {days.map((d) => {
               const isRealToday = d.iso === todayIso;
               const sorted = [...(tasksByDate[d.iso] ?? [])].sort((a, b) => {
@@ -1431,7 +1431,7 @@ function TasksDueUpcomingSchedule({
                 return a.text.localeCompare(b.text);
               });
               return (
-                <div key={d.iso} className="min-w-0 bg-white">
+                <div key={d.iso} className="min-w-0 bg-white flex flex-col">
                   <div className="flex min-h-[64px] flex-col items-center justify-center gap-1 border-b border-[#E5E7EB] px-2 py-3">
                     <span
                       className={`text-[12px] tracking-tight ${isRealToday ? "font-bold text-[#111827]" : "font-medium text-[#6B7280]"}`}
@@ -1451,7 +1451,7 @@ function TasksDueUpcomingSchedule({
                       </span>
                     )}
                   </div>
-                  <div className="min-h-[420px] px-2 py-2 sm:px-3">
+                  <div className="flex-1 px-2 py-2 sm:px-3">
                     <div className="flex min-h-[40px] flex-col gap-1.5">
                       {sorted.map((t) => (
                         <ScheduleTaskCard
@@ -1980,6 +1980,10 @@ function InsightCard({
           ? "tv-insight-card--blue"
           : "tv-insight-card--neutral";
   const lockedClass = insight.locked ? "tv-insight-card--locked" : "";
+  const exampleClass =
+    insight.id === "pending-morning" || insight.id === "pending-trend"
+      ? "tv-insight-card--example"
+      : "";
 
   return (
     <motion.div
@@ -1997,9 +2001,15 @@ function InsightCard({
         stiffness: 120,
         damping: 12,
       }}
-      className={`tv-insight-card ${variantClass} ${lockedClass}`}
+      className={`tv-insight-card ${variantClass} ${lockedClass} ${exampleClass}`}
     >
-      <p className="tv-insight-card__title">{insight.title}</p>
+      <p
+        className={`tv-insight-card__title ${
+          exampleClass ? "tv-insight-card__title--example" : ""
+        }`}
+      >
+        {insight.title}
+      </p>
       <p className="tv-insight-card__description">{insight.description}</p>
     </motion.div>
   );
@@ -6210,6 +6220,18 @@ export default function App() {
           font-size:13px;
           line-height:1.45;
           color:rgba(31,41,55,.60);
+        }
+        @keyframes tv-insight-title-bounce {
+          0%,100%{ transform:translateY(0); }
+          50%{ transform:translateY(-3px); }
+        }
+        .tv-insight-card--example .tv-insight-card__title--example{
+          background:linear-gradient(120deg,rgba(129,140,248,0.95),rgba(56,189,248,0.9),rgba(52,211,153,0.9));
+          -webkit-background-clip:text;
+          background-clip:text;
+          color:transparent;
+          text-shadow:0 0 24px rgba(148,163,184,0.55);
+          animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
         }
         .tv-insight-card:hover{
           transform:translateY(-2px);
