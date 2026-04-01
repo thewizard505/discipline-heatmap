@@ -6213,13 +6213,15 @@ export default function App() {
           pointer-events:none;
         }
         .tv-insight-card__title{
-          font-size:16px;
+          font-size:18px;
           line-height:1.35;
           font-weight:600;
           color:#1f2937;
+          margin-top:18px;
         }
         .tv-insight-card__description{
           margin-top:8px;
+          margin-bottom:14px;
           font-size:13px;
           line-height:1.45;
           color:rgba(31,41,55,.60);
