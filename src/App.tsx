@@ -6440,13 +6440,14 @@ export default function App() {
         }
         .task-input::placeholder{ color:#9ca3af; }
         .input-kbd{
-          font-size:11px;
-          font-family:monospace;
-          background:#f3f4f6;
-          border:0.5px solid #e5e7eb;
-          border-radius:4px;
-          padding:2px 6px;
-          color:#9ca3af;
+          font-size:12px;
+          font-weight:500;
+          background:#6366f1;
+          border-radius:999px;
+          padding:4px 10px;
+          color:#ffffff;
+          box-shadow:0 6px 18px rgba(79,70,229,0.25);
+          border:none;
         }
         .task-item{
           display:flex;
@@ -8969,7 +8970,7 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
+                          className="btn-press-instant rounded-full border border-[#E5E7EB] bg-white/90 px-3.5 py-1.5 text-[12px] font-medium leading-tight text-[#4B5563] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F3F4F6] disabled:opacity-50"
                         >
                           +15 min
                         </button>
@@ -8977,7 +8978,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="btn-press-instant rounded border border-[#7a5fbe] bg-[#9d84d8] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#7a5fbe]"
+                            className="btn-press-instant rounded-full border border-transparent bg-[#6366F1] px-5 py-2 text-[13px] font-semibold leading-tight text-white shadow-[0_12px_30px_rgba(79,70,229,0.45)] transition-colors duration-150 ease-out hover:bg-[#4F46E5]"
                           >
                             Start
                           </button>
