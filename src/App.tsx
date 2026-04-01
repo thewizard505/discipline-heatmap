@@ -8873,59 +8873,119 @@ export default function App() {
               )}
             </div>
 
-            {/* TIMER — dark tunnel canvas */}
-            <div className="relative z-[200] flex w-full max-w-[460px] flex-col items-center px-2 py-8 sm:py-10">
-              <div className={`timer-canvas ${running ? "scale-[1.01]" : ""}`}>
-                <div className="session-chip">SESSION · FOCUS</div>
-                <div className="timer-display">
-                  {String(Math.floor(Math.abs(seconds) / 60)).padStart(2, "0")}
-                  <span className="colon">:</span>
-                  {String(Math.abs(seconds) % 60).padStart(2, "0")}
-                </div>
-                <p className="timer-task-label">
-                  {activeFocusTaskForIntegrity
-                    ? `Deep work: ${activeFocusTaskForIntegrity.text}`
-                    : "Deep work: current task name"}
-                </p>
-                <div className="timer-controls">
-                  <button
-                    type="button"
-                    className="btn-play"
-                    disabled={isSimulation}
-                    onClick={() => {
-                      if (running) {
-                        setRunning(false);
-                      } else {
-                        startTimer();
-                      }
-                    }}
-                    aria-label={running ? "Pause timer" : "Start timer"}
-                  >
-                    <span aria-hidden>{running ? "⏹" : "▶"}</span>
-                    <span>{running ? "Stop" : "Start"}</span>
-                  </button>
-                  <button
-                    type="button"
-                    className="btn-ghost"
-                    disabled={isSimulation}
-                    onClick={handleResetSessionConfirm}
-                  >
-                    <span aria-hidden>🔄</span>
-                    <span>Reset</span>
-                  </button>
-                </div>
-                <button
-                  type="button"
-                  disabled={isSimulation}
-                  onClick={() => {
-                    setSeconds((s) => s + 900);
-                    setInitialSeconds((s) => s + 900);
-                  }}
-                  className="add-time-btn"
+            {/* TIMER — square hero card (original design with ring + focus integrity) */}
+            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-8 sm:py-10">
+              <div
+                className={`focus-timer-hero-square relative aspect-square w-full max-w-[360px] shrink-0 overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
+                  focusFinaleOpen ? "focus-finale-timer-wrap" : ""
+                } ${focusTimerNudge ? "micro-timer-nudge" : ""} ${
+                  running ? "focus-timer-running-glow focus-timer-breathe" : ""
+                }`}
+              >
+                {focusFinaleOpen && (
+                  <div
+                    className="pointer-events-none absolute -inset-10 z-0 rounded-[3.75rem] focus-finale-streamers-ring"
+                    aria-hidden
+                  />
+                )}
+                <svg
+                  className="absolute inset-0 z-[1] h-full w-full -rotate-90"
+                  viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
+                  aria-hidden
                 >
-                  + 15 min
-                </button>
-                <div id="tunnelOverlay" className="tunnel-overlay" />
+                  <defs>
+                    <linearGradient
+                      id="focusTimerRingGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
+                    >
+                      <stop offset="0%" stopColor="#818CF8" />
+                      <stop offset="55%" stopColor="#6366F1" />
+                      <stop offset="100%" stopColor="#4F46E5" />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx={FOCUS_TIMER_SVG_CENTER}
+                    cy={FOCUS_TIMER_SVG_CENTER}
+                    r={FOCUS_TIMER_RING_RADIUS}
+                    stroke="rgba(15, 23, 42, 0.06)"
+                    strokeWidth="10"
+                    fill="none"
+                  />
+                  <circle
+                    cx={FOCUS_TIMER_SVG_CENTER}
+                    cy={FOCUS_TIMER_SVG_CENTER}
+                    r={FOCUS_TIMER_RING_RADIUS}
+                    stroke="url(#focusTimerRingGradient)"
+                    strokeWidth="10"
+                    fill="none"
+                    strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
+                    strokeDashoffset={
+                      FOCUS_TIMER_RING_CIRCUMFERENCE -
+                      focusTimerProgressLength
+                    }
+                    strokeLinecap="round"
+                    style={{
+                      transition:
+                        "stroke-dashoffset 1s linear, stroke 0.5s ease",
+                    }}
+                  />
+                </svg>
+                <div
+                  className={`absolute inset-[11px] z-[2] flex flex-col overflow-hidden rounded-[26px] border border-[#e8e8e8] bg-white transition-all duration-200 ease-out ${
+                    running ? "shadow-none" : "focus-timer-idle-shadow"
+                  } ${focusFinaleOpen ? "focus-finale-timer-card" : ""}`}
+                >
+                  <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
+                    <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
+                      <div className="text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.03em] text-[#171717] transition-opacity duration-200 ease-out font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                        {String(Math.floor(Math.abs(seconds) / 60)).padStart(
+                          2,
+                          "0",
+                        )}
+                        <span className="inline-block translate-y-[-0.03em] text-[#171717]">
+                          :
+                        </span>
+                        {String(Math.abs(seconds) % 60).padStart(2, "0")}
+                      </div>
+                      {running && (
+                        <div
+                          className={`mt-4 text-[10px] tracking-[0.16em] font-semibold uppercase transition-all duration-200 ease-out ${
+                            isViolating ? "text-red-500" : "text-[#9CA3AF]"
+                          }`}
+                        >
+                          Focus Integrity: {integrityScore}%
+                        </div>
+                      )}
+                    </div>
+                    {!running && (
+                      <div className="flex shrink-0 flex-col items-center gap-2 pb-6 pt-1">
+                        <button
+                          type="button"
+                          disabled={isSimulation}
+                          onClick={() => {
+                            setSeconds((s) => s + 900);
+                            setInitialSeconds((s) => s + 900);
+                          }}
+                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
+                        >
+                          +15 min
+                        </button>
+                        {seconds > 0 && (
+                          <button
+                            type="button"
+                            onClick={startTimer}
+                            className="btn-press-instant rounded border border-[#7a5fbe] bg-[#9d84d8] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#7a5fbe]"
+                          >
+                            Start
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
