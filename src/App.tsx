@@ -6296,17 +6296,20 @@ export default function App() {
             app-notif-urgency 3.2s ease-in-out 0.4s 2;
         }
         .timer-canvas{
-          background:var(--canvas-bg);
-          border-radius:20px;
-          padding:2.5rem 2rem;
+          background:rgba(255,255,255,0.7);
+          border-radius:16px;
+          padding:32px 28px;
           display:flex;
           flex-direction:column;
           align-items:center;
-          gap:1.25rem;
+          gap:16px;
           position:relative;
           overflow:hidden;
-          border:1px solid rgba(255,255,255,0.06);
-          transition:box-shadow .6s ease,border-color .6s ease;
+          border:1px solid #E5E7EB;
+          box-shadow:0 4px 12px rgba(0,0,0,0.06);
+          backdrop-filter:blur(24px);
+          -webkit-backdrop-filter:blur(24px);
+          transition:box-shadow .6s ease,border-color .6s ease,transform .2s ease;
         }
         .session-chip{
           background:rgba(255,255,255,0.06);
@@ -6323,7 +6326,7 @@ export default function App() {
           font-size:72px;
           font-weight:400;
           letter-spacing:-0.02em;
-          color:#ffffff;
+          color:#111827;
           line-height:1;
           position:relative;
           z-index:2;
@@ -6345,37 +6348,42 @@ export default function App() {
           z-index:2;
         }
         .btn-play{
-          width:54px;
-          height:54px;
-          border-radius:50%;
+          border-radius:12px;
           background:var(--accent);
           border:none;
-          color:white;
-          font-size:20px;
-          display:flex;
+          color:#ffffff;
+          font-size:14px;
+          font-weight:600;
+          display:inline-flex;
           align-items:center;
           justify-content:center;
+          gap:6px;
+          padding:10px 16px;
           cursor:pointer;
-          transition:transform .1s,opacity .1s;
-          padding-left:3px;
+          box-shadow:0 4px 12px rgba(99,102,241,0.28);
+          transition:transform .1s,opacity .1s,background-color .15s;
         }
-        .btn-play:hover{ opacity:.9; transform:scale(1.04); }
-        .btn-play:active{ transform:scale(.97); }
+        .btn-play:hover{ opacity:.96; background:#4f46e5; }
+        .btn-play:active{ transform:scale(.98); }
         .btn-ghost{
-          width:38px;
-          height:38px;
-          border-radius:50%;
-          background:rgba(255,255,255,0.06);
-          border:0.5px solid rgba(255,255,255,0.1);
-          color:rgba(255,255,255,0.45);
-          font-size:20px;
-          display:flex;
+          border-radius:12px;
+          background:transparent;
+          border:1px solid #E5E7EB;
+          color:#374151;
+          font-size:14px;
+          font-weight:500;
+          padding:10px 16px;
+          display:inline-flex;
           align-items:center;
           justify-content:center;
+          gap:6px;
           cursor:pointer;
-          transition:background .12s;
+          transition:background .12s,border-color .12s;
         }
-        .btn-ghost:hover{ background:rgba(255,255,255,0.1); }
+        .btn-ghost:hover{
+          background:#F3F4F6;
+          border-color:#E5E7EB;
+        }
         .add-time-btn{
           background:rgba(255,255,255,0.05);
           border:0.5px solid rgba(255,255,255,0.1);
@@ -6444,8 +6452,8 @@ export default function App() {
           display:flex;
           align-items:center;
           gap:10px;
-          padding:10px 14px;
-          border-radius:10px;
+          padding:12px 16px;
+          border-radius:12px;
           background:#ffffff;
           border:0.5px solid #e5e7eb;
           transition:border-color .12s,background .12s;
@@ -6534,7 +6542,7 @@ export default function App() {
       `}</style>
 
       <div
-        className={`size-full bg-white text-[#111827] selection:bg-[#6366F1]/20 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
+        className={`size-full bg-[#F7F8FA] text-[#111827] selection:bg-[#6366F1]/20 font-sans text-[13px] leading-normal transition-all duration-700 ${isSimulation ? "min-h-[240vh]" : "min-h-screen"} ${isTransitioning ? "opacity-0" : "opacity-100"}`}
       >
         {isSimulation && null}
         {isSimulation && (
@@ -8867,7 +8875,7 @@ export default function App() {
 
             {/* TIMER — dark tunnel canvas */}
             <div className="relative z-[200] flex w-full max-w-[460px] flex-col items-center px-2 py-8 sm:py-10">
-              <div className="timer-canvas">
+              <div className={`timer-canvas ${running ? "scale-[1.01]" : ""}`}>
                 <div className="session-chip">SESSION · FOCUS</div>
                 <div className="timer-display">
                   {String(Math.floor(Math.abs(seconds) / 60)).padStart(2, "0")}
@@ -8882,14 +8890,6 @@ export default function App() {
                 <div className="timer-controls">
                   <button
                     type="button"
-                    className="btn-ghost"
-                    disabled
-                    aria-hidden
-                  >
-                    ‹
-                  </button>
-                  <button
-                    type="button"
                     className="btn-play"
                     disabled={isSimulation}
                     onClick={() => {
@@ -8901,15 +8901,17 @@ export default function App() {
                     }}
                     aria-label={running ? "Pause timer" : "Start timer"}
                   >
-                    {running ? "‖" : "▶"}
+                    <span aria-hidden>{running ? "⏹" : "▶"}</span>
+                    <span>{running ? "Stop" : "Start"}</span>
                   </button>
                   <button
                     type="button"
                     className="btn-ghost"
-                    disabled
-                    aria-hidden
+                    disabled={isSimulation}
+                    onClick={handleResetSessionConfirm}
                   >
-                    ›
+                    <span aria-hidden>🔄</span>
+                    <span>Reset</span>
                   </button>
                 </div>
                 <button
@@ -8974,9 +8976,16 @@ export default function App() {
                           taskInputClearFlash ? "opacity-50" : ""
                         }`}
                       />
-                      <span className="input-kbd" aria-hidden>
-                        ↵
-                      </span>
+                      <button
+                        type="button"
+                        disabled={isSimulation}
+                        onClick={() =>
+                          addTaskFromFocusBar({ fromButtonClick: true })
+                        }
+                        className="input-kbd"
+                      >
+                        +
+                      </button>
                     </div>
                   </div>
                   {taskInputLiveHints.length > 0 && (
