@@ -912,11 +912,11 @@ type TaskPriorityLevel = 1 | 2 | 3 | 4;
 function priorityCheckboxRingClass(p: TaskPriorityLevel | undefined): string {
   switch (p ?? 4) {
     case 1:
-      return "border-[#eab308] bg-[#fefce8]";
+      return "border-[#facc15] bg-[#fef9c3]";
     case 2:
-      return "border-[#f97316] bg-[#fff7ed]";
+      return "border-[#f97316] bg-[#ffedd5]";
     case 3:
-      return "border-[#a855f7] bg-[#faf5ff]";
+      return "border-[#a855f7] bg-[#f3e8ff]";
     default:
       return "border-[#d1d5db] bg-white";
   }
@@ -950,9 +950,9 @@ function PriorityPickerPopover({
   const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 210));
 
   const rows: { p: TaskPriorityLevel; label: string; stroke: string }[] = [
-    { p: 1, label: "Priority 1", stroke: "#eab308" }, // yellow
-    { p: 2, label: "Priority 2", stroke: "#f97316" }, // orange
-    { p: 3, label: "Priority 3", stroke: "#a855f7" }, // purple
+    { p: 1, label: "Priority 1", stroke: "#8e6fd0" },
+    { p: 2, label: "Priority 2", stroke: "#eb8a0a" },
+    { p: 3, label: "Priority 3", stroke: "#246fe0" },
     { p: 4, label: "Priority 4", stroke: "#9ca3af" },
   ];
 
@@ -4864,6 +4864,13 @@ export default function App() {
       }
       return;
     }
+    // Auto-collapse sidebar when entering focus session (timer view)
+    try {
+      window.localStorage.setItem("tunnelvision_sidebar_collapsed_v1", "1");
+    } catch {
+      // ignore
+    }
+    setSidebarCollapsed(true);
     if (focusEnterZenActive) {
       clearFocusEnterTimers();
       setFocusEnterZenActive(false);
@@ -7195,40 +7202,37 @@ export default function App() {
                     : "overflow-y-auto"
               }`}
             >
-              <div className="w-full h-full min-h-0 flex flex-col bg-white overflow-hidden">
+              <div
+                className={`w-full h-full min-h-0 flex flex-col bg-white overflow-hidden ${
+                  activeView === "calendar" || activeView === "analytics"
+                    ? "flex-1 min-h-0"
+                    : ""
+                }`}
+              >
                 {activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
-                    <header className="shrink-0 bg-white pb-2 pt-8">
-                      <div>
+                    <header className="shrink-0 bg-white pb-4 pt-8 border-b border-[#E5E7EB]">
+                      <div className="mx-auto flex items-center justify-between px-5 max-w-[min(100%,720px)]">
                         <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
                           Completed
                         </h1>
-                        <p className="mt-1 flex items-center gap-1.5 text-[13px] text-[#808080]">
-                          <svg className="w-3.5 h-3.5 text-[#B0B0B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
-                            <path d="M22 4L12 14.01l-3-3" />
-                          </svg>
-                          <span>
-                            {completedGroups.reduce((sum, g) => sum + g.items.length, 0)}{" "}
-                            {completedGroups.reduce((sum, g) => sum + g.items.length, 0) === 1 ? "task" : "tasks"}
+                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
+                          <span className="inline-flex h-[14px] w-[14px] items-center justify-center rounded-full bg-white/15">
+                            ✓
                           </span>
-                        </p>
+                          Done
+                        </span>
                       </div>
                     </header>
-                    <div className="flex-1 min-h-0 overflow-y-auto pb-8">
+                    <div className="flex-1 min-h-0 overflow-y-auto">
                       {completedGroups.length === 0 ? (
-                        <div className="flex min-h-[260px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
-                          <SaaSAllCaughtUpIllustration />
-                          <p className="mt-3 text-[17px] font-bold text-[#202020]">
-                            You&apos;re all caught up.
-                          </p>
-                          <p className="mt-1 text-[14px] text-[#6B7280]">
-                            Enjoy the rest of your day.
-                          </p>
+                        <div className="flex flex-col items-center justify-center min-h-[280px]">
+                          <svg className="w-[80px] h-[80px] mb-3 opacity-70" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
+                          <p className="text-[14px] font-medium text-[#6B7280]">No completed tasks yet</p>
+                          <p className="text-[12px] text-[#9CA3AF] mt-0.5">Complete some tasks and they'll show up here</p>
                         </div>
                       ) : (
-                        <div>
+                        <div className="mx-auto w-full max-w-[min(100%,720px)]">
                           {completedGroups.map((group) => {
                             const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
                             return (
@@ -7239,28 +7243,23 @@ export default function App() {
                                   <span className="text-[11px] text-[#9CA3AF] font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
-                                  <div className="">
+                                  <div className="divide-y divide-[#E5E7EB]">
                                     {group.items.map((item) => (
                                       <div
                                         key={item.key}
-                                        className="flex items-center justify-between rounded-[10px] bg-white px-4 py-3 mb-2 shadow-[0_1px_0_rgba(15,23,42,0.04)]"
+                                        className="flex items-center gap-3 px-5 py-2.5 pl-12 hover:bg-[#FAFAFA] transition-colors"
                                       >
-                                        <div className="flex min-w-0 flex-1 items-center gap-3">
-                                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white text-[11px]">
+                                        <span className="shrink-0 w-[18px] h-[18px] rounded-full bg-emerald-500 flex items-center justify-center">
+                                          <span className="text-white text-[10px] leading-none">
                                             ✓
                                           </span>
-                                          <span className="min-w-0 flex-1 truncate text-[14px] font-normal leading-snug text-[#111827] line-through">
-                                            {item.taskName}
-                                          </span>
-                                        </div>
-                                        <div className="ml-3 flex items-center gap-3 text-[12px] text-[#6B7280]">
-                                          <span className="tabular-nums">
-                                            {item.minutes}m
-                                          </span>
-                                          <span className="truncate max-w-[120px]">
-                                            {item.listLabel}
-                                          </span>
-                                        </div>
+                                        </span>
+                                        <span className="flex-1 min-w-0 text-[14px] text-[#9CA3AF] line-through truncate">
+                                          {item.taskName}
+                                        </span>
+                                        <span className="shrink-0 text-[12px] text-[#9CA3AF] tabular-nums">
+                                          {item.minutes}m
+                                        </span>
                                       </div>
                                     ))}
                                   </div>
@@ -7333,6 +7332,14 @@ export default function App() {
                               </p>
                               <p className="text-[13px] text-[#9CA3AF] mt-1">You&apos;re all clear.</p>
                             </div>
+                          ) : selectedListId === SYS_LIST_INBOX &&
+                            focusForTodayItems.length === 0 ? (
+                            <ListEmptyHero
+                              src={EMPTY_STATE_IMG.focusDayOff}
+                              className={listEmptyExit ? "micro-empty-out" : ""}
+                              title={`Enjoy a true day off, ${dispName}!`}
+                              subtitle="Nothing is showing from your lists yet — add tasks in Today, Projects, Tests, or Long-Term and they will line up here automatically."
+                            />
                           ) : allElasticListTasksComplete ? (
                             selectedListId === SYS_LIST_TODAY ? (
                               <ListEmptyHero
@@ -7376,12 +7383,17 @@ export default function App() {
                               </div>
                             )
                           ) : (
-                            <ListEmptyHero
-                              src={EMPTY_STATE_IMG.focusDayOff}
-                              className={listEmptyExit ? "micro-empty-out" : ""}
-                              title={`Enjoy a true day off, ${dispName}!`}
-                              subtitle="You&apos;ve completed everything here for now."
-                            />
+                            <div
+                              className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
+                            >
+                              <SaaSAllCaughtUpIllustration />
+                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
+                                {todoistEmptyDayMessage.title}
+                              </p>
+                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
+                                You&apos;re all caught up in this view.
+                              </p>
+                            </div>
                           );
 
                         return (
@@ -7596,7 +7608,20 @@ export default function App() {
                                       ? focusTaskSourceByTaskId.get(t.id) ??
                                         selectedListId
                                       : selectedListId!;
-                                  const classLabel = "";
+                                  const classLabel =
+                                    sourceListId === SYS_LIST_TODAY
+                                      ? "Today"
+                                      : sourceListId === SYS_LIST_OVERDUE
+                                        ? "Overdue"
+                                        : sourceListId === SYS_LIST_PROJECTS
+                                          ? "Projects"
+                                          : sourceListId === SYS_LIST_TESTS
+                                            ? "Tests"
+                                            : sourceListId === SYS_LIST_LONGTERM
+                                              ? "Long-Term"
+                                              : sourceListId === SYS_LIST_INBOX
+                                                ? "Inbox"
+                                                : selectedList?.label ?? "—";
                                   const listReadOnly =
                                     selectedListId === SYS_LIST_OVERDUE;
                                   const noReorder =
@@ -7878,9 +7903,7 @@ export default function App() {
                                           </div>
                                         ) : null}
                                       </div>
-                                      <div className="hidden shrink-0 items-center gap-1 text-[12px] text-[#9CA3AF] sm:flex">
-                                        <span className="max-w-[120px] truncate">{classLabel}</span>
-                                      </div>
+                                      <div className="hidden shrink-0 items-center gap-1 text-[12px] text-[#9CA3AF] sm:flex" />
                                       {!listReadOnly ? (
                                         <button
                                           type="button"
@@ -7949,7 +7972,6 @@ export default function App() {
                                 </div>
                                 <div>
                                   {doneTasks.map((t) => {
-                                    const classLabel = selectedListId === SYS_LIST_TODAY ? "Today" : selectedListId === SYS_LIST_OVERDUE ? "Overdue" : selectedListId === SYS_LIST_PROJECTS ? "Projects" : selectedListId === SYS_LIST_TESTS ? "Tests" : selectedListId === SYS_LIST_LONGTERM ? "Long-Term" : selectedList?.label ?? "—";
                                     return (
                                       <div key={t.id} className={`group flex items-center h-[36px] px-6 border-b border-[#F1F5F9] ${taskRowExitingId === t.id ? "opacity-0 pointer-events-none" : ""}`}>
                                         <div className="w-[28px] shrink-0 flex items-center justify-center">
@@ -7957,7 +7979,6 @@ export default function App() {
                                         </div>
                                         <div className="flex-1 min-w-0 text-[13px] text-[#9CA3AF] line-through truncate">{t.text}</div>
                                         <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">—</div>
-                                        <div className="w-[120px] shrink-0 text-center text-[12px] text-[#9CA3AF]">{classLabel}</div>
                                         <div className="w-[32px] shrink-0 flex items-center justify-center">
                                           <button type="button" onClick={(e) => { e.stopPropagation(); if (!selectedListId) return; if (deleteUndoToastTimerRef.current) { clearTimeout(deleteUndoToastTimerRef.current); deleteUndoToastTimerRef.current = null; } setTasks((prev) => prev.filter((x) => x.id !== t.id)); setDeleteUndoToast({ task: { ...t }, listId: selectedListId }); deleteUndoToastTimerRef.current = setTimeout(() => { setDeleteUndoToast(null); deleteUndoToastTimerRef.current = null; }, 8000); }} className="btn-press-instant w-6 h-6 rounded-md text-[#9CA3AF] hover:text-[#6B7280] hover:bg-[#F1F5F9] opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-[11px]" aria-label="Delete task">✕</button>
                                         </div>
@@ -8424,7 +8445,7 @@ export default function App() {
                                     ))}
                                   </div>
                                   <div
-                                    className="relative min-h-[280px] w-full max-h-[300px] flex-1"
+                                    className="relative min-h-[220px] w-full max-h-[240px] flex-1"
                                     onMouseLeave={() =>
                                       setAnalyticsChartHover(null)
                                     }
