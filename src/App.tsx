@@ -912,11 +912,11 @@ type TaskPriorityLevel = 1 | 2 | 3 | 4;
 function priorityCheckboxRingClass(p: TaskPriorityLevel | undefined): string {
   switch (p ?? 4) {
     case 1:
-      return "border-[#8e6fd0] bg-[#f7f4fc]";
+      return "border-[#eab308] bg-[#fefce8]";
     case 2:
-      return "border-[#eb8a0a] bg-[#fff8f0]";
+      return "border-[#f97316] bg-[#fff7ed]";
     case 3:
-      return "border-[#246fe0] bg-[#f4f8ff]";
+      return "border-[#a855f7] bg-[#faf5ff]";
     default:
       return "border-[#d1d5db] bg-white";
   }
@@ -950,9 +950,9 @@ function PriorityPickerPopover({
   const left = Math.max(8, Math.min(anchor.left, window.innerWidth - 210));
 
   const rows: { p: TaskPriorityLevel; label: string; stroke: string }[] = [
-    { p: 1, label: "Priority 1", stroke: "#8e6fd0" },
-    { p: 2, label: "Priority 2", stroke: "#eb8a0a" },
-    { p: 3, label: "Priority 3", stroke: "#246fe0" },
+    { p: 1, label: "Priority 1", stroke: "#eab308" }, // yellow
+    { p: 2, label: "Priority 2", stroke: "#f97316" }, // orange
+    { p: 3, label: "Priority 3", stroke: "#a855f7" }, // purple
     { p: 4, label: "Priority 4", stroke: "#9ca3af" },
   ];
 
@@ -7195,28 +7195,37 @@ export default function App() {
                     : "overflow-y-auto"
               }`}
             >
-              <div
-                className={`w-full h-full min-h-0 flex flex-col bg-white overflow-hidden ${
-                  activeView === "calendar" || activeView === "analytics"
-                    ? "flex-1 min-h-0"
-                    : ""
-                }`}
-              >
+              <div className="w-full h-full min-h-0 flex flex-col bg-white overflow-hidden">
                 {activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <header className="shrink-0 flex items-center gap-3 px-5 h-[40px] border-b border-[#E5E7EB]">
-                      <button type="button" onClick={() => setSidebarCollapsed((c) => !c)} className="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[#6B7280] hover:bg-[#F1F5F9] transition-colors" aria-label="Toggle sidebar">
-                        <svg className="w-[17px] h-[17px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden><line x1="4" y1="6" x2="20" y2="6" /><line x1="4" y1="12" x2="20" y2="12" /><line x1="4" y1="18" x2="20" y2="18" /></svg>
-                      </button>
-                      <svg className="w-[18px] h-[18px] text-[#6B7280] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14" /><path d="M22 4L12 14.01l-3-3" /></svg>
-                      <h2 className="text-[15px] font-semibold text-[#111827] tracking-tight">Completed</h2>
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
+                    <header className="shrink-0 bg-white pb-2 pt-8">
+                      <div>
+                        <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                          Completed
+                        </h1>
+                        <p className="mt-1 flex items-center gap-1.5 text-[13px] text-[#808080]">
+                          <svg className="w-3.5 h-3.5 text-[#B0B0B0]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                            <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
+                            <path d="M22 4L12 14.01l-3-3" />
+                          </svg>
+                          <span>
+                            {completedGroups.reduce((sum, g) => sum + g.items.length, 0)}{" "}
+                            {completedGroups.reduce((sum, g) => sum + g.items.length, 0) === 1 ? "task" : "tasks"}
+                          </span>
+                        </p>
+                      </div>
                     </header>
-                    <div className="flex-1 min-h-0 overflow-y-auto">
+                    <div className="flex-1 min-h-0 overflow-y-auto pb-8">
                       {completedGroups.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center min-h-[280px]">
-                          <svg className="w-[80px] h-[80px] mb-3 opacity-70" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
-                          <p className="text-[14px] font-medium text-[#6B7280]">No completed tasks yet</p>
-                          <p className="text-[12px] text-[#9CA3AF] mt-0.5">Complete some tasks and they'll show up here</p>
+                        <div className="flex min-h-[260px] flex-col items-center justify-center text-[14px] text-[#6B7280]">
+                          <SaaSAllCaughtUpIllustration />
+                          <p className="mt-3 text-[17px] font-bold text-[#202020]">
+                            You&apos;re all caught up.
+                          </p>
+                          <p className="mt-1 text-[14px] text-[#6B7280]">
+                            Enjoy the rest of your day.
+                          </p>
                         </div>
                       ) : (
                         <div>
@@ -7230,13 +7239,28 @@ export default function App() {
                                   <span className="text-[11px] text-[#9CA3AF] font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
-                                  <div className="divide-y divide-[#E5E7EB]">
+                                  <div className="">
                                     {group.items.map((item) => (
-                                      <div key={item.key} className="flex items-center gap-2.5 px-5 py-2 pl-12 hover:bg-[#F8FAFC]/50 transition-colors">
-                                        <span className="shrink-0 w-[16px] h-[16px] rounded-full bg-emerald-500 flex items-center justify-center"><span className="text-white text-[9px] leading-none">✓</span></span>
-                                        <span className="flex-1 min-w-0 text-[13px] text-[#9CA3AF] line-through truncate">{item.taskName}</span>
-                                        <span className="shrink-0 text-[11px] text-[#9CA3AF] tabular-nums">{item.minutes}m</span>
-                                        <span className="shrink-0 text-[10px] text-[#9CA3AF] truncate max-w-[100px]">{item.listLabel}</span>
+                                      <div
+                                        key={item.key}
+                                        className="flex items-center justify-between rounded-[10px] bg-white px-4 py-3 mb-2 shadow-[0_1px_0_rgba(15,23,42,0.04)]"
+                                      >
+                                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                                          <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white text-[11px]">
+                                            ✓
+                                          </span>
+                                          <span className="min-w-0 flex-1 truncate text-[14px] font-normal leading-snug text-[#111827] line-through">
+                                            {item.taskName}
+                                          </span>
+                                        </div>
+                                        <div className="ml-3 flex items-center gap-3 text-[12px] text-[#6B7280]">
+                                          <span className="tabular-nums">
+                                            {item.minutes}m
+                                          </span>
+                                          <span className="truncate max-w-[120px]">
+                                            {item.listLabel}
+                                          </span>
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
@@ -7309,14 +7333,6 @@ export default function App() {
                               </p>
                               <p className="text-[13px] text-[#9CA3AF] mt-1">You&apos;re all clear.</p>
                             </div>
-                          ) : selectedListId === SYS_LIST_INBOX &&
-                            focusForTodayItems.length === 0 ? (
-                            <ListEmptyHero
-                              src={EMPTY_STATE_IMG.focusDayOff}
-                              className={listEmptyExit ? "micro-empty-out" : ""}
-                              title={`Enjoy a true day off, ${dispName}!`}
-                              subtitle="Nothing is showing from your lists yet — add tasks in Today, Projects, Tests, or Long-Term and they will line up here automatically."
-                            />
                           ) : allElasticListTasksComplete ? (
                             selectedListId === SYS_LIST_TODAY ? (
                               <ListEmptyHero
@@ -7360,17 +7376,12 @@ export default function App() {
                               </div>
                             )
                           ) : (
-                            <div
-                              className={`flex flex-col items-center justify-center min-h-[260px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
-                            >
-                              <SaaSAllCaughtUpIllustration />
-                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
-                                No tasks yet
-                              </p>
-                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
-                                Add your first task using the button above.
-                              </p>
-                            </div>
+                            <ListEmptyHero
+                              src={EMPTY_STATE_IMG.focusDayOff}
+                              className={listEmptyExit ? "micro-empty-out" : ""}
+                              title={`Enjoy a true day off, ${dispName}!`}
+                              subtitle="You&apos;ve completed everything here for now."
+                            />
                           );
 
                         return (
@@ -7585,20 +7596,7 @@ export default function App() {
                                       ? focusTaskSourceByTaskId.get(t.id) ??
                                         selectedListId
                                       : selectedListId!;
-                                  const classLabel =
-                                    sourceListId === SYS_LIST_TODAY
-                                      ? "Today"
-                                      : sourceListId === SYS_LIST_OVERDUE
-                                        ? "Overdue"
-                                        : sourceListId === SYS_LIST_PROJECTS
-                                          ? "Projects"
-                                          : sourceListId === SYS_LIST_TESTS
-                                            ? "Tests"
-                                            : sourceListId === SYS_LIST_LONGTERM
-                                              ? "Long-Term"
-                                              : sourceListId === SYS_LIST_INBOX
-                                                ? "Inbox"
-                                                : selectedList?.label ?? "—";
+                                  const classLabel = "";
                                   const listReadOnly =
                                     selectedListId === SYS_LIST_OVERDUE;
                                   const noReorder =
