@@ -8975,7 +8975,7 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="btn-press-instant rounded-full border border-[#E5E7EB] bg-white/90 px-3.5 py-1.5 text-[12px] font-medium leading-tight text-[#4B5563] shadow-sm transition-colors duration-150 ease-out hover:bg-[#F3F4F6] disabled:opacity-50"
+                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
                         >
                           +15 min
                         </button>
@@ -8983,7 +8983,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="btn-press-instant rounded-full border border-transparent bg-[#6366F1] px-5 py-2 text-[13px] font-semibold leading-tight text-white shadow-[0_12px_30px_rgba(79,70,229,0.45)] transition-colors duration-150 ease-out hover:bg-[#4F46E5]"
+                            className="btn-press-instant rounded border border-[#c5372f] bg-[#db4c3f] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#c5372f]"
                           >
                             Start
                           </button>
@@ -9000,59 +9000,35 @@ export default function App() {
                 className={`space-y-4 transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="space-y-1.5">
-                  <div className="task-input-row">
-                    <div
-                      className={`task-input-wrap ${
-                        invalidInputTarget === "focus"
-                          ? "micro-input-invalid"
-                          : taskInputShellPress
-                            ? "micro-input-press"
-                            : ""
-                      }`}
+                  <div className="flex w-full items-center gap-2 rounded-[3px] border border-[#ddd] bg-white px-3 py-2">
+                    <input
+                      ref={focusSessionTaskInputRef}
+                      disabled={isSimulation}
+                      value={taskInput}
+                      onChange={(e) => setTaskInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          addTaskFromFocusBar({ fromEnter: true });
+                        }
+                      }}
+                      placeholder={
+                        isSimulation ? "Simulating input..." : "Next objective..."
+                      }
+                      className={`min-h-[38px] flex-1 rounded-[3px] border border-transparent bg-white px-0 text-[14px] font-normal leading-snug text-[#202020] outline-none transition-colors duration-150 ease-out placeholder:text-[#808080] focus:border-[#999] ${
+                        taskInputClearFlash ? "opacity-50" : ""
+                      } font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]`}
+                    />
+                    <button
+                      disabled={isSimulation}
+                      type="button"
+                      onClick={() =>
+                        addTaskFromFocusBar({ fromButtonClick: true })
+                      }
+                      className="btn-press-instant shrink-0 rounded-[3px] bg-[#1f1f1f] px-4 py-2 text-[13px] font-medium leading-snug text-white transition-colors duration-150 ease-out hover:bg-black disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                     >
-                      <span className="input-icon" aria-hidden>
-                        <svg
-                          className="h-4 w-4"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="1.8"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        >
-                          <circle cx="11" cy="11" r="7" />
-                          <path d="M21 21l-3.8-3.8" />
-                        </svg>
-                      </span>
-                      <input
-                        ref={focusSessionTaskInputRef}
-                        disabled={isSimulation}
-                        value={taskInput}
-                        onChange={(e) => setTaskInput(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            addTaskFromFocusBar({ fromEnter: true });
-                          }
-                        }}
-                        placeholder={
-                          isSimulation ? "Simulating input..." : "Next objective..."
-                        }
-                        className={`task-input ${
-                          taskInputClearFlash ? "opacity-50" : ""
-                        }`}
-                      />
-                      <button
-                        type="button"
-                        disabled={isSimulation}
-                        onClick={() =>
-                          addTaskFromFocusBar({ fromButtonClick: true })
-                        }
-                        className="input-kbd"
-                      >
-                        +
-                      </button>
-                    </div>
+                      Add
+                    </button>
                   </div>
                   {taskInputLiveHints.length > 0 && (
                     <div className="pl-1 space-y-0.5" aria-live="polite">
