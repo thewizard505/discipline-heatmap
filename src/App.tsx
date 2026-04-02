@@ -6245,6 +6245,74 @@ export default function App() {
           text-shadow:0 0 24px rgba(148,163,184,0.55);
           animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
         }
+        .sidebar-focus-cta{
+          position:relative;
+          display:flex;
+          align-items:center;
+          gap:10px;
+          width:100%;
+          border-radius:999px;
+          padding:8px 14px;
+          background:rgba(15,23,42,0.9);
+          border:1px solid rgba(148,163,184,0.35);
+          box-shadow:0 18px 38px rgba(15,23,42,0.45);
+          overflow:hidden;
+        }
+        .sidebar-focus-cta-ring{
+          position:relative;
+          flex-shrink:0;
+          width:28px;
+          height:28px;
+          border-radius:999px;
+          background:radial-gradient(circle at 30% 20%,rgba(248,250,252,0.45),transparent 60%),radial-gradient(circle at 80% 80%,rgba(59,130,246,0.8),transparent 70%);
+          display:flex;
+          align-items:center;
+          justify-content:center;
+        }
+        .sidebar-focus-cta-hole{
+          width:22px;
+          height:22px;
+          border-radius:999px;
+          background-image:url("assets/c__Users_savin_AppData_Roaming_Cursor_User_workspaceStorage_3b22fddf6fc4868fcaa8bcc5b49c83df_images_image-removebg-preview-866e18fb-1813-44fc-b278-ec95d580aceb.png");
+          background-size:cover;
+          background-position:center;
+          box-shadow:0 0 12px rgba(59,130,246,0.65);
+          transform-origin:50% 50%;
+          transition:transform .45s cubic-bezier(0.22,0.61,0.36,1),box-shadow .45s cubic-bezier(0.22,0.61,0.36,1);
+        }
+        .sidebar-focus-cta-label{
+          position:relative;
+          z-index:1;
+        }
+        .sidebar-focus-cta-label--halo{
+          font-size:13px;
+          font-weight:600;
+          background:linear-gradient(120deg,rgba(129,140,248,0.95),rgba(56,189,248,0.9),rgba(52,211,153,0.9));
+          -webkit-background-clip:text;
+          background-clip:text;
+          color:transparent;
+          text-shadow:0 0 20px rgba(15,23,42,0.8);
+        }
+        .sidebar-focus-cta::before{
+          content:"";
+          position:absolute;
+          inset:-40%;
+          background:radial-gradient(circle at 0% 0%,rgba(99,102,241,0.25),transparent 60%),radial-gradient(circle at 100% 100%,rgba(56,189,248,0.2),transparent 70%);
+          opacity:.35;
+          transition:opacity .4s ease-out,transform .4s ease-out;
+          transform:translate3d(0,6px,0);
+        }
+        .sidebar-focus-cta:hover::before{
+          opacity:.7;
+          transform:translate3d(0,0,0);
+        }
+        .sidebar-focus-cta:hover .sidebar-focus-cta-hole{
+          transform:scale(0.9) rotate(18deg);
+          box-shadow:0 0 22px rgba(59,130,246,0.95);
+        }
+        .sidebar-focus-cta:active .sidebar-focus-cta-hole{
+          transform:scale(0.82) rotate(28deg);
+        }
         .tv-insight-card:hover{
           transform:translateY(-2px);
           box-shadow:
@@ -6937,12 +7005,11 @@ export default function App() {
                         className="sidebar-focus-cta"
                       >
                         <span className="sidebar-focus-cta-ring" aria-hidden>
-                          <svg viewBox="0 0 24 24" className="sidebar-focus-cta-plus" fill="none" aria-hidden>
-                            <line x1="12" y1="8" x2="12" y2="16" stroke="white" strokeWidth="2.25" strokeLinecap="round" />
-                            <line x1="8" y1="12" x2="16" y2="12" stroke="white" strokeWidth="2.25" strokeLinecap="round" />
-                          </svg>
+                          <span className="sidebar-focus-cta-hole" />
                         </span>
-                        <span className="sidebar-focus-cta-label">Focus Today</span>
+                        <span className="sidebar-focus-cta-label sidebar-focus-cta-label--halo">
+                          Plan my day
+                        </span>
                       </button>
                     </div>
 
@@ -8591,27 +8658,20 @@ export default function App() {
                                           <circle
                                             cx={cx}
                                             cy={cy}
-                                            r={
-                                              analyticsChartHover === i
-                                                ? 1.45
-                                                : 0.9
-                                            }
-                                            fill={
-                                              analyticsChartHover === i
-                                                ? "#7a5fbe"
-                                                : "#8e6fd0"
-                                            }
+                                            r={analyticsChartHover === i ? 1.1 : 0.8}
+                                            fill={analyticsChartHover === i ? "#6366F1" : "#818CF8"}
                                             stroke="#ffffff"
-                                            strokeWidth="0.24"
-                                            className="transition-all duration-100"
+                                            strokeWidth="0.2"
+                                            className="transition-all duration-120"
                                             vectorEffect="non-scaling-stroke"
                                           />
                                           {analyticsChartHover === i && (
                                             <circle
                                               cx={cx}
                                               cy={cy}
-                                              r={0.42}
-                                              fill="#EF4444"
+                                              r={1.9}
+                                              fill="url(#analyticsAreaFillGrad)"
+                                              opacity="0.9"
                                               vectorEffect="non-scaling-stroke"
                                             />
                                           )}
