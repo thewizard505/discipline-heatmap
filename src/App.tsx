@@ -6846,10 +6846,9 @@ export default function App() {
           )}
           <div className="h-screen min-h-0 flex w-full bg-[#FAFAFA] text-[#111827] overflow-hidden">
             {/* ── Sidebar (Todoist-style) ── */}
-            {!isFocusSessionActive && (
-              <div
-                className={`relative flex h-full shrink-0 overflow-hidden border-r border-[#E8E6E3] bg-white transition-[width,min-width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-[250] ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[min(19vw,320px)] min-w-[280px]"}`}
-              >
+            <div
+              className={`relative flex h-full shrink-0 overflow-hidden border-r border-[#E8E6E3] bg-white transition-[width,min-width] duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-[250] ${sidebarCollapsed ? "w-0 min-w-0 border-r-0" : "w-[min(19vw,320px)] min-w-[280px]"}`}
+            >
                 <aside className="app-sidebar flex h-full w-full min-w-[280px] max-w-[320px] flex-col bg-white">
                   <div className="shrink-0 flex h-[52px] items-center gap-1.5 border-b border-[#E8E6E3] px-4 py-3">
                     <div ref={sidebarUserMenuRef} className="relative min-w-0 flex-1">
@@ -7052,7 +7051,6 @@ export default function App() {
                   </div>
                 </aside>
               </div>
-            )}
 
             {/* Expand sidebar strip (focus session) */}
             {isFocusSessionActive &&
@@ -7076,7 +7074,7 @@ export default function App() {
 
             {/* ── Main content column ── */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
-              {!isFocusSessionActive && sidebarCollapsed ? (
+            {sidebarCollapsed ? (
                 <button
                   type="button"
                   onClick={() => setSidebarCollapsed(false)}
@@ -7211,17 +7209,11 @@ export default function App() {
               >
                 {activeView === "tasks" && todayMainMode === "completed" ? (
                   <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <header className="shrink-0 bg-white pb-4 pt-8 border-b border-[#E5E7EB]">
-                      <div className="mx-auto flex items-center justify-between px-5 max-w-[min(100%,720px)]">
+                    <header className="shrink-0 bg-white pb-2 pt-8">
+                      <div className="mx-auto w-full max-w-[min(100%,720px)] px-6 sm:px-10">
                         <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
                           Completed
                         </h1>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-[#22c55e] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-white">
-                          <span className="inline-flex h-[14px] w-[14px] items-center justify-center rounded-full bg-white/15">
-                            ✓
-                          </span>
-                          Done
-                        </span>
                       </div>
                     </header>
                     <div className="flex-1 min-h-0 overflow-y-auto">
@@ -7232,14 +7224,16 @@ export default function App() {
                           <p className="text-[12px] text-[#9CA3AF] mt-0.5">Complete some tasks and they'll show up here</p>
                         </div>
                       ) : (
-                        <div className="mx-auto w-full max-w-[min(100%,720px)]">
+                        <div className="mx-auto w-full max-w-[min(100%,720px)] px-6 sm:px-10 pt-2">
                           {completedGroups.map((group) => {
                             const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
                             return (
-                              <div key={group.dateStr} className="border-b border-[#E5E7EB]">
-                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 px-5 py-2 text-left hover:bg-[#F8FAFC] transition-colors">
+                              <div key={group.dateStr}>
+                                <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 py-2 text-left hover:bg-[#F8FAFC] transition-colors">
                                   <svg className={`w-3 h-3 text-[#9CA3AF] transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="flex-1 text-[13px] font-semibold text-[#111827]">{group.label}</span>
+                                  <span className="flex-1 text-[13px] font-semibold text-[#111827] font-['Inter',system-ui,sans-serif]">
+                                    {group.label}
+                                  </span>
                                   <span className="text-[11px] text-[#9CA3AF] font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
