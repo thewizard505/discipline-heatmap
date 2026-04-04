@@ -1937,14 +1937,28 @@ function InsightCard({
       ? "tv-insight-card--example"
       : "";
   const isExamplePlaceholder = Boolean(exampleClass);
+  const fakeTierClass =
+    insight.id === "pending-morning"
+      ? "tv-insight-card--fake-1"
+      : insight.id === "pending-trend"
+        ? "tv-insight-card--fake-2"
+        : "";
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.985, boxShadow: "0 0 0 rgba(0,0,0,0)" }}
       animate={{
-        opacity: isExamplePlaceholder ? 0.55 : 1,
+        opacity: isExamplePlaceholder
+          ? insight.id === "pending-morning"
+            ? 0.78
+            : 0.9
+          : 1,
         y: 0,
-        scale: isExamplePlaceholder ? 0.99 : 1,
+        scale: isExamplePlaceholder
+          ? insight.id === "pending-morning"
+            ? 0.993
+            : 0.997
+          : 1,
         boxShadow:
           "0 10px 30px rgba(0,0,0,0.16), 0 0 40px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.38)",
       }}
@@ -1954,7 +1968,7 @@ function InsightCard({
         stiffness: 120,
         damping: 12,
       }}
-      className={`tv-insight-card ${variantClass} ${lockedClass} ${exampleClass}`}
+      className={`tv-insight-card ${variantClass} ${lockedClass} ${exampleClass} ${fakeTierClass}`}
     >
       <p
         className={`tv-insight-card__title ${
@@ -4193,7 +4207,7 @@ export default function App() {
       type: "neutral",
       strength: 0,
       variant: "green",
-      locked: true,
+      locked: false,
     },
     {
       id: "pending-trend",
@@ -4202,7 +4216,7 @@ export default function App() {
       type: "neutral",
       strength: 0,
       variant: "blue",
-      locked: true,
+      locked: false,
     },
   ];
   const displayedInsightCards: InsightCardItem[] = isEmptyInsightsState
@@ -6168,25 +6182,31 @@ export default function App() {
           pointer-events:none;
         }
         .tv-insight-card--example{
-          filter:saturate(0.72) brightness(1.03);
+          pointer-events:none;
+          cursor:default;
+          filter:saturate(0.9) brightness(1.02);
           box-shadow:
-            0 3px 14px rgba(0,0,0,0.08),
-            inset 0 1px 0 rgba(255,255,255,0.22);
+            0 4px 18px rgba(88, 28, 135, 0.06),
+            0 3px 14px rgba(0,0,0,0.07),
+            inset 0 1px 0 rgba(255,255,255,0.28);
         }
         .tv-insight-card--example.tv-insight-card--green{
-          background:rgba(34,197,94,0.05);
+          background:rgba(34,197,94,0.07);
         }
         .tv-insight-card--example.tv-insight-card--red{
-          background:rgba(239,68,68,0.05);
+          background:rgba(239,68,68,0.07);
         }
         .tv-insight-card--example.tv-insight-card--blue{
-          background:rgba(59,130,246,0.05);
+          background:rgba(59,130,246,0.08);
         }
         .tv-insight-card--example.tv-insight-card--neutral{
-          background:rgba(148,163,184,0.07);
+          background:rgba(148,163,184,0.09);
         }
-        .tv-insight-card--example .tv-insight-card__description{
-          color:rgba(31,41,55,0.38);
+        .tv-insight-card--fake-1 .tv-insight-card__description{
+          color:rgba(31,41,55,0.48);
+        }
+        .tv-insight-card--fake-2 .tv-insight-card__description{
+          color:rgba(31,41,55,0.56);
         }
         .tv-insight-card__title{
           font-size:18px;
@@ -6206,12 +6226,20 @@ export default function App() {
           0%,100%{ transform:translateY(0); }
           50%{ transform:translateY(-3px); }
         }
-        .tv-insight-card--example .tv-insight-card__title--example{
-          background:linear-gradient(120deg,rgba(129,140,248,0.42),rgba(56,189,248,0.38),rgba(52,211,153,0.4));
+        .tv-insight-card--fake-1 .tv-insight-card__title--example{
+          background:linear-gradient(125deg,rgba(129,140,248,0.62),rgba(56,189,248,0.52),rgba(52,211,153,0.58));
           -webkit-background-clip:text;
           background-clip:text;
           color:transparent;
-          text-shadow:0 0 18px rgba(148,163,184,0.22);
+          text-shadow:0 0 20px rgba(167,139,250,0.18);
+          animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
+        }
+        .tv-insight-card--fake-2 .tv-insight-card__title--example{
+          background:linear-gradient(125deg,rgba(129,140,248,0.74),rgba(56,189,248,0.64),rgba(52,211,153,0.7));
+          -webkit-background-clip:text;
+          background-clip:text;
+          color:transparent;
+          text-shadow:0 0 22px rgba(167,139,250,0.22);
           animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
         }
         .tv-insight-card:hover{
@@ -6221,19 +6249,47 @@ export default function App() {
             inset 0 1px 0 rgba(255,255,255,0.40);
         }
         .tv-insight-card:active{ transform:scale(.98); }
+        .tv-insights-ambient{
+          position:relative;
+          border-radius:22px;
+          padding:10px 6px 8px;
+          margin:-6px -4px 0 -4px;
+        }
+        .tv-insights-ambient::before{
+          content:"";
+          position:absolute;
+          inset:-2px -6px -10px -6px;
+          border-radius:24px;
+          background:
+            radial-gradient(ellipse 95% 72% at 78% 22%, rgba(167, 139, 250, 0.11), transparent 58%),
+            radial-gradient(ellipse 75% 58% at 12% 78%, rgba(196, 181, 253, 0.09), transparent 52%),
+            radial-gradient(ellipse 55% 45% at 52% 92%, rgba(139, 92, 246, 0.06), transparent 50%);
+          pointer-events:none;
+          z-index:0;
+        }
+        .tv-insights-ambient::after{
+          content:"";
+          position:absolute;
+          inset:0;
+          border-radius:20px;
+          background:linear-gradient(165deg, rgba(250, 245, 255, 0.45) 0%, rgba(255,255,255,0) 42%, rgba(243, 232, 255, 0.2) 100%);
+          pointer-events:none;
+          z-index:0;
+          opacity:0.85;
+        }
         .tv-insight-wisp{
           position:absolute;
-          width:120px;
-          height:120px;
-          background:radial-gradient(circle, rgba(255,255,255,0.13), transparent 68%);
-          filter:blur(20px);
+          width:140px;
+          height:140px;
+          background:radial-gradient(circle at 40% 40%, rgba(196, 181, 253, 0.28), rgba(167, 139, 250, 0.12) 42%, transparent 70%);
+          filter:blur(22px);
           animation:tv-insight-float 6s ease-in-out infinite;
           pointer-events:none;
           z-index:1;
         }
-        .tv-insight-wisp--a{ left:4%; top:6%; animation-delay:0s; }
-        .tv-insight-wisp--b{ right:8%; top:14%; animation-delay:1.1s; }
-        .tv-insight-wisp--c{ left:46%; bottom:-8px; animation-delay:2.2s; }
+        .tv-insight-wisp--a{ left:2%; top:8%; animation-delay:0s; }
+        .tv-insight-wisp--b{ right:4%; top:18%; animation-delay:1.1s; }
+        .tv-insight-wisp--c{ left:48%; bottom:2px; animation-delay:2.2s; }
         @keyframes tv-insight-float{
           0%{ transform:translateY(0px); }
           50%{ transform:translateY(-12px); }
@@ -8651,7 +8707,7 @@ export default function App() {
                                     Patterns based on your focus data
                                   </p>
                                 </div>
-                                <div className="relative">
+                                <div className="relative tv-insights-ambient">
                                   <span
                                     className="tv-insight-wisp tv-insight-wisp--a"
                                     aria-hidden
