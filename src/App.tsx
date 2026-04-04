@@ -3318,6 +3318,14 @@ export default function App() {
     return applySoftEstimateReorder(base, tasksByListId);
   }, [tasksByListId, notificationDay]);
 
+  const planMyDaySidebarTaskCount = useMemo(
+    () =>
+      (tasksByListId[SYS_LIST_INBOX] ?? []).filter(
+        (t) => !t.completed && !t.removing,
+      ).length,
+    [tasksByListId],
+  );
+
   const mainPanelTaskCount = useMemo(() => {
     if (!selectedListId) return 0;
     const searchQ = taskSearchQuery.toLowerCase().trim();
@@ -6245,73 +6253,6 @@ export default function App() {
           text-shadow:0 0 24px rgba(148,163,184,0.55);
           animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
         }
-        .sidebar-focus-cta{
-          position:relative;
-          display:flex;
-          align-items:center;
-          gap:10px;
-          width:100%;
-          border-radius:999px;
-          padding:8px 12px;
-          background:transparent;
-          border:none;
-          box-shadow:none;
-          overflow:visible;
-          transition:box-shadow .35s cubic-bezier(0.22,0.61,0.36,1),filter .35s ease;
-        }
-        .sidebar-focus-cta:hover{
-          box-shadow:
-            0 10px 32px rgba(15,23,42,0.08),
-            0 4px 14px rgba(99,102,241,0.07),
-            0 0 0 1px rgba(148,163,184,0.12);
-        }
-        .sidebar-focus-cta-ring{
-          position:relative;
-          flex-shrink:0;
-          width:30px;
-          height:30px;
-          border-radius:999px;
-          background:transparent;
-          display:flex;
-          align-items:center;
-          justify-content:center;
-        }
-        .sidebar-focus-cta-hole{
-          width:28px;
-          height:28px;
-          border-radius:999px;
-          background-color:transparent;
-          background-image:url("/plan-my-day-black-hole.png");
-          background-size:120%;
-          background-position:center;
-          background-repeat:no-repeat;
-          transform-origin:50% 50%;
-          transition:transform .5s cubic-bezier(0.22,0.61,0.36,1);
-          transform:scale(1) rotate(0deg);
-        }
-        .sidebar-focus-cta:hover .sidebar-focus-cta-hole{
-          transform:scale(0.72) rotate(22deg);
-        }
-        .sidebar-focus-cta:active .sidebar-focus-cta-hole{
-          transform:scale(0.66) rotate(26deg);
-        }
-        .sidebar-focus-cta-label{
-          position:relative;
-          z-index:1;
-        }
-        .sidebar-focus-cta-label--halo{
-          font-size:13px;
-          font-weight:600;
-          letter-spacing:-0.01em;
-          background:linear-gradient(120deg,rgba(129,140,248,0.98),rgba(56,189,248,0.92),rgba(52,211,153,0.92));
-          -webkit-background-clip:text;
-          background-clip:text;
-          color:transparent;
-          filter:
-            drop-shadow(0 0 12px rgba(129,140,248,0.5))
-            drop-shadow(0 3px 18px rgba(56,189,248,0.25))
-            drop-shadow(0 0 22px rgba(52,211,153,0.2));
-        }
         .tv-insight-card:hover{
           transform:translateY(-2px);
           box-shadow:
@@ -6984,7 +6925,7 @@ export default function App() {
                   </div>
 
                   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3 pt-3">
-                    <div className="sidebar-focus-today-wrap mb-1">
+                    <div className="mb-1">
                       <button
                         type="button"
                         onClick={() => {
@@ -7001,14 +6942,25 @@ export default function App() {
                           applyListSelection(SYS_LIST_INBOX);
                           queueMicrotask(() => taskListInputRef.current?.focus());
                         }}
-                        className="sidebar-focus-cta"
+                        className={`sidebar-nav-item sidebar-plan-my-day ${
+                          activeView === "tasks" &&
+                          todayMainMode === "tasks" &&
+                          selectedListId === SYS_LIST_INBOX
+                            ? "sidebar-nav-item--active"
+                            : ""
+                        }`}
                       >
-                        <span className="sidebar-focus-cta-ring" aria-hidden>
-                          <span className="sidebar-focus-cta-hole" />
+                        <span className="sidebar-icon-slot text-[17px] leading-none" aria-hidden>
+                          🗓️
                         </span>
-                        <span className="sidebar-focus-cta-label sidebar-focus-cta-label--halo">
+                        <span className="min-w-0 flex-1 truncate text-left">
                           Plan My Day
                         </span>
+                        {planMyDaySidebarTaskCount > 0 ? (
+                          <span className="sidebar-badge-muted shrink-0">
+                            {planMyDaySidebarTaskCount}
+                          </span>
+                        ) : null}
                       </button>
                     </div>
 
