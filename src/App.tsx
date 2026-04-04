@@ -1,4 +1,5 @@
 import React from "react";
+import { FocusForTodayPlanner } from "./focusForTodayPlan/FocusForTodayPlanner";
 import { Analytics } from "@vercel/analytics/react";
 import { motion } from "framer-motion";
 import {
@@ -7276,6 +7277,9 @@ export default function App() {
 
                         return (
                           <div className="flex w-full flex-col">
+                            {selectedListId === SYS_LIST_INBOX ? (
+                              <FocusForTodayPlanner />
+                            ) : null}
                             {selectedListId !== SYS_LIST_OVERDUE &&
                               selectedListId !== SYS_LIST_INBOX && (
                               <>
