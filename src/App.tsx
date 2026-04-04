@@ -399,11 +399,8 @@ function buildFocusTodayTasksFromStorage(
     .filter((t): t is Task => !!t && !t.removing);
 }
 
+/** Shared “free day” illustration for list empty states (Overdue, Today, Projects, etc.). */
 const EMPTY_STATE_IMG = {
-  today: "/empty-states/today-all-done.png",
-  longterm: "/empty-states/longterm-all-done.png",
-  tests: "/empty-states/tests-all-done.png",
-  projects: "/empty-states/projects-all-done.png",
   focusDayOff: "/empty-states/focus-today-day-off.png",
 } as const;
 
@@ -673,59 +670,6 @@ function formatDueChipLabel(iso: string | null, todayIso: string): string {
   if (!iso) return "Due date";
   if (iso === todayIso) return "Today";
   return formatDueButtonLabel(iso);
-}
-
-/** Todoist-style empty / “all done” hero (suitcase + hat + soft clouds). */
-function SaaSAllCaughtUpIllustration() {
-  return (
-    <div
-      className="mb-6 flex w-full max-w-[340px] flex-col items-center"
-      aria-hidden
-    >
-      <svg
-        className="h-[168px] w-full drop-shadow-sm"
-        viewBox="0 0 320 200"
-        fill="none"
-      >
-        <ellipse cx="248" cy="52" rx="36" ry="14" fill="#E2E8F0" opacity="0.85" />
-        <ellipse cx="72" cy="44" rx="28" ry="11" fill="#E2E8F0" opacity="0.7" />
-        <ellipse cx="180" cy="36" rx="22" ry="9" fill="#E2E8F0" opacity="0.55" />
-        <ellipse cx="210" cy="68" rx="48" ry="16" fill="#D4A574" />
-        <ellipse cx="210" cy="58" rx="40" ry="24" fill="#E8D4B8" />
-        <rect x="96" y="88" width="128" height="78" rx="10" fill="#8FA8BC" />
-        <rect x="104" y="98" width="112" height="52" rx="6" fill="#A8BFD4" />
-        <path
-          d="M136 88 V72 Q160 56 184 72 V88"
-          stroke="#64748B"
-          strokeWidth="5"
-          strokeLinecap="round"
-          fill="none"
-        />
-        <rect
-          x="112"
-          y="108"
-          width="14"
-          height="10"
-          rx="2"
-          fill="#F97373"
-          opacity="0.9"
-          transform="rotate(-10 119 113)"
-        />
-        <rect x="188" y="112" width="12" height="12" rx="2" fill="#F8FAFC" />
-        <circle cx="116" cy="174" r="6" fill="#64748B" />
-        <circle cx="204" cy="174" r="6" fill="#64748B" />
-        <path
-          d="M52 178 C100 162 220 162 268 178"
-          stroke="#86B894"
-          strokeWidth="4"
-          strokeLinecap="round"
-          opacity="0.85"
-        />
-        <ellipse cx="120" cy="182" rx="5" ry="10" fill="#86B894" opacity="0.5" />
-        <ellipse cx="200" cy="182" rx="5" ry="10" fill="#86B894" opacity="0.5" />
-      </svg>
-    </div>
-  );
 }
 
 /** Overdue row: “Yesterday” when due was calendar yesterday, else short date */
@@ -7295,11 +7239,11 @@ export default function App() {
                     </header>
                     <div className="flex-1 min-h-0 overflow-y-auto">
                       {completedGroups.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center min-h-[280px]">
-                          <svg className="w-[80px] h-[80px] mb-3 opacity-70" viewBox="0 0 120 120" fill="none"><circle cx="60" cy="60" r="50" fill="#f4f4f5"/><circle cx="60" cy="55" r="25" fill="#e4e4e7"/><path d="M45 85c0-8.28 6.72-15 15-15s15 6.72 15 15" fill="#d4d4d8"/><circle cx="48" cy="50" r="3" fill="#a1a1aa"/><circle cx="72" cy="50" r="3" fill="#a1a1aa"/><path d="M52 60c0 0 4 5 8 5s8-5 8-5" stroke="#a1a1aa" strokeWidth="2" strokeLinecap="round"/></svg>
-                          <p className="text-[14px] font-medium text-[#6B7280]">No completed tasks yet</p>
-                          <p className="text-[12px] text-[#9CA3AF] mt-0.5">Complete some tasks and they'll show up here</p>
-                        </div>
+                        <ListEmptyHero
+                          src={EMPTY_STATE_IMG.focusDayOff}
+                          title={todoistEmptyDayMessage.title}
+                          subtitle="You're all caught up in this view."
+                        />
                       ) : (
                         <div className="mx-auto w-full max-w-[min(100%,720px)] px-6 sm:px-10 pt-2">
                           {completedGroups.map((group) => {
@@ -7396,13 +7340,12 @@ export default function App() {
                               No tasks match your search.
                             </div>
                           ) : selectedListId === SYS_LIST_OVERDUE ? (
-                            <div className="flex flex-col items-center justify-center min-h-[240px]">
-                              <SaaSAllCaughtUpIllustration />
-                              <p className="text-[15px] font-semibold text-[#374151]">
-                                Nothing overdue — nice work!
-                              </p>
-                              <p className="text-[13px] text-[#9CA3AF] mt-1">You&apos;re all clear.</p>
-                            </div>
+                            <ListEmptyHero
+                              src={EMPTY_STATE_IMG.focusDayOff}
+                              className={listEmptyExit ? "micro-empty-out" : ""}
+                              title={`Nothing overdue — nice work, ${dispName}!`}
+                              subtitle="You're all clear."
+                            />
                           ) : selectedListId === SYS_LIST_INBOX &&
                             focusForTodayItems.length === 0 ? (
                             <ListEmptyHero
@@ -7414,57 +7357,47 @@ export default function App() {
                           ) : allElasticListTasksComplete ? (
                             selectedListId === SYS_LIST_TODAY ? (
                               <ListEmptyHero
-                                src={EMPTY_STATE_IMG.today}
+                                src={EMPTY_STATE_IMG.focusDayOff}
                                 className={listEmptyExit ? "micro-empty-out" : ""}
                                 title={`Have a marvelous day, ${dispName}!`}
                                 subtitle="You're all caught up for today."
                               />
                             ) : selectedListId === SYS_LIST_LONGTERM ? (
                               <ListEmptyHero
-                                src={EMPTY_STATE_IMG.longterm}
+                                src={EMPTY_STATE_IMG.focusDayOff}
                                 className={listEmptyExit ? "micro-empty-out" : ""}
                                 title={`Long-term load is light, ${dispName}`}
                                 subtitle="No long-term assignments need attention in this view right now."
                               />
                             ) : selectedListId === SYS_LIST_TESTS ? (
                               <ListEmptyHero
-                                src={EMPTY_STATE_IMG.tests}
+                                src={EMPTY_STATE_IMG.focusDayOff}
                                 className={listEmptyExit ? "micro-empty-out" : ""}
                                 title={`Tests are clear, ${dispName}`}
                                 subtitle="No exams or test prep tasks here — you're covered for now."
                               />
                             ) : selectedListId === SYS_LIST_PROJECTS ? (
                               <ListEmptyHero
-                                src={EMPTY_STATE_IMG.projects}
+                                src={EMPTY_STATE_IMG.focusDayOff}
                                 className={listEmptyExit ? "micro-empty-out" : ""}
                                 title={`Project board is quiet, ${dispName}`}
                                 subtitle="No active project tasks in this list. Enjoy the pause or add your next milestone."
                               />
                             ) : (
-                              <div
-                                className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
-                              >
-                                <SaaSAllCaughtUpIllustration />
-                                <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
-                                  {todoistEmptyDayMessage.title}
-                                </p>
-                                <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
-                                  You&apos;re all caught up in this view.
-                                </p>
-                              </div>
+                              <ListEmptyHero
+                                src={EMPTY_STATE_IMG.focusDayOff}
+                                className={listEmptyExit ? "micro-empty-out" : ""}
+                                title={todoistEmptyDayMessage.title}
+                                subtitle="You're all caught up in this view."
+                              />
                             )
                           ) : (
-                            <div
-                              className={`flex flex-col items-center justify-center min-h-[280px] px-4 ${listEmptyExit ? "micro-empty-out" : ""}`}
-                            >
-                              <SaaSAllCaughtUpIllustration />
-                              <p className="text-[17px] font-bold text-[#202020] text-center max-w-md">
-                                {todoistEmptyDayMessage.title}
-                              </p>
-                              <p className="text-[14px] text-[#6B7280] mt-2 text-center max-w-sm leading-relaxed">
-                                You&apos;re all caught up in this view.
-                              </p>
-                            </div>
+                            <ListEmptyHero
+                              src={EMPTY_STATE_IMG.focusDayOff}
+                              className={listEmptyExit ? "micro-empty-out" : ""}
+                              title={todoistEmptyDayMessage.title}
+                              subtitle="You're all caught up in this view."
+                            />
                           );
 
                         return (
