@@ -2868,10 +2868,6 @@ export default function App() {
     FocusSessionRecord[]
   >([]);
 
-  /* --- BEAT YESTERDAY FUNCTIONAL STATE --- */
-  const [yesterdayTotalFocusMinutes, setYesterdayTotalFocusMinutes] =
-    useState(0);
-  const [todayTotalFocusMinutes, setTodayTotalFocusMinutes] = useState(0);
   const [timerAccumulator, setTimerAccumulator] = useState(0);
   const timerAccumulatorRef = useRef(0);
   timerAccumulatorRef.current = timerAccumulator;
@@ -4265,12 +4261,10 @@ export default function App() {
     const savedHeatmap = localStorage.getItem(
       "tunnelvision_discipline_heatmap",
     );
-    const savedTodayMins = localStorage.getItem("tunnelvision_today_mins");
     const savedFocusSessions = localStorage.getItem(FOCUS_SESSION_LOG_KEY);
 
     if (savedStreak) setStreak(parseInt(savedStreak));
     if (savedHistory) setHistory(JSON.parse(savedHistory));
-    if (savedTodayMins) setTodayTotalFocusMinutes(parseInt(savedTodayMins));
 
     if (savedFocusSessions) {
       try {
@@ -4334,18 +4328,6 @@ export default function App() {
     if (savedHeatmap) {
       const data: DayMetric[] = JSON.parse(savedHeatmap);
       setHeatmapData(data);
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      const yesterdayEntry = data.find((d) => d.date === yesterdayStr);
-      if (yesterdayEntry) {
-        setYesterdayTotalFocusMinutes(
-          Math.round(yesterdayEntry.totalFocusSeconds / 60),
-        );
-      }
     } else {
       const empty = [...Array(31)].map((_, i) => ({
         date: `${getCurrentMonthName().slice(0, 3)} ${i + 1}`,
@@ -4381,10 +4363,6 @@ export default function App() {
         JSON.stringify(heatmapData),
       );
       localStorage.setItem(
-        "tunnelvision_today_mins",
-        todayTotalFocusMinutes.toString(),
-      );
-      localStorage.setItem(
         "tunnelvision_completed_activity",
         JSON.stringify(completedActivityLog),
       );
@@ -4409,7 +4387,6 @@ export default function App() {
     focusSessionRecords,
     isSimulation,
     heatmapData,
-    todayTotalFocusMinutes,
     completedActivityLog,
     tasksByListId,
     todayLists,
@@ -5134,8 +5111,6 @@ export default function App() {
     setTaskIntegrityHistory({});
     setCompletedActivityLog([]);
     setHeatmapData([]);
-    setTodayTotalFocusMinutes(0);
-    setYesterdayTotalFocusMinutes(0);
     setStreak(0);
     setTasks([]);
     setTasksByListId({});
@@ -5159,7 +5134,6 @@ export default function App() {
     durationSeconds?: number;
   }) => {
     const todayStr = getTodayStr();
-    const sessionSecs = todayTotalFocusMinutes * 60;
     const tasksDone = options?.tasksCompleted ?? tasks.length;
     const integrityRounded = Math.round(
       Math.max(0, Math.min(100, integrityScoreNum)),
@@ -5167,7 +5141,7 @@ export default function App() {
     const durationLogged =
       options?.durationSeconds != null
         ? Math.max(0, Math.floor(options.durationSeconds))
-        : Math.max(0, Math.floor(sessionSecs));
+        : 0;
 
     if (!isSimulation) {
       const now = new Date();
@@ -5196,7 +5170,7 @@ export default function App() {
       // FIXED: Stack data onto the specific existing date box for today
       if (todayIndex !== -1) {
         const existingDay = newData[todayIndex];
-        const newTotalSecs = existingDay.totalFocusSeconds + sessionSecs;
+        const newTotalSecs = existingDay.totalFocusSeconds + durationLogged;
         const totalMins = Math.floor(newTotalSecs / 60);
 
         let symbol = "⬜";
@@ -5228,7 +5202,6 @@ export default function App() {
       ],
     }));
 
-    setTodayTotalFocusMinutes(0);
     setReflectionPrompt(null);
     setReflectionText("");
     setWarning("Focus Synced");
@@ -5465,13 +5438,6 @@ export default function App() {
     }, 1000);
     return () => clearInterval(id);
   }, [running, seconds, isSimulation]);
-
-  useEffect(() => {
-    if (timerAccumulator >= 300) {
-      setTodayTotalFocusMinutes((prev) => prev + 5);
-      setTimerAccumulator(0);
-    }
-  }, [timerAccumulator]);
 
   useEffect(() => {
     if (!running && !isSimulation) {
@@ -5757,7 +5723,6 @@ export default function App() {
     );
     const tasksDone = Math.max(1, focusSessionTasksCompletedRef.current);
 
-    setTodayTotalFocusMinutes((prev) => prev + partialMins);
     setTimerAccumulator(0);
     setRunning(false);
     setSeconds(0);
@@ -6069,15 +6034,6 @@ export default function App() {
     if (symbol === "🔥") return `${base} bg-[#818CF8] border-[#6366F1]`;
     return `${base} bg-[#F8FAFC] border-[#E5E7EB]`;
   };
-
-  const improvementDelta = useMemo(() => {
-    if (!isSimulation && yesterdayTotalFocusMinutes > 0) {
-      const delta = todayTotalFocusMinutes - yesterdayTotalFocusMinutes;
-      const percent = (delta / yesterdayTotalFocusMinutes) * 100;
-      return percent.toFixed(0);
-    }
-    return "0";
-  }, [yesterdayTotalFocusMinutes, todayTotalFocusMinutes, isSimulation]);
 
   /* --- PREVIEW SCENE OPACITIES (for soft crossfades) --- */
   const heroOpacity = useMemo(() => {
@@ -6489,17 +6445,22 @@ export default function App() {
         .task-item{
           display:flex;
           align-items:center;
-          gap:10px;
-          padding:12px 16px;
-          border-radius:12px;
+          gap:12px;
+          padding:12px 18px;
+          border-radius:9999px;
           background:#ffffff;
-          border:0.5px solid #e5e7eb;
-          transition:border-color .12s,background .12s;
+          border:0.5px solid rgba(0,0,0,0.06);
+          box-shadow:0 1px 2px rgba(0,0,0,0.04);
+          transition:border-color .12s,background .12s,box-shadow .12s;
           cursor:default;
         }
         .task-item:hover{
-          border-color:#d1d5db;
-          background:#f9fafb;
+          border-color:#e5e7eb;
+          background:#fafafa;
+          box-shadow:0 2px 8px rgba(0,0,0,0.05);
+        }
+        .focus-timer-digits{
+          font-feature-settings:"tnum" 1;
         }
         .task-check{
           width:17px;
@@ -6556,24 +6517,26 @@ export default function App() {
           display:flex;
           align-items:center;
           gap:10px;
-          padding:8px 10px;
-          border-radius:8px;
+          padding:10px 12px;
+          border-radius:12px;
           cursor:pointer;
-          transition:background .1s;
+          transition:background .12s;
+          color:#fafafa;
         }
-        .queue-row:hover{ background:rgba(0,0,0,0.04); }
+        .queue-row:hover{ background:rgba(255,255,255,0.06); }
         .queue-row-name{
           flex:1;
           font-size:14px;
+          color:#f4f4f5;
         }
         .queue-count{
           font-size:12px;
           font-weight:500;
-          color:#9ca3af;
+          color:#a1a1aa;
         }
         .queue-count.overdue{
-          background:rgba(239,68,68,0.1);
-          color:#ef4444;
+          background:rgba(248,113,113,0.15);
+          color:#fca5a5;
           border-radius:999px;
           padding:1px 8px;
         }
@@ -8865,7 +8828,7 @@ export default function App() {
                       focusImmerseIntro ? "micro-focus-main-in" : ""
                     }`}
                   >
-                    <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-8 px-4 pb-20 pt-10 sm:gap-10 sm:pb-24 sm:pt-12">
+                    <div className="mx-auto flex w-full max-w-4xl flex-col items-center gap-5 px-4 pb-16 pt-6 sm:gap-6 sm:pb-20 sm:pt-8">
                   {warning && (
               <div className="fixed top-24 bg-[#6366F1] text-white px-8 py-2 rounded-lg z-[100] animate-pulse text-[13px] font-semibold tracking-wide uppercase shadow-[0_4px_12px_rgba(0,0,0,0.08)]">
                 {warning}
@@ -8912,46 +8875,10 @@ export default function App() {
                 🔥 {streak} day streak
               </div>
 
-              {!isSimulation && (
-                <div className="pt-6 flex justify-center">
-                  <div className="bg-white border border-[#E5E7EB] rounded-lg p-8 flex gap-12 relative">
-                    <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold">
-                        YESTERDAY
-                      </div>
-                      <div className="text-3xl font-mono font-semibold tracking-tighter text-[#111827]">
-                        {yesterdayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-[#6B7280] uppercase">
-                          MIN
-                        </span>
-                      </div>
-                    </div>
-                    <div className="text-left">
-                      <div className="text-[9px] uppercase tracking-[0.2em] text-[#6B7280] font-semibold">
-                        TODAY
-                      </div>
-                      <div className="text-3xl font-mono font-semibold tracking-tighter text-[#6366F1]">
-                        {todayTotalFocusMinutes}{" "}
-                        <span className="text-[10px] text-[#6366F1]/80 uppercase">
-                          MIN
-                        </span>
-                      </div>
-                    </div>
-                    <div
-                      className={`flex items-end pb-1 text-[10px] font-semibold uppercase tracking-widest ${parseInt(improvementDelta) >= 0 ? "text-emerald-600" : "text-red-500"}`}
-                    >
-                      <span className="mr-1">
-                        {parseInt(improvementDelta) >= 0 ? "▲" : "▼"}
-                      </span>
-                      {Math.abs(parseInt(improvementDelta))}% IMPROVEMENT
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
 
             {/* TIMER — square hero card (original design with ring + focus integrity) */}
-            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-8 sm:py-10">
+            <div className="relative z-[200] flex w-full max-w-[400px] flex-col items-center px-2 py-4 sm:py-6">
               <div
                 className={`focus-timer-hero-square relative aspect-square w-full max-w-[360px] shrink-0 overflow-visible transition-[box-shadow,filter] duration-200 ease-out ${
                   focusFinaleOpen ? "focus-finale-timer-wrap" : ""
@@ -9017,7 +8944,7 @@ export default function App() {
                 >
                   <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
                     <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
-                      <div className="text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.03em] text-[#171717] transition-opacity duration-200 ease-out font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                      <div className="focus-timer-digits text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.04em] text-[#171717] transition-opacity duration-200 ease-out font-['Outfit',system-ui,sans-serif]">
                         {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                           2,
                           "0",
@@ -9038,7 +8965,7 @@ export default function App() {
                       )}
                     </div>
                     {!running && (
-                      <div className="flex shrink-0 flex-col items-center gap-2 pb-6 pt-1">
+                      <div className="flex shrink-0 flex-col items-center gap-2.5 pb-6 pt-1">
                         <button
                           type="button"
                           disabled={isSimulation}
@@ -9046,7 +8973,7 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="btn-press-instant rounded border border-[#dcdcdc] bg-[#f3f3f3] px-2.5 py-1 text-[12px] font-medium leading-tight text-[#444] transition-colors duration-150 ease-out hover:bg-[#e8e8e8] disabled:opacity-50"
+                          className="btn-press-instant rounded-full border border-neutral-200/90 bg-white px-5 py-2 text-[12px] font-semibold leading-tight text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-150 ease-out hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
                         >
                           +15 min
                         </button>
@@ -9054,7 +8981,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="btn-press-instant rounded border border-[#c5372f] bg-[#db4c3f] px-4 py-1.5 text-[13px] font-medium leading-tight text-white transition-colors duration-150 ease-out hover:bg-[#c5372f]"
+                            className="btn-press-instant rounded-full bg-[#9d84d8] px-8 py-2.5 text-[13px] font-semibold leading-tight text-white shadow-[0_4px_14px_-4px_rgba(157,132,216,0.65)] transition-all duration-150 ease-out hover:bg-[#8f75cf] active:scale-[0.98]"
                           >
                             Start
                           </button>
@@ -9066,12 +8993,12 @@ export default function App() {
               </div>
             </div>
 
-            <div className="w-full max-w-xl space-y-12 px-0 pb-12 pt-6 sm:pt-8">
+            <div className="w-full max-w-xl space-y-8 px-0 pb-12 pt-2 sm:pt-4">
               <div
                 className={`space-y-4 transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="space-y-1.5">
-                  <div className="flex w-full items-center gap-2 rounded-[3px] border border-[#ddd] bg-white px-3 py-2">
+                  <div className="flex w-full items-center gap-1 rounded-full border border-neutral-200/90 bg-white/95 py-1.5 pl-5 pr-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-6px_rgba(0,0,0,0.08)] backdrop-blur-sm">
                     <input
                       ref={focusSessionTaskInputRef}
                       disabled={isSimulation}
@@ -9086,7 +9013,7 @@ export default function App() {
                       placeholder={
                         isSimulation ? "Simulating input..." : "Next objective..."
                       }
-                      className={`min-h-[38px] flex-1 rounded-[3px] border border-transparent bg-white px-0 text-[14px] font-normal leading-snug text-[#202020] outline-none transition-colors duration-150 ease-out placeholder:text-[#808080] focus:border-[#999] ${
+                      className={`min-h-[40px] flex-1 rounded-full border-0 bg-transparent px-0 text-[14px] font-normal leading-snug text-[#202020] outline-none ring-0 transition-colors duration-150 ease-out placeholder:text-neutral-400 focus:ring-0 ${
                         taskInputClearFlash ? "opacity-50" : ""
                       } font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]`}
                     />
@@ -9096,7 +9023,7 @@ export default function App() {
                       onClick={() =>
                         addTaskFromFocusBar({ fromButtonClick: true })
                       }
-                      className="btn-press-instant shrink-0 rounded-[3px] bg-[#1f1f1f] px-4 py-2 text-[13px] font-medium leading-snug text-white transition-colors duration-150 ease-out hover:bg-black disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
+                      className="btn-press-instant shrink-0 rounded-full bg-neutral-900 px-5 py-2.5 text-[13px] font-semibold leading-none text-white shadow-sm transition-all duration-150 ease-out hover:bg-neutral-800 active:scale-[0.98] disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                     >
                       Add
                     </button>
@@ -9116,9 +9043,9 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="flex w-full flex-col overflow-hidden rounded-[3px] border border-[#E5E5E5] bg-white">
+                <div className="flex w-full flex-col gap-2 overflow-visible rounded-2xl border border-neutral-200/80 bg-neutral-50/50 p-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]">
                   {focusSessionEntries.length === 0 ? (
-                    <p className="py-8 text-center text-[13px] text-[#808080] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                    <p className="py-10 text-center text-[13px] text-neutral-500 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                       No tasks in session
                     </p>
                   ) : (
@@ -9180,12 +9107,12 @@ export default function App() {
                       focusImmerseIntro ? "opacity-[0.88]" : "opacity-100"
                     }`}
                   >
-                    <div className="focus-queue-panel-shadow flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-[#E5E5E5] bg-white sm:rounded-lg">
-                      <div className="shrink-0 border-b border-[#E5E5E5] bg-white px-3 py-2.5 sm:px-3.5">
+                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/10 bg-zinc-950 shadow-[0_12px_40px_rgba(0,0,0,0.35)] sm:rounded-2xl">
+                      <div className="shrink-0 border-b border-white/10 bg-zinc-950 px-3 py-2.5 sm:px-3.5">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex min-w-0 flex-1 items-center gap-2">
                             <span
-                              className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-[#1f1f1f]"
+                              className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-zinc-400"
                               aria-hidden
                             >
                               <svg
@@ -9199,12 +9126,12 @@ export default function App() {
                                 <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
                               </svg>
                             </span>
-                            <h2 className="min-w-0 truncate text-[14px] font-semibold leading-7 tracking-tight text-[#1f1f1f] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
+                            <h2 className="min-w-0 truncate text-[14px] font-semibold leading-7 tracking-tight text-white font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                               Task queue
                             </h2>
                           </div>
                           <div
-                            className="shrink-0 p-1.5 text-[#6B7280]"
+                            className="shrink-0 p-1.5 text-zinc-500"
                             aria-hidden
                           >
                             <svg
@@ -9221,7 +9148,7 @@ export default function App() {
                           </div>
                         </div>
                       </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#fafafa] px-2 py-2 sm:px-2.5">
+                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#0a0a0a] px-2 py-2 sm:px-2.5">
                           <div className="flex flex-col">
                             {focusSidebarSections.map((section, secIdx) => {
                               const expanded =
@@ -9229,7 +9156,7 @@ export default function App() {
                               return (
                                 <div
                                   key={section.listId}
-                                  className={`border-b border-[#E5E7EB] last:border-b-0 ${secIdx === 0 ? "pt-0" : ""}`}
+                                  className={`border-b border-white/10 last:border-b-0 ${secIdx === 0 ? "pt-0" : ""}`}
                                 >
                                   <button
                                     type="button"
@@ -9241,11 +9168,11 @@ export default function App() {
                                           !prev[section.listId],
                                       }))
                                     }
-                                    className="queue-row text-left"
+                                    className="queue-row w-full text-left"
                                   >
                                     <TaskSystemNavIcon
                                       listId={section.listId}
-                                      className="h-5 w-5 shrink-0 text-[#808080]"
+                                      className="h-5 w-5 shrink-0 text-zinc-500"
                                     />
                                     <span className="queue-row-name min-w-0 truncate font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
                                       {section.label}
@@ -9261,7 +9188,7 @@ export default function App() {
                                       {section.tasks.length}
                                     </span>
                                     <svg
-                                      className={`h-4 w-4 shrink-0 text-[#6B7280] transition-transform duration-200 ease-out ${expanded ? "rotate-90" : ""}`}
+                                      className={`h-4 w-4 shrink-0 text-zinc-500 transition-transform duration-200 ease-out ${expanded ? "rotate-90" : ""}`}
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
@@ -9289,16 +9216,16 @@ export default function App() {
                                                 section.listId,
                                               );
                                             }}
-                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-[3px] border border-dashed border-[#d4d4d4] bg-white py-1.5 text-[11px] font-medium text-[#666] transition hover:bg-[#f5f5f5] active:scale-[0.99] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
+                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-white/20 bg-white/5 py-2 text-[11px] font-medium text-zinc-300 transition hover:bg-white/10 active:scale-[0.99] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                                           >
-                                            <span className="text-[12px] font-medium text-[#444]">
+                                            <span className="text-[12px] font-medium text-zinc-200">
                                               +
                                             </span>
                                             Add all {section.label} tasks
                                           </button>
                                         )}
                                         {section.tasks.length === 0 ? (
-                                          <p className="py-4 text-center text-[11px] text-[#6B7280]">
+                                          <p className="py-4 text-center text-[11px] text-zinc-500">
                                             No tasks here
                                           </p>
                                         ) : (
@@ -9326,17 +9253,17 @@ export default function App() {
                                                         task.id,
                                                       )
                                                     }
-                                                    className={`group flex w-full items-start gap-2.5 rounded-[3px] border px-2.5 py-2 text-left transition active:scale-[0.99] ${
+                                                    className={`group flex w-full items-start gap-2.5 rounded-2xl border px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
                                                       inSession
-                                                        ? "cursor-default border-[#d4d4d4] bg-[#f0f0f0]"
-                                                        : "border-[#E5E5E5] bg-white hover:border-[#ccc] hover:bg-[#fafafa]"
+                                                        ? "cursor-default border-white/15 bg-white/10"
+                                                        : "border-white/10 bg-zinc-900/80 hover:border-white/20 hover:bg-zinc-800/90"
                                                     }`}
                                                   >
                                                     <span
-                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-[3px] border text-[13px] font-medium leading-none transition-colors ${
+                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[13px] font-medium leading-none transition-colors ${
                                                         inSession
-                                                          ? "border-[#1f1f1f] bg-[#1f1f1f] text-white"
-                                                          : "border-[#c8c8c8] bg-white text-[#666] group-hover:border-[#808080] group-hover:text-[#202020]"
+                                                          ? "border-emerald-400/50 bg-emerald-500/20 text-emerald-300"
+                                                          : "border-zinc-600 bg-zinc-800 text-zinc-300 group-hover:border-zinc-500 group-hover:text-white"
                                                       }`}
                                                       aria-hidden
                                                     >
@@ -9360,14 +9287,14 @@ export default function App() {
                                                       <span
                                                         className={`block text-[13px] leading-snug font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif] ${
                                                           inSession
-                                                            ? "text-[#666]"
-                                                            : "text-[#202020]"
+                                                            ? "text-zinc-400"
+                                                            : "text-zinc-100"
                                                         }`}
                                                       >
                                                         {task.text}
                                                       </span>
                                                       {inSession && (
-                                                        <span className="mt-0.5 block text-[10px] font-medium text-[#666]">
+                                                        <span className="mt-0.5 block text-[10px] font-medium text-zinc-500">
                                                           In your session
                                                         </span>
                                                       )}
