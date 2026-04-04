@@ -7229,24 +7229,25 @@ export default function App() {
                 }`}
               >
                 {activeView === "tasks" && todayMainMode === "completed" ? (
-                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-white">
-                    <header className="shrink-0 bg-white pb-2 pt-8">
-                      <div className="mx-auto w-full max-w-[min(100%,720px)] px-6 sm:px-10">
-                        <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
-                          Completed
-                        </h1>
-                      </div>
-                    </header>
-                    <div className="flex-1 min-h-0 overflow-y-auto">
-                      {completedGroups.length === 0 ? (
-                        <ListEmptyHero
-                          src={EMPTY_STATE_IMG.focusDayOff}
-                          title={todoistEmptyDayMessage.title}
-                          subtitle="You're all caught up in this view."
-                        />
-                      ) : (
-                        <div className="mx-auto w-full max-w-[min(100%,720px)] px-6 sm:px-10 pt-2">
-                          {completedGroups.map((group) => {
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
+                      <header className="shrink-0 bg-[#FAFAFA] pb-2 pt-8">
+                        <div>
+                          <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                            Completed
+                          </h1>
+                        </div>
+                      </header>
+                      <div className="relative flex-1 min-h-0 overflow-y-auto pb-8">
+                        {completedGroups.length === 0 ? (
+                          <ListEmptyHero
+                            src={EMPTY_STATE_IMG.focusDayOff}
+                            title={todoistEmptyDayMessage.title}
+                            subtitle="You're all caught up in this view."
+                          />
+                        ) : (
+                          <div className="w-full pt-2">
+                            {completedGroups.map((group) => {
                             const isCollapsed = collapsedCompletedDates[group.dateStr] ?? false;
                             return (
                               <div key={group.dateStr}>
@@ -7281,9 +7282,10 @@ export default function App() {
                                 )}
                               </div>
                             );
-                          })}
-                        </div>
-                      )}
+                            })}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ) : activeView === "tasks" &&
