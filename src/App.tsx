@@ -89,7 +89,6 @@ const DUE_DATE_PICKER_LIST_IDS = new Set<string>([
 const FOCUS_PICKER_LIST_IDS: readonly string[] = [
   SYS_LIST_OVERDUE,
   SYS_LIST_INBOX,
-  SYS_LIST_TODAY,
   SYS_LIST_PROJECTS,
   SYS_LIST_TESTS,
   SYS_LIST_LONGTERM,
@@ -97,7 +96,7 @@ const FOCUS_PICKER_LIST_IDS: readonly string[] = [
 
 const FOCUS_PICKER_LABELS: Record<string, string> = {
   [SYS_LIST_OVERDUE]: "Overdue",
-  [SYS_LIST_INBOX]: "Inbox",
+  [SYS_LIST_INBOX]: "Today",
   [SYS_LIST_TODAY]: "Today",
   [SYS_LIST_PROJECTS]: "Projects",
   [SYS_LIST_TESTS]: "Tests",
@@ -2094,7 +2093,7 @@ function TaskSystemNavIcon({
       </svg>
     );
   }
-  if (listId === "sys-today") {
+  if (listId === "sys-today" || listId === "sys-inbox") {
     return (
       <svg
         className={base}
@@ -6460,7 +6459,10 @@ export default function App() {
           box-shadow:0 2px 8px rgba(0,0,0,0.05);
         }
         .focus-timer-digits{
+          font-family:'Manrope',system-ui,-apple-system,sans-serif;
+          font-weight:700;
           font-feature-settings:"tnum" 1;
+          letter-spacing:-0.07em;
         }
         .task-check{
           width:17px;
@@ -8944,12 +8946,12 @@ export default function App() {
                 >
                   <div className="flex min-h-0 flex-1 flex-col px-5 pt-7 sm:px-6 sm:pt-8">
                     <div className="flex min-h-[62%] flex-1 flex-col items-center justify-center">
-                      <div className="focus-timer-digits text-[clamp(3.5rem,12vw,6rem)] font-semibold tabular-nums tracking-[-0.04em] text-[#171717] transition-opacity duration-200 ease-out font-['Outfit',system-ui,sans-serif]">
+                      <div className="focus-timer-digits text-[clamp(3.5rem,12vw,6rem)] tabular-nums text-[#0a0a0a] transition-opacity duration-200 ease-out">
                         {String(Math.floor(Math.abs(seconds) / 60)).padStart(
                           2,
                           "0",
                         )}
-                        <span className="inline-block translate-y-[-0.03em] text-[#171717]">
+                        <span className="inline-block translate-y-[-0.03em] text-[#0a0a0a] opacity-90">
                           :
                         </span>
                         {String(Math.abs(seconds) % 60).padStart(2, "0")}
@@ -8965,7 +8967,7 @@ export default function App() {
                       )}
                     </div>
                     {!running && (
-                      <div className="flex shrink-0 flex-col items-center gap-2.5 pb-6 pt-1">
+                      <div className="flex shrink-0 flex-col items-center gap-3 pb-6 pt-1">
                         <button
                           type="button"
                           disabled={isSimulation}
@@ -8973,7 +8975,7 @@ export default function App() {
                             setSeconds((s) => s + 900);
                             setInitialSeconds((s) => s + 900);
                           }}
-                          className="btn-press-instant rounded-full border border-neutral-200/90 bg-white px-5 py-2 text-[12px] font-semibold leading-tight text-neutral-700 shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-all duration-150 ease-out hover:border-neutral-300 hover:bg-neutral-50 disabled:opacity-50"
+                          className="btn-press-instant rounded-full bg-[#f5f5f7] px-[1.125rem] py-2 text-[12px] font-semibold leading-none text-[#3c3c43] shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_1px_3px_rgba(0,0,0,0.06)] ring-1 ring-black/[0.06] transition-all duration-200 ease-out hover:bg-[#ebebed] hover:ring-black/[0.08] active:scale-[0.97] disabled:opacity-50"
                         >
                           +15 min
                         </button>
@@ -8981,7 +8983,7 @@ export default function App() {
                           <button
                             type="button"
                             onClick={startTimer}
-                            className="btn-press-instant rounded-full bg-[#9d84d8] px-8 py-2.5 text-[13px] font-semibold leading-tight text-white shadow-[0_4px_14px_-4px_rgba(157,132,216,0.65)] transition-all duration-150 ease-out hover:bg-[#8f75cf] active:scale-[0.98]"
+                            className="btn-press-instant rounded-full bg-gradient-to-b from-[#c4b5fd] via-[#a78bfa] to-[#9d84d8] px-9 py-2.5 text-[13px] font-semibold leading-none text-white shadow-[0_10px_28px_-6px_rgba(157,132,216,0.55),0_2px_6px_rgba(0,0,0,0.08)] ring-1 ring-white/35 transition-all duration-200 ease-out hover:brightness-[1.04] hover:shadow-[0_12px_32px_-6px_rgba(157,132,216,0.6)] active:scale-[0.97] active:brightness-[0.98]"
                           >
                             Start
                           </button>
@@ -8998,7 +9000,7 @@ export default function App() {
                 className={`space-y-4 transition-all duration-300 ease-out ${running || focusFinaleModalOpen ? "opacity-40" : "opacity-100"}`}
               >
                 <div className="space-y-1.5">
-                  <div className="flex w-full items-center gap-1 rounded-full border border-neutral-200/90 bg-white/95 py-1.5 pl-5 pr-1.5 shadow-[0_1px_3px_rgba(0,0,0,0.06),0_4px_12px_-6px_rgba(0,0,0,0.08)] backdrop-blur-sm">
+                  <div className="flex w-full items-center gap-1 rounded-full border border-black/[0.06] bg-white/75 py-1.5 pl-5 pr-1.5 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_28px_-10px_rgba(0,0,0,0.1)] ring-1 ring-black/[0.03] backdrop-blur-xl backdrop-saturate-150">
                     <input
                       ref={focusSessionTaskInputRef}
                       disabled={isSimulation}
@@ -9023,7 +9025,7 @@ export default function App() {
                       onClick={() =>
                         addTaskFromFocusBar({ fromButtonClick: true })
                       }
-                      className="btn-press-instant shrink-0 rounded-full bg-neutral-900 px-5 py-2.5 text-[13px] font-semibold leading-none text-white shadow-sm transition-all duration-150 ease-out hover:bg-neutral-800 active:scale-[0.98] disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
+                      className="btn-press-instant shrink-0 rounded-full bg-[#1d1d1f] px-[1.125rem] py-2.5 text-[13px] font-semibold leading-none text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_2px_8px_rgba(0,0,0,0.14)] ring-1 ring-black/20 transition-all duration-200 ease-out hover:bg-[#2c2c2e] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_4px_12px_rgba(0,0,0,0.12)] active:scale-[0.97] disabled:opacity-50 font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
                     >
                       Add
                     </button>
