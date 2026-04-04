@@ -8060,38 +8060,33 @@ export default function App() {
                     ) : null}
                   </div>
                 ) : activeView === "notifications" ? (
-                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
-                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
-                      <header className="shrink-0 bg-[#FAFAFA] pb-2 pt-8">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                          <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
-                            Notifications
-                          </h1>
-                          <button
-                            type="button"
-                            onClick={handleMarkAllNotificationsRead}
-                            disabled={
-                              notificationItems.length === 0 ||
-                              notificationItems.every((n) => n.read)
-                            }
-                            className="inline-flex items-center gap-1.5 shrink-0 rounded-md py-1 text-[13px] font-medium text-[#202020] transition-colors hover:text-[#111827] disabled:pointer-events-none disabled:opacity-40 sm:mt-0.5"
-                          >
-                            <svg
-                              className="h-[18px] w-[18px] text-[#6B7280]"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="1.75"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              aria-hidden
-                            >
-                              <rect x="3" y="3" width="18" height="18" rx="2" />
-                              <path d="M9 12l2 2 4-4" />
-                            </svg>
-                            Mark all as read
-                          </button>
-                        </div>
+                  <div className="relative flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[#FAFAFA]">
+                    <header className="relative shrink-0 bg-[#FAFAFA] px-6 pb-2 pt-8 sm:px-10">
+                      <button
+                        type="button"
+                        onClick={handleMarkAllNotificationsRead}
+                        aria-label="Mark all notifications as read"
+                        className="absolute right-6 top-8 z-10 inline-flex items-center gap-1.5 rounded-md py-1 text-[13px] font-medium text-[#374151] transition-colors hover:text-[#111827] sm:right-10"
+                      >
+                        <svg
+                          className="h-[18px] w-[18px] shrink-0 text-current"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.75"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden
+                        >
+                          <rect x="3" y="3" width="18" height="18" rx="2" />
+                          <path d="M9 12l2 2 4-4" />
+                        </svg>
+                        Mark all as read
+                      </button>
+                      <div className="mx-auto w-full max-w-[min(100%,720px)]">
+                        <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                          Notifications
+                        </h1>
                         <div className="mt-3 inline-flex h-9 items-center rounded-full border border-[#E5E7EB] bg-[#F8FAFC] p-1 shadow-sm">
                           <button
                             type="button"
@@ -8117,7 +8112,9 @@ export default function App() {
                             {notificationItems.filter((n) => !n.read).length}
                           </button>
                         </div>
-                      </header>
+                      </div>
+                    </header>
+                    <div className="mx-auto flex min-h-0 w-full max-w-[min(100%,720px)] flex-1 flex-col px-6 sm:px-10">
                       <div className="relative flex-1 min-h-0 overflow-y-auto pb-8">
                         {filteredNotificationItems.length === 0 ? (
                           <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
