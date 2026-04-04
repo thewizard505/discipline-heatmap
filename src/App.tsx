@@ -2901,8 +2901,6 @@ export default function App() {
   /* --- Focus Session Mode STATE --- */
   const FOCUS_SESSION_DURATION_SECONDS = 25 * 60;
   const [isFocusSessionActive, setIsFocusSessionActive] = useState(false);
-  const [isTodayPanelCollapsed, setIsTodayPanelCollapsed] = useState(false);
-  const [isTodayPanelAnimatingOut, setIsTodayPanelAnimatingOut] = useState(false);
   const [focusSeconds, setFocusSeconds] = useState(
     FOCUS_SESSION_DURATION_SECONDS,
   );
@@ -4618,8 +4616,6 @@ export default function App() {
     resetGlow();
     setRunning(false);
     setIsFocusSessionActive(false);
-    setIsTodayPanelCollapsed(false);
-    setIsTodayPanelAnimatingOut(false);
     setTodayMainMode("tasks");
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
     setIsAddListModalOpen(false);
@@ -4670,8 +4666,6 @@ export default function App() {
     setTodayMainMode("tasks");
     setOpenListMenuId(null);
     setActiveView("tasks");
-    setIsTodayPanelCollapsed(false);
-    setIsTodayPanelAnimatingOut(false);
     isSwitchingListRef.current = false;
   };
 
@@ -4762,12 +4756,6 @@ export default function App() {
     setTodayMainMode("tasks");
     setFocusSeconds(FOCUS_SESSION_DURATION_SECONDS);
     setActiveView("tasks");
-
-    setIsTodayPanelAnimatingOut(true);
-    window.setTimeout(() => {
-      setIsTodayPanelCollapsed(true);
-      setIsTodayPanelAnimatingOut(false);
-    }, 220);
 
     if (pending && pending.length > 0 && !isSimulation) {
       queueMicrotask(() => {
@@ -7039,26 +7027,6 @@ export default function App() {
                   </div>
                 </aside>
               </div>
-
-            {/* Expand sidebar strip (focus session) */}
-            {isFocusSessionActive &&
-              isTodayPanelCollapsed &&
-              !isTodayPanelAnimatingOut && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsTodayPanelCollapsed(false);
-                    setIsTodayPanelAnimatingOut(false);
-                  }}
-                  className="h-full w-7 shrink-0 z-[240] flex flex-col items-center justify-center gap-1 bg-[#FAFAF8] border-r border-[#E8E6E3] text-[#5a5a5a] hover:text-[#202020] hover:bg-[#f3f0ee] transition-colors"
-                  aria-label="Expand sidebar"
-                  title="Show sidebar"
-                >
-                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <path d="M9 6l6 6-6 6" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              )}
 
             {/* ── Main content column ── */}
             <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
