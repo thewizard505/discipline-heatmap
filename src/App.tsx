@@ -8223,16 +8223,11 @@ export default function App() {
                     ) : activeView === "analytics" ? (
                       <div className="flex-1 min-h-0 flex flex-col overflow-hidden bg-[#F9FAFB] text-[#111827] [text-rendering:optimizeLegibility] font-[family-name:Inter,system-ui,-apple-system,sans-serif] antialiased">
                         <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden">
-                          <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-12 space-y-6">
-                            <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-                              <div>
-                                <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
-                                  Analytics
-                                </h1>
-                                <p className="mt-1 text-[14px] font-medium text-[#4B5563]">
-                                  Focus trends and discipline at a glance
-                                </p>
-                              </div>
+                          <div className="w-full max-w-none mx-auto px-4 sm:px-6 lg:px-8 pt-5 pb-12 space-y-6">
+                            <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                              <h1 className="text-[28px] font-bold leading-tight tracking-[-0.03em] text-[#111827]">
+                                Analytics
+                              </h1>
                               <div className="shrink-0 flex items-center gap-2">
                                 <div
                                   ref={analyticsRangeRef}
