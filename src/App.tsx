@@ -1984,14 +1984,15 @@ function InsightCard({
     insight.id === "pending-morning" || insight.id === "pending-trend"
       ? "tv-insight-card--example"
       : "";
+  const isExamplePlaceholder = Boolean(exampleClass);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20, scale: 0.985, boxShadow: "0 0 0 rgba(0,0,0,0)" }}
       animate={{
-        opacity: 1,
+        opacity: isExamplePlaceholder ? 0.55 : 1,
         y: 0,
-        scale: 1,
+        scale: isExamplePlaceholder ? 0.99 : 1,
         boxShadow:
           "0 10px 30px rgba(0,0,0,0.16), 0 0 40px rgba(255,255,255,0.03), inset 0 1px 0 rgba(255,255,255,0.38)",
       }}
@@ -6268,6 +6269,27 @@ export default function App() {
           filter:saturate(.8);
           pointer-events:none;
         }
+        .tv-insight-card--example{
+          filter:saturate(0.72) brightness(1.03);
+          box-shadow:
+            0 3px 14px rgba(0,0,0,0.08),
+            inset 0 1px 0 rgba(255,255,255,0.22);
+        }
+        .tv-insight-card--example.tv-insight-card--green{
+          background:rgba(34,197,94,0.05);
+        }
+        .tv-insight-card--example.tv-insight-card--red{
+          background:rgba(239,68,68,0.05);
+        }
+        .tv-insight-card--example.tv-insight-card--blue{
+          background:rgba(59,130,246,0.05);
+        }
+        .tv-insight-card--example.tv-insight-card--neutral{
+          background:rgba(148,163,184,0.07);
+        }
+        .tv-insight-card--example .tv-insight-card__description{
+          color:rgba(31,41,55,0.38);
+        }
         .tv-insight-card__title{
           font-size:18px;
           line-height:1.35;
@@ -6287,11 +6309,11 @@ export default function App() {
           50%{ transform:translateY(-3px); }
         }
         .tv-insight-card--example .tv-insight-card__title--example{
-          background:linear-gradient(120deg,rgba(129,140,248,0.95),rgba(56,189,248,0.9),rgba(52,211,153,0.9));
+          background:linear-gradient(120deg,rgba(129,140,248,0.42),rgba(56,189,248,0.38),rgba(52,211,153,0.4));
           -webkit-background-clip:text;
           background-clip:text;
           color:transparent;
-          text-shadow:0 0 24px rgba(148,163,184,0.55);
+          text-shadow:0 0 18px rgba(148,163,184,0.22);
           animation:tv-insight-title-bounce 3.4s ease-in-out infinite;
         }
         .tv-insight-card:hover{
