@@ -3593,10 +3593,6 @@ export default function App() {
       map.get(e.dateStr)!.items.push(e);
     });
 
-    map.forEach((g) => {
-      g.label = `${formatGroupLabel(g.dateStr)} ${g.items.length}`;
-    });
-
     const groups = Array.from(map.values());
     // completedEntries are already sorted; preserve order of first appearance
     groups.sort((a, b) => {
@@ -7253,10 +7249,13 @@ export default function App() {
                               <div key={group.dateStr}>
                                 <button type="button" onClick={() => setCollapsedCompletedDates((prev) => ({ ...prev, [group.dateStr]: !isCollapsed }))} className="w-full flex items-center gap-2 py-2 text-left hover:bg-[#F8FAFC] transition-colors">
                                   <svg className={`w-3 h-3 text-[#9CA3AF] transition-transform duration-150 ${isCollapsed ? "" : "rotate-90"}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M9 18l6-6-6-6" /></svg>
-                                  <span className="flex-1 text-[13px] font-semibold text-[#111827] font-['Inter',system-ui,sans-serif]">
-                                    {group.label}
+                                  <span className="flex-1 min-w-0 text-[13px] font-['Inter',system-ui,sans-serif]">
+                                    <span className="font-semibold text-[#111827]">{group.label}</span>
+                                    <span className="font-normal text-[#9CA3AF] tabular-nums">
+                                      {" "}
+                                      {group.items.length}
+                                    </span>
                                   </span>
-                                  <span className="text-[11px] text-[#9CA3AF] font-medium tabular-nums">{group.items.length}</span>
                                 </button>
                                 {!isCollapsed && (
                                   <div className="divide-y divide-[#E5E7EB]">
