@@ -557,6 +557,14 @@ function formatOverdueNotificationAgo(daysUntil: number): string {
   return `${n} days ago`;
 }
 
+function formatNotificationRelativeCaption(n: AppNotificationItem): string {
+  const d = n.daysRemaining;
+  if (d < 0) return formatOverdueNotificationAgo(d);
+  if (d === 0) return "Today";
+  if (d === 1) return "Tomorrow";
+  return formatDueButtonLabel(n.dueDate);
+}
+
 function buildOverdueNotifications(
   tasksByListId: Record<string, Task[]>,
   todayIso: string,
@@ -2945,15 +2953,9 @@ export default function App() {
   const [notificationReadIds, setNotificationReadIds] = useState<Set<string>>(
     () => loadNotificationReadIds(),
   );
-  const [notificationsPanelOpen, setNotificationsPanelOpen] = useState(false);
   const [notificationsFilter, setNotificationsFilter] = useState<"all" | "unread">("all");
   const notificationsButtonRef = useRef<HTMLButtonElement>(null);
-  const notificationsPanelRef = useRef<HTMLDivElement>(null);
   const sidebarUserMenuRef = useRef<HTMLDivElement>(null);
-  const [notificationsPanelPos, setNotificationsPanelPos] = useState({
-    left: 12,
-    bottom: 88,
-  });
 
   const DEFAULT_LIST_ICON = "≡";
   const [todayLists, setTodayLists] = useState<TodayList[]>(() =>
@@ -3451,47 +3453,6 @@ export default function App() {
     }
   }, [notificationReadIds]);
 
-  const updateNotificationsPanelPosition = useCallback(() => {
-    const btn = notificationsButtonRef.current;
-    if (!btn) return;
-    const rect = btn.getBoundingClientRect();
-    const gap = 6;
-    const panelW = 320;
-    const left = Math.max(
-      8,
-      Math.min(rect.right - panelW, window.innerWidth - panelW - 8),
-    );
-    const top = rect.bottom + gap;
-    setNotificationsPanelPos({ left, bottom: top });
-  }, []);
-
-  useLayoutEffect(() => {
-    if (!notificationsPanelOpen) return;
-    updateNotificationsPanelPosition();
-    window.addEventListener("resize", updateNotificationsPanelPosition);
-    window.addEventListener("scroll", updateNotificationsPanelPosition, true);
-    return () => {
-      window.removeEventListener("resize", updateNotificationsPanelPosition);
-      window.removeEventListener(
-        "scroll",
-        updateNotificationsPanelPosition,
-        true,
-      );
-    };
-  }, [notificationsPanelOpen, updateNotificationsPanelPosition]);
-
-  useEffect(() => {
-    if (!notificationsPanelOpen) return;
-    const onMouseDown = (e: MouseEvent) => {
-      const t = e.target as Node;
-      if (notificationsButtonRef.current?.contains(t)) return;
-      if (notificationsPanelRef.current?.contains(t)) return;
-      setNotificationsPanelOpen(false);
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    return () => document.removeEventListener("mousedown", onMouseDown);
-  }, [notificationsPanelOpen]);
-
   useEffect(() => {
     if (!sidebarUserMenuOpen) return;
     const onDown = (e: MouseEvent) => {
@@ -3512,13 +3473,22 @@ export default function App() {
       /* ignore */
     }
     if (sidebarCollapsed) {
-      setNotificationsPanelOpen(false);
       setSidebarUserMenuOpen(false);
     }
   }, [sidebarCollapsed]);
 
+  const handleMarkAllNotificationsRead = useCallback(() => {
+    setNotificationReadIds((prev) => {
+      const next = new Set(prev);
+      for (const n of notificationItems) {
+        next.add(n.id);
+      }
+      return next;
+    });
+  }, [notificationItems]);
+
   const handleNotificationsButtonClick = () => {
-    setNotificationsPanelOpen((prev) => !prev);
+    setActiveView("notifications");
     setNotificationsFilter("all");
   };
 
@@ -6900,8 +6870,9 @@ export default function App() {
                       ref={notificationsButtonRef}
                       type="button"
                       onClick={handleNotificationsButtonClick}
-                      aria-expanded={notificationsPanelOpen}
-                      aria-haspopup="dialog"
+                      aria-current={
+                        activeView === "notifications" ? "page" : undefined
+                      }
                       aria-label="Notifications"
                       className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-[5px] text-[#666666] transition-colors hover:bg-[#eeeeee]"
                     >
@@ -7105,95 +7076,6 @@ export default function App() {
                   </svg>
                 </button>
               ) : null}
-              {/* Notifications dropdown panel */}
-              {notificationsPanelOpen && (
-                <div
-                  ref={notificationsPanelRef}
-                  id="app-notifications-panel"
-                  role="dialog"
-                  aria-label="Notifications"
-                  className="pointer-events-auto fixed z-[280] w-[min(320px,calc(100vw-20px))] max-h-[min(680px,calc(100vh-72px))] flex flex-col rounded-[14px] border border-[#E5E7EB] bg-white shadow-[0_12px_34px_rgba(0,0,0,0.12)] overflow-hidden"
-                  style={{
-                    left: notificationsPanelPos.left,
-                    top: notificationsPanelPos.bottom,
-                  }}
-                >
-                  <div className="shrink-0 px-4 pt-3 pb-2">
-                    <div className="inline-flex h-9 items-center rounded-full border border-[#E5E7EB] bg-[#F8FAFC] p-1 shadow-sm">
-                      <button
-                        type="button"
-                        onClick={() => setNotificationsFilter("all")}
-                        className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
-                          notificationsFilter === "all"
-                            ? "bg-white text-[#111827]"
-                            : "text-[#6B7280] hover:text-[#111827]"
-                        }`}
-                      >
-                        All
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setNotificationsFilter("unread")}
-                        className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
-                          notificationsFilter === "unread"
-                            ? "bg-white text-[#111827]"
-                            : "text-[#6B7280] hover:text-[#111827]"
-                        }`}
-                      >
-                        Unread {notificationItems.filter((n) => !n.read).length}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain">
-                    {filteredNotificationItems.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center px-8 py-10 text-center">
-                        <img
-                          src="/notifications-empty.png"
-                          alt=""
-                          className="mb-4 h-auto w-[min(100%,260px)] max-h-[200px] object-contain select-none"
-                          draggable={false}
-                        />
-                        <p className="text-[15px] font-semibold text-[#111827]">
-                          {notificationsFilter === "unread"
-                            ? "No unread notifications"
-                            : "No notifications"}
-                        </p>
-                        <p className="text-[13px] text-[#6B7280] mt-2 max-w-[280px] leading-relaxed">
-                          Overdue alerts and due-date reminders will show up here.
-                        </p>
-                      </div>
-                    ) : (
-                      <ul className="py-1">
-                        {filteredNotificationItems.map((n, idx) => (
-                          <li
-                            key={n.id}
-                            className="border-b border-[#F1F5F9] last:border-b-0"
-                          >
-                            <div
-                              className={`px-4 py-3 hover:bg-[#F8FAFC] transition-colors ${!n.read ? "app-notif-item--unread" : "app-notif-item"}`}
-                              style={{ animationDelay: `${idx * 45}ms` }}
-                              onClick={() =>
-                                setNotificationReadIds((prev) => {
-                                  const next = new Set(prev);
-                                  next.add(n.id);
-                                  return next;
-                                })
-                              }
-                            >
-                              <p className="text-[13px] leading-snug text-[#111827] font-medium">
-                                {n.message}
-                              </p>
-                              <p className="text-[12px] text-[#9CA3AF] mt-1.5 tabular-nums">
-                                {formatDueButtonLabel(n.dueDate)}
-                              </p>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                </div>
-              )}
 
               <div
                 className={`flex min-h-0 flex-1 ${
@@ -7212,9 +7094,11 @@ export default function App() {
                   todayMainMode === "search" ||
                   todayMainMode === "completed")
                   ? "overflow-hidden"
-                  : activeView === "calendar"
+                  : activeView === "notifications"
                     ? "overflow-hidden"
-                    : "overflow-y-auto"
+                    : activeView === "calendar"
+                      ? "overflow-hidden"
+                      : "overflow-y-auto"
               }`}
             >
               <div
@@ -8151,6 +8035,162 @@ export default function App() {
                       </div>
                     ) : null}
                   </div>
+                ) : activeView === "notifications" ? (
+                  <div className="w-full flex-1 min-h-0 flex flex-col overflow-hidden bg-[#FAFAFA]">
+                    <div className="mx-auto flex h-full min-h-0 w-full max-w-[min(100%,720px)] flex-col px-6 sm:px-10">
+                      <header className="shrink-0 bg-[#FAFAFA] pb-2 pt-8">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                          <h1 className="text-[26px] font-bold leading-tight text-[#202020] tracking-tight font-['Inter',system-ui,sans-serif]">
+                            Notifications
+                          </h1>
+                          <button
+                            type="button"
+                            onClick={handleMarkAllNotificationsRead}
+                            disabled={
+                              notificationItems.length === 0 ||
+                              notificationItems.every((n) => n.read)
+                            }
+                            className="inline-flex items-center gap-1.5 shrink-0 rounded-md py-1 text-[13px] font-medium text-[#202020] transition-colors hover:text-[#111827] disabled:pointer-events-none disabled:opacity-40 sm:mt-0.5"
+                          >
+                            <svg
+                              className="h-[18px] w-[18px] text-[#6B7280]"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.75"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              aria-hidden
+                            >
+                              <rect x="3" y="3" width="18" height="18" rx="2" />
+                              <path d="M9 12l2 2 4-4" />
+                            </svg>
+                            Mark all as read
+                          </button>
+                        </div>
+                        <div className="mt-3 inline-flex h-9 items-center rounded-full border border-[#E5E7EB] bg-[#F8FAFC] p-1 shadow-sm">
+                          <button
+                            type="button"
+                            onClick={() => setNotificationsFilter("all")}
+                            className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
+                              notificationsFilter === "all"
+                                ? "bg-white text-[#111827]"
+                                : "text-[#6B7280] hover:text-[#111827]"
+                            }`}
+                          >
+                            All
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setNotificationsFilter("unread")}
+                            className={`rounded-full px-3 py-1 text-[13px] font-semibold transition-colors ${
+                              notificationsFilter === "unread"
+                                ? "bg-white text-[#111827]"
+                                : "text-[#6B7280] hover:text-[#111827]"
+                            }`}
+                          >
+                            Unread{" "}
+                            {notificationItems.filter((n) => !n.read).length}
+                          </button>
+                        </div>
+                      </header>
+                      <div className="relative flex-1 min-h-0 overflow-y-auto pb-8">
+                        {filteredNotificationItems.length === 0 ? (
+                          <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+                            <img
+                              src="/notifications-empty.png"
+                              alt=""
+                              className="mb-4 h-auto w-[min(100%,260px)] max-h-[200px] object-contain select-none"
+                              draggable={false}
+                            />
+                            <p className="text-[15px] font-semibold text-[#111827]">
+                              {notificationsFilter === "unread"
+                                ? "No unread notifications"
+                                : "No notifications"}
+                            </p>
+                            <p className="mt-2 max-w-[280px] text-[13px] leading-relaxed text-[#6B7280]">
+                              Overdue alerts and due-date reminders will show up
+                              here.
+                            </p>
+                          </div>
+                        ) : (
+                          <ul className="space-y-2.5 pt-1">
+                            {filteredNotificationItems.map((n, idx) => (
+                              <li key={n.id}>
+                                <button
+                                  type="button"
+                                  className="w-full overflow-hidden rounded-xl border border-[#E8E8E8] bg-[#F3F4F6] text-left shadow-sm transition-colors hover:bg-[#EEEEEE]"
+                                  style={{ animationDelay: `${idx * 45}ms` }}
+                                  onClick={() =>
+                                    setNotificationReadIds((prev) => {
+                                      const next = new Set(prev);
+                                      next.add(n.id);
+                                      return next;
+                                    })
+                                  }
+                                >
+                                  <div className="flex min-h-[72px]">
+                                    <div
+                                      className="w-1 shrink-0 rounded-l-xl bg-[#A78BFA]"
+                                      aria-hidden
+                                    />
+                                    <div className="flex min-w-0 flex-1 items-stretch gap-3 px-3 py-3 pr-2 sm:px-4">
+                                      <div
+                                        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#9d84d8] text-white shadow-sm"
+                                        aria-hidden
+                                      >
+                                        <svg
+                                          className="h-5 w-5"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="1.75"
+                                          strokeLinecap="round"
+                                          strokeLinejoin="round"
+                                        >
+                                          <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" />
+                                          <circle cx="12" cy="10" r="3" />
+                                        </svg>
+                                      </div>
+                                      <div className="min-w-0 flex-1 py-0.5">
+                                        <p className="text-[14px] font-medium leading-snug text-[#111827]">
+                                          {n.message}
+                                        </p>
+                                        <p className="mt-1.5 text-[12px] tabular-nums text-[#9CA3AF]">
+                                          {formatNotificationRelativeCaption(n)}
+                                        </p>
+                                      </div>
+                                      <div
+                                        className="flex w-7 shrink-0 items-center justify-center self-center text-[#9CA3AF]"
+                                        aria-hidden
+                                      >
+                                        <svg
+                                          className="h-5 w-5"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="1.5"
+                                        >
+                                          <circle cx="12" cy="12" r="9" />
+                                          <circle
+                                            cx="12"
+                                            cy="12"
+                                            r="2"
+                                            fill="currentColor"
+                                            stroke="none"
+                                          />
+                                        </svg>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </button>
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div
                     className={`pointer-events-auto ${
@@ -8775,8 +8815,6 @@ export default function App() {
                     ) : (
                       <div className="flex items-center justify-center h-full pt-8">
                         <p className="text-sm md:text-base text-[#6B7280]">
-                          {activeView === "notifications" &&
-                            "Notifications Center"}
                           {activeView === "settings" && "Settings"}
                         </p>
                       </div>
