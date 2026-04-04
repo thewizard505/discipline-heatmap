@@ -6252,33 +6252,48 @@ export default function App() {
           gap:10px;
           width:100%;
           border-radius:999px;
-          padding:8px 14px;
-          background:rgba(15,23,42,0.9);
-          border:1px solid rgba(148,163,184,0.35);
-          box-shadow:0 18px 38px rgba(15,23,42,0.45);
-          overflow:hidden;
+          padding:8px 12px;
+          background:transparent;
+          border:none;
+          box-shadow:none;
+          overflow:visible;
+          transition:box-shadow .35s cubic-bezier(0.22,0.61,0.36,1),filter .35s ease;
+        }
+        .sidebar-focus-cta:hover{
+          box-shadow:
+            0 10px 32px rgba(15,23,42,0.08),
+            0 4px 14px rgba(99,102,241,0.07),
+            0 0 0 1px rgba(148,163,184,0.12);
         }
         .sidebar-focus-cta-ring{
           position:relative;
           flex-shrink:0;
-          width:28px;
-          height:28px;
+          width:30px;
+          height:30px;
           border-radius:999px;
-          background:radial-gradient(circle at 30% 20%,rgba(248,250,252,0.45),transparent 60%),radial-gradient(circle at 80% 80%,rgba(59,130,246,0.8),transparent 70%);
+          background:transparent;
           display:flex;
           align-items:center;
           justify-content:center;
         }
         .sidebar-focus-cta-hole{
-          width:22px;
-          height:22px;
+          width:28px;
+          height:28px;
           border-radius:999px;
-          background-image:url("assets/c__Users_savin_AppData_Roaming_Cursor_User_workspaceStorage_3b22fddf6fc4868fcaa8bcc5b49c83df_images_image-removebg-preview-866e18fb-1813-44fc-b278-ec95d580aceb.png");
-          background-size:cover;
+          background-color:transparent;
+          background-image:url("/plan-my-day-black-hole.png");
+          background-size:120%;
           background-position:center;
-          box-shadow:0 0 12px rgba(59,130,246,0.65);
+          background-repeat:no-repeat;
           transform-origin:50% 50%;
-          transition:transform .45s cubic-bezier(0.22,0.61,0.36,1),box-shadow .45s cubic-bezier(0.22,0.61,0.36,1);
+          transition:transform .5s cubic-bezier(0.22,0.61,0.36,1);
+          transform:scale(1) rotate(0deg);
+        }
+        .sidebar-focus-cta:hover .sidebar-focus-cta-hole{
+          transform:scale(0.72) rotate(22deg);
+        }
+        .sidebar-focus-cta:active .sidebar-focus-cta-hole{
+          transform:scale(0.66) rotate(26deg);
         }
         .sidebar-focus-cta-label{
           position:relative;
@@ -6287,31 +6302,15 @@ export default function App() {
         .sidebar-focus-cta-label--halo{
           font-size:13px;
           font-weight:600;
-          background:linear-gradient(120deg,rgba(129,140,248,0.95),rgba(56,189,248,0.9),rgba(52,211,153,0.9));
+          letter-spacing:-0.01em;
+          background:linear-gradient(120deg,rgba(129,140,248,0.98),rgba(56,189,248,0.92),rgba(52,211,153,0.92));
           -webkit-background-clip:text;
           background-clip:text;
           color:transparent;
-          text-shadow:0 0 20px rgba(15,23,42,0.8);
-        }
-        .sidebar-focus-cta::before{
-          content:"";
-          position:absolute;
-          inset:-40%;
-          background:radial-gradient(circle at 0% 0%,rgba(99,102,241,0.25),transparent 60%),radial-gradient(circle at 100% 100%,rgba(56,189,248,0.2),transparent 70%);
-          opacity:.35;
-          transition:opacity .4s ease-out,transform .4s ease-out;
-          transform:translate3d(0,6px,0);
-        }
-        .sidebar-focus-cta:hover::before{
-          opacity:.7;
-          transform:translate3d(0,0,0);
-        }
-        .sidebar-focus-cta:hover .sidebar-focus-cta-hole{
-          transform:scale(0.9) rotate(18deg);
-          box-shadow:0 0 22px rgba(59,130,246,0.95);
-        }
-        .sidebar-focus-cta:active .sidebar-focus-cta-hole{
-          transform:scale(0.82) rotate(28deg);
+          filter:
+            drop-shadow(0 0 12px rgba(129,140,248,0.5))
+            drop-shadow(0 3px 18px rgba(56,189,248,0.25))
+            drop-shadow(0 0 22px rgba(52,211,153,0.2));
         }
         .tv-insight-card:hover{
           transform:translateY(-2px);
@@ -7008,7 +7007,7 @@ export default function App() {
                           <span className="sidebar-focus-cta-hole" />
                         </span>
                         <span className="sidebar-focus-cta-label sidebar-focus-cta-label--halo">
-                          Plan my day
+                          Plan My Day
                         </span>
                       </button>
                     </div>
