@@ -2424,6 +2424,42 @@ function SidebarCompletedIcon({
   );
 }
 
+/** Compass — same stroke/fill pattern as primary list icons (outline #666 → solid lavender). */
+function SidebarPlanMyDayIcon({
+  active,
+  className = "h-[18px] w-[18px] shrink-0",
+}: {
+  active: boolean;
+  className?: string;
+}) {
+  const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
+  const sw = active ? 0 : 1.5;
+  return (
+    <svg className={className} viewBox="0 0 24 24" aria-hidden>
+      {active ? (
+        <>
+          <circle cx="12" cy="12" r="10" fill={SIDEBAR_ACCENT} />
+          <path
+            d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
+            fill="white"
+          />
+        </>
+      ) : (
+        <>
+          <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} fill="none" />
+          <path
+            d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
+            stroke={stroke}
+            strokeWidth={sw}
+            fill="none"
+            strokeLinejoin="round"
+          />
+        </>
+      )}
+    </svg>
+  );
+}
+
 /** Matches primary nav icon language: outline @ #666, solid accent + white detail when active. */
 function SidebarToolsIcon({
   kind,
@@ -3325,6 +3361,11 @@ export default function App() {
       ).length,
     [tasksByListId],
   );
+
+  const isPlanMyDaySidebarActive =
+    activeView === "tasks" &&
+    todayMainMode === "tasks" &&
+    selectedListId === SYS_LIST_INBOX;
 
   const mainPanelTaskCount = useMemo(() => {
     if (!selectedListId) return 0;
@@ -6942,16 +6983,12 @@ export default function App() {
                           applyListSelection(SYS_LIST_INBOX);
                           queueMicrotask(() => taskListInputRef.current?.focus());
                         }}
-                        className={`sidebar-nav-item sidebar-plan-my-day ${
-                          activeView === "tasks" &&
-                          todayMainMode === "tasks" &&
-                          selectedListId === SYS_LIST_INBOX
-                            ? "sidebar-nav-item--active"
-                            : ""
+                        className={`sidebar-nav-item ${
+                          isPlanMyDaySidebarActive ? "sidebar-nav-item--active" : ""
                         }`}
                       >
-                        <span className="sidebar-icon-slot text-[17px] leading-none" aria-hidden>
-                          🗓️
+                        <span className="sidebar-icon-slot" aria-hidden>
+                          <SidebarPlanMyDayIcon active={isPlanMyDaySidebarActive} />
                         </span>
                         <span className="min-w-0 flex-1 truncate text-left">
                           Plan My Day
