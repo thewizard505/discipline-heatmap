@@ -1,5 +1,8 @@
 import React from "react";
-import { FocusForTodayPlanner } from "./focusForTodayPlan/FocusForTodayPlanner";
+import {
+  PlanMyDayExperience,
+  appendPlanMyDayCompletion,
+} from "./planMyDay";
 import { Analytics } from "@vercel/analytics/react";
 import { motion } from "framer-motion";
 import {
@@ -3309,6 +3312,32 @@ export default function App() {
     return applySoftEstimateReorder(base, tasksByListId);
   }, [tasksByListId, notificationDay]);
 
+  const [planMyDayIntent, setPlanMyDayIntent] = useState(0);
+
+  const planMyDayTaskMap = useMemo(() => {
+    const m = new Map<
+      number,
+      {
+        id: number;
+        text: string;
+        estimatedMinutes?: number | null;
+        priority?: 1 | 2 | 3 | 4;
+      }
+    >();
+    for (const p of focusForTodayItems) {
+      const t = getTaskForPick(tasksByListId, p);
+      if (t) {
+        m.set(t.id, {
+          id: t.id,
+          text: t.text,
+          estimatedMinutes: t.estimatedMinutes,
+          priority: t.priority,
+        });
+      }
+    }
+    return m;
+  }, [focusForTodayItems, tasksByListId]);
+
   const planMyDaySidebarTaskCount = useMemo(
     () =>
       (tasksByListId[SYS_LIST_INBOX] ?? []).filter(
@@ -3713,6 +3742,10 @@ export default function App() {
     pushTimer(() => setTaskRowExitingId(task.id), 420);
     pushTimer(() => {
       appendCompletedActivity(task.text, 0, listId, listLabel);
+      const est = task.estimatedMinutes;
+      if (est != null && est > 0) {
+        appendPlanMyDayCompletion(task.id, est);
+      }
       if (selectedListIdRef.current === listId) {
         setTasks((prev) =>
           prev.map((x) =>
@@ -4595,6 +4628,13 @@ export default function App() {
         completed: false,
       },
     ]);
+    if (focusSessionEntries.length > 0 && elapsedSecs > 0) {
+      const share =
+        elapsedSecs / 60 / Math.max(1, focusSessionEntries.length);
+      for (const e of focusSessionEntries) {
+        appendPlanMyDayCompletion(e.taskId, share);
+      }
+    }
   };
 
   const cleanupFocusSessionAfterQuit = () => {
@@ -6924,6 +6964,7 @@ export default function App() {
                           if (isFocusSessionActive) cleanupFocusSessionAfterQuit();
                           setActiveView("tasks");
                           applyListSelection(SYS_LIST_INBOX);
+                          setPlanMyDayIntent((n) => n + 1);
                           queueMicrotask(() => taskListInputRef.current?.focus());
                         }}
                         className={`sidebar-nav-item ${
@@ -7278,7 +7319,11 @@ export default function App() {
                         return (
                           <div className="flex w-full flex-col">
                             {selectedListId === SYS_LIST_INBOX ? (
-                              <FocusForTodayPlanner />
+                              <PlanMyDayExperience
+                                intent={planMyDayIntent}
+                                picks={focusForTodayItems}
+                                tasksByTaskId={planMyDayTaskMap}
+                              />
                             ) : null}
                             {selectedListId !== SYS_LIST_OVERDUE &&
                               selectedListId !== SYS_LIST_INBOX && (
