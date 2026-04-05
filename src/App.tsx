@@ -7624,7 +7624,7 @@ export default function App() {
                             <img
                               src="/notifications-empty.png"
                               alt=""
-                              className="mb-4 h-auto w-[min(100%,260px)] max-h-[200px] object-contain select-none"
+                              className="mb-5 h-auto w-[min(100%,280px)] max-h-[220px] object-contain select-none"
                               draggable={false}
                             />
                             <p className="text-[15px] font-semibold text-[#111827]">
