@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@layer base {
+  body {
+    font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
 /* Blinking cursor for embed typing simulation */
 @keyframes demo-cursor-blink {
   50% { opacity: 0; }

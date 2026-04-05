@@ -6139,10 +6139,10 @@ export default function App() {
           box-shadow:0 2px 8px rgba(0,0,0,0.05);
         }
         .focus-timer-digits{
-          font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-          font-weight:700;
+          font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+          font-weight:800;
           font-feature-settings:"tnum" 1;
-          letter-spacing:-0.06em;
+          letter-spacing:-0.055em;
         }
         @keyframes micro-focus-timer-pulse-kf{
           0%,100%{ transform:scale(1); }
@@ -8382,7 +8382,7 @@ export default function App() {
 
             {isFocusSessionActive && (
               <div
-                className={`dark relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#0F0F10] text-[#ececec] antialiased transition-[filter] duration-200 ease-out ${
+                className={`dark font-sans relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#0F0F10] text-[#ececec] antialiased transition-[filter] duration-200 ease-out ${
                   focusRootShake ? "micro-focus-shake" : ""
                 }`}
               >
@@ -8392,39 +8392,39 @@ export default function App() {
                   } transition-opacity duration-200`}
                 >
                   {warning && (
-                    <div className="fixed top-20 z-[100] max-w-sm rounded-xl bg-[#6366F1] px-5 py-2.5 text-[13px] font-medium text-white shadow-lg shadow-[#6366F1]/25">
+                    <div className="fixed top-20 z-[100] max-w-sm rounded-xl bg-[#6366F1] px-5 py-2.5 text-[13px] font-medium text-[#fafafa] shadow-[0_4px_20px_rgba(99,102,241,0.35)]">
                       {warning}
                     </div>
                   )}
                   {floatingTime && (
                     <div
                       key={floatingTime.id}
-                      className="fixed top-1/2 z-[300] animate-float-fade text-5xl font-semibold tabular-nums text-[#6366F1] dark:text-[#818cf8]"
+                      className="fixed top-1/2 z-[300] animate-float-fade text-5xl font-bold tabular-nums text-[#818cf8]"
                     >
                       {floatingTime.text}
                     </div>
                   )}
                   {stayLockedHint && (
-                    <div className="fixed bottom-24 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/90 px-4 py-1.5 text-[11px] font-medium text-[#636366] shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-[#1c1c1e]/90 dark:text-[#a1a1a6]">
+                    <div className="fixed bottom-24 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-white/[0.08] bg-[#1a1a1c]/95 px-4 py-1.5 text-[11px] font-normal text-[#a1a1a6] shadow-[0_2px_12px_rgba(0,0,0,0.25)] backdrop-blur-sm">
                       Stay on task.
                     </div>
                   )}
 
-                  <header className="mb-8 space-y-1 text-center">
-                    <h1 className="text-[1.75rem] font-semibold tracking-tight text-[#1c1c1e] dark:text-[#f5f5f7] sm:text-[1.875rem]">
+                  <header className="mb-8 space-y-2 text-center">
+                    <h1 className="text-[1.75rem] font-bold tracking-[-0.03em] text-[#f4f4f5] sm:text-[1.875rem]">
                       Focus
                     </h1>
-                    <p className="text-[13px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
+                    <p className="text-[14px] font-medium leading-relaxed text-[#a1a1a6]">
                       {randomGreeting}
                     </p>
-                    <p className="text-[12px] tabular-nums text-[#8e8e93] dark:text-[#7c7c80]">
+                    <p className="text-[12px] font-normal tabular-nums text-[#8e8e93]">
                       Streak {streak} days
                     </p>
                   </header>
 
                   <article
-                    className={`rounded-[20px] border border-[#e5e5ea] bg-[#fcfcfd] p-7 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] dark:border-white/[0.08] dark:bg-[#141416] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] sm:p-8 ${
-                      running ? "ring-1 ring-[#6366F1]/15 dark:ring-[#6366F1]/25" : ""
+                    className={`rounded-[20px] border border-white/[0.06] bg-[#141416] p-7 shadow-[0_1px_2px_rgba(0,0,0,0.2),0_12px_40px_rgba(0,0,0,0.35)] sm:p-8 ${
+                      running ? "ring-1 ring-[#6366F1]/20" : ""
                     } transition-[box-shadow,ring] duration-200 ease-out`}
                   >
                     {focusFinaleOpen && focusFinaleSnapshot ? (
@@ -8432,7 +8432,7 @@ export default function App() {
                         className="flex min-h-[200px] flex-col items-center justify-center py-10"
                         aria-hidden
                       >
-                        <p className="text-[13px] text-[#8e8e93]">
+                        <p className="text-[13px] font-normal text-[#9ca3af]">
                           Session summary
                         </p>
                       </div>
@@ -8444,11 +8444,11 @@ export default function App() {
                           <div className="space-y-2">
                             <label
                               htmlFor="focus-task-input"
-                              className="block text-left text-[13px] font-medium text-[#3a3a3c] dark:text-[#d1d1d6]"
+                              className="block text-left text-[14px] font-medium text-[#d4d4d8]"
                             >
                               What are you working on?
                             </label>
-                            <div className="flex w-full items-stretch gap-2 rounded-[12px] border border-[#e5e5ea] bg-white px-3.5 py-2.5 transition-[border-color,box-shadow] duration-200 ease-out focus-within:border-[#6366F1]/50 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] dark:border-white/[0.1] dark:bg-[#1c1c1e]">
+                            <div className="flex w-full items-stretch gap-2 rounded-[13px] border border-white/[0.04] bg-[#101012] px-4 py-3 shadow-[inset_0_1px_2px_rgba(0,0,0,0.25)] transition-all duration-200 ease-out focus-within:border-[#6366F1]/45 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.18),inset_0_1px_2px_rgba(0,0,0,0.25)]">
                               <input
                                 id="focus-task-input"
                                 ref={focusSessionTaskInputRef}
@@ -8466,7 +8466,7 @@ export default function App() {
                                     ? "Simulating…"
                                     : "Enter your focus task…"
                                 }
-                                className={`min-h-[44px] flex-1 rounded-[10px] border-0 bg-transparent text-[15px] leading-snug text-[#1c1c1e] outline-none placeholder:text-[#aeaeb2] dark:text-[#f2f2f7] dark:placeholder:text-[#636366] ${
+                                className={`min-h-[44px] flex-1 rounded-[11px] border-0 bg-transparent text-[15px] font-normal leading-snug text-[#f4f4f5] outline-none ring-0 placeholder:text-[#71717a] ${
                                   taskInputClearFlash ? "opacity-50" : ""
                                 }`}
                               />
@@ -8476,7 +8476,7 @@ export default function App() {
                                 onClick={() =>
                                   addTaskFromFocusBar({ fromButtonClick: true })
                                 }
-                                className="shrink-0 self-center rounded-lg px-3 py-2 text-[13px] font-semibold text-[#6366F1] transition-colors duration-200 ease-out hover:bg-[#6366F1]/10 active:scale-[0.98] disabled:opacity-50"
+                                className="shrink-0 self-center rounded-[10px] px-3 py-2 text-[13px] font-semibold text-[#a5b4fc] transition-all duration-200 ease-out hover:bg-[#6366F1]/15 hover:text-[#c7d2fe] active:scale-[0.97] disabled:opacity-50"
                               >
                                 Add
                               </button>
@@ -8486,7 +8486,7 @@ export default function App() {
                                 {taskInputLiveHints.map((hint, hi) => (
                                   <p
                                     key={hi}
-                                    className="text-[12px] leading-snug text-[#6e6e73] dark:text-[#98989d]"
+                                    className="text-[12px] font-normal leading-snug text-[#9ca3af]"
                                   >
                                     {hint}
                                   </p>
@@ -8495,7 +8495,7 @@ export default function App() {
                             )}
                           </div>
                           <div className="space-y-3">
-                            <p className="text-[13px] font-medium text-[#3a3a3c] dark:text-[#d1d1d6]">
+                            <p className="text-[14px] font-medium text-[#d4d4d8]">
                               Focus length
                             </p>
                             <div className="grid grid-cols-3 gap-2 sm:gap-3">
@@ -8517,10 +8517,10 @@ export default function App() {
                                       setSeconds(sec);
                                       setInitialSeconds(sec);
                                     }}
-                                    className={`min-h-[44px] rounded-full text-[14px] font-semibold tabular-nums transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 ${
+                                    className={`min-h-[44px] rounded-[14px] text-[14px] font-semibold tabular-nums transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 ${
                                       active
-                                        ? "bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/25"
-                                        : "border border-[#e5e5ea] bg-white text-[#3a3a3c] hover:border-[#6366F1]/35 dark:border-white/[0.1] dark:bg-[#1c1c1e] dark:text-[#e5e5ea]"
+                                        ? "bg-[#6366F1] text-[#fafafa] shadow-[0_2px_10px_rgba(99,102,241,0.45)]"
+                                        : "border border-white/[0.08] bg-[#18181b] text-[#e4e4e7] hover:border-[#6366F1]/30"
                                     }`}
                                   >
                                     {label} min
@@ -8537,7 +8537,7 @@ export default function App() {
                           }
                         >
                           {focusHeroTaskLabel && running && (
-                            <p className="text-center text-[14px] font-medium leading-snug text-[#3a3a3c] dark:text-[#d1d1d6]">
+                            <p className="text-center text-[14px] font-medium leading-snug text-[#d4d4d8]">
                               {focusHeroTaskLabel}
                             </p>
                           )}
@@ -8553,7 +8553,7 @@ export default function App() {
                                 r={FOCUS_TIMER_RING_RADIUS}
                                 stroke="currentColor"
                                 strokeWidth="5"
-                                className="text-[#e5e5ea] dark:text-white/[0.12]"
+                                className="text-white/[0.1]"
                                 fill="none"
                               />
                               <circle
@@ -8577,7 +8577,7 @@ export default function App() {
                             </svg>
                             <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center">
                               <div
-                                className={`focus-timer-digits text-[clamp(3.75rem,18vw,5.5rem)] tabular-nums leading-none tracking-tight text-[#1c1c1e] transition-all duration-200 ease-out dark:text-[#f2f2f7] ${
+                                className={`focus-timer-digits text-[clamp(4rem,19vw,6rem)] tabular-nums leading-none tracking-[-0.04em] text-[#fafafa] transition-all duration-200 ease-out ${
                                   running ? "micro-focus-timer-pulse" : ""
                                 }`}
                               >
@@ -8592,13 +8592,13 @@ export default function App() {
                               </div>
                             </div>
                           </div>
-                          <p className="text-center text-[12px] font-medium text-[#8e8e93] dark:text-[#7c7c80]">
+                          <p className="text-center text-[12px] font-normal text-[#9ca3af]">
                             {running ? "Remaining" : "Ready"}
                           </p>
                           {running && (
                             <p
-                              className={`text-center text-[12px] font-medium tabular-nums transition-colors duration-200 ease-out ${
-                                isViolating ? "text-red-500" : "text-[#6e6e73] dark:text-[#98989d]"
+                              className={`text-center text-[12px] font-normal tabular-nums transition-colors duration-200 ease-out ${
+                                isViolating ? "text-red-500" : "text-[#a1a1a6]"
                               }`}
                             >
                               Integrity {integrityScore}%
@@ -8622,7 +8622,7 @@ export default function App() {
                               }
                               startTimer();
                             }}
-                            className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-[#6366F1] text-[15px] font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 dark:hover:brightness-110"
+                            className="flex h-[52px] w-full items-center justify-center rounded-[15px] bg-[#6366F1] text-[15px] font-semibold text-[#fafafa] shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_4px_16px_rgba(99,102,241,0.42)] transition-all duration-200 ease-out hover:-translate-y-px hover:shadow-[0_1px_0_rgba(255,255,255,0.14)_inset,0_6px_22px_rgba(99,102,241,0.5)] hover:brightness-[1.05] active:scale-[0.97] active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:brightness-100 disabled:hover:shadow-[0_1px_0_rgba(255,255,255,0.12)_inset,0_4px_16px_rgba(99,102,241,0.42)]"
                           >
                             {running ? "End Session" : "Start Focus Session"}
                           </button>
@@ -8634,7 +8634,7 @@ export default function App() {
                                 setSeconds((s) => s + 900);
                                 setInitialSeconds((s) => s + 900);
                               }}
-                              className="w-full py-2 text-[13px] font-medium text-[#6e6e73] transition-colors duration-200 ease-out hover:text-[#1c1c1e] active:scale-[0.98] dark:text-[#98989d] dark:hover:text-[#f2f2f7]"
+                              className="w-full py-2 text-[13px] font-normal text-[#9ca3af] transition-colors duration-200 ease-out hover:text-[#d4d4d8] active:scale-[0.98]"
                             >
                               +15 minutes
                             </button>
@@ -8642,8 +8642,8 @@ export default function App() {
                         </div>
 
                         {focusSessionEntries.length > 0 && (
-                          <div className="mt-8 border-t border-[#e5e5ea] pt-6 dark:border-white/[0.08]">
-                            <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                          <div className="mt-8 border-t border-white/[0.08] pt-6">
+                            <p className="mb-3 text-[11px] font-normal uppercase tracking-[0.08em] text-[#9ca3af]">
                               Queue
                             </p>
                             <ul className="space-y-2">
@@ -8668,7 +8668,7 @@ export default function App() {
                                   return (
                                     <li
                                       key={`${entry.listId}-${entry.taskId}`}
-                                      className={`flex items-center gap-3 rounded-[12px] border border-[#e5e5ea] bg-white px-3 py-2.5 dark:border-white/[0.08] dark:bg-[#1c1c1e] ${
+                                      className={`flex items-center gap-3 rounded-[13px] border border-white/[0.06] bg-[#101012] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.03)] transition-colors duration-200 ${
                                         itemDone ? "opacity-50" : ""
                                       }`}
                                     >
@@ -8684,7 +8684,7 @@ export default function App() {
                                         }
                                         title="Complete"
                                       />
-                                      <span className="min-w-0 flex-1 text-[14px] leading-snug text-[#1c1c1e] dark:text-[#f2f2f7]">
+                                      <span className="min-w-0 flex-1 text-[14px] font-normal leading-snug text-[#ececec]">
                                         {getFocusSessionDisplayLabel(
                                           entry.listId,
                                           t.text,
@@ -8701,32 +8701,32 @@ export default function App() {
                   </article>
 
                   <section
-                    className="mt-8 grid grid-cols-3 gap-4 border-t border-[#e5e5ea] pt-8 dark:border-white/[0.08]"
+                    className="mt-8 grid grid-cols-3 gap-4 border-t border-white/[0.08] pt-8"
                     aria-label="Focus stats"
                   >
                     <div className="text-center">
-                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                      <p className="text-[1.375rem] font-bold tabular-nums leading-none tracking-tight text-[#fafafa] sm:text-2xl">
                         {completedFocusSessionsCount}
                       </p>
-                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                      <p className="mt-2 text-[11px] font-normal uppercase tracking-[0.06em] text-[#9ca3af]">
                         Sessions
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                      <p className="text-[1.375rem] font-bold tabular-nums leading-none tracking-tight text-[#fafafa] sm:text-2xl">
                         {String(Math.floor(timerAccumulator / 60)).padStart(2, "0")}
-                        <span className="text-[#c7c7cc] dark:text-[#48484a]">:</span>
+                        <span className="text-[#52525b]">:</span>
                         {String(timerAccumulator % 60).padStart(2, "0")}
                       </p>
-                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                      <p className="mt-2 text-[11px] font-normal uppercase tracking-[0.06em] text-[#9ca3af]">
                         Time focused
                       </p>
                     </div>
                     <div className="text-center">
-                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                      <p className="text-[1.375rem] font-bold tabular-nums leading-none tracking-tight text-[#fafafa] sm:text-2xl">
                         {running ? `${integrityScore}%` : "—"}
                       </p>
-                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                      <p className="mt-2 text-[11px] font-normal uppercase tracking-[0.06em] text-[#9ca3af]">
                         Integrity
                       </p>
                     </div>
@@ -8746,13 +8746,13 @@ export default function App() {
                       onClick={dismissFocusFinale}
                     />
                     <div
-                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-white/[0.08] bg-[#1c1c1e] px-8 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.45)] pointer-events-auto"
+                      className="relative z-[1] w-full max-w-md rounded-[20px] border border-white/[0.08] bg-[#18181b] px-8 py-10 text-center shadow-[0_8px_32px_rgba(0,0,0,0.5),0_2px_8px_rgba(0,0,0,0.25)] pointer-events-auto"
                       onClick={(e) => e.stopPropagation()}
                       role="presentation"
                     >
                       <h2
                         id="focus-finale-title"
-                        className={`text-[1.65rem] font-semibold tracking-tight text-[#f2f2f7] transition-all duration-500 ease-out ${
+                        className={`text-[1.625rem] font-bold tracking-[-0.02em] text-[#fafafa] transition-all duration-500 ease-out ${
                           focusFinalePhase >= 2
                             ? "translate-y-0 opacity-100"
                             : "translate-y-3 opacity-0"
@@ -8772,10 +8772,10 @@ export default function App() {
                               : "translate-y-4 opacity-0"
                           }`}
                         >
-                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                          <span className="text-[13px] font-normal text-[#9ca3af]">
                             Focus integrity
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                          <span className="text-xl font-bold tabular-nums text-[#fafafa]">
                             {focusFinaleSnapshot.integrity}%
                           </span>
                         </div>
@@ -8790,10 +8790,10 @@ export default function App() {
                               focusFinalePhase >= 3 ? "120ms" : "0ms",
                           }}
                         >
-                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                          <span className="text-[13px] font-normal text-[#9ca3af]">
                             Time in focus
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                          <span className="text-xl font-bold tabular-nums text-[#fafafa]">
                             {(() => {
                               const s = focusFinaleSnapshot.elapsedSecs;
                               const m = Math.floor(s / 60);
@@ -8814,15 +8814,15 @@ export default function App() {
                               focusFinalePhase >= 3 ? "240ms" : "0ms",
                           }}
                         >
-                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                          <span className="text-[13px] font-normal text-[#9ca3af]">
                             Tasks completed
                           </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                          <span className="text-xl font-bold tabular-nums text-[#fafafa]">
                             {focusFinaleSnapshot.tasksDone}
                           </span>
                         </div>
                       </div>
-                      <p className="mt-8 text-[11px] text-[#6e6e73]">
+                      <p className="mt-8 text-[11px] font-normal text-[#9ca3af]">
                         Tap outside to continue
                       </p>
                     </div>
