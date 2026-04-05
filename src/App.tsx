@@ -1,8 +1,4 @@
 import React from "react";
-import {
-  PlanMyDayExperience,
-  appendPlanMyDayCompletion,
-} from "./planMyDay";
 import { Analytics } from "@vercel/analytics/react";
 import { motion } from "framer-motion";
 import {
@@ -54,7 +50,7 @@ type Task = {
   dueDate?: string | null;
   /** Todoist-style priority: 1 = highest; default 4 */
   priority?: 1 | 2 | 3 | 4;
-  /** User-provided quick estimate (Focus for today), minutes */
+  /** Optional quick time estimate (minutes) */
   estimatedMinutes?: number | null;
   /** User skipped or answered inline estimate prompt — do not ask again */
   estimatePromptDismissed?: boolean;
@@ -105,16 +101,6 @@ const FOCUS_PICKER_LABELS: Record<string, string> = {
   [SYS_LIST_PROJECTS]: "Projects",
   [SYS_LIST_TESTS]: "Tests",
   [SYS_LIST_LONGTERM]: "Long-Term Assignments",
-};
-
-/** Short labels for the Focus for today row tags (Todoist-like). */
-const FOCUS_FOR_TODAY_TAG_LABELS: Record<string, string> = {
-  [SYS_LIST_OVERDUE]: "Overdue",
-  [SYS_LIST_INBOX]: "Inbox",
-  [SYS_LIST_TODAY]: "Today",
-  [SYS_LIST_PROJECTS]: "Project",
-  [SYS_LIST_TESTS]: "Test",
-  [SYS_LIST_LONGTERM]: "Long-term",
 };
 
 /** Quick-add title placeholder examples, randomized when the selected list changes. */
@@ -168,7 +154,7 @@ function getFocusSessionDisplayLabel(listId: string, taskText: string): string {
   return s;
 }
 
-/** Smart picks for the Today view “Focus for today” strip (Tests / Projects / Long-Term). */
+/** Aggregated task picks for the Inbox view (overdue, today, upcoming). */
 type FocusForTodayPick = {
   listId: string;
   taskId: number;
@@ -307,69 +293,6 @@ function buildFocusForTodayPicks(
   return [...overduePicks, ...todayListPicks, ...bigPicks];
 }
 
-const ESTIMATE_PATTERNS_KEY = "tunnelvision_estimate_patterns_v1";
-const ESTIMATE_SESSION_ACTIONS_KEY = "tunnelvision_estimate_session_actions_v1";
-
-type EstimatePatternRow = { sum: number; count: number };
-
-function loadEstimatePatterns(): Record<string, EstimatePatternRow> {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(ESTIMATE_PATTERNS_KEY);
-    if (!raw) return {};
-    const p = JSON.parse(raw) as Record<string, EstimatePatternRow>;
-    return p && typeof p === "object" ? p : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveEstimatePatterns(p: Record<string, EstimatePatternRow>) {
-  try {
-    localStorage.setItem(ESTIMATE_PATTERNS_KEY, JSON.stringify(p));
-  } catch {
-    /* ignore */
-  }
-}
-
-function normalizeEstimateKeyword(text: string): string {
-  return text.trim().toLowerCase().slice(0, 80);
-}
-
-function recordEstimatePattern(keyword: string, minutes: number) {
-  if (!keyword) return;
-  const p = loadEstimatePatterns();
-  const row = p[keyword] ?? { sum: 0, count: 0 };
-  row.sum += minutes;
-  row.count += 1;
-  p[keyword] = row;
-  saveEstimatePatterns(p);
-}
-
-function isVagueTaskTitle(raw: string): boolean {
-  const t = raw.trim().toLowerCase();
-  if (t.length < 2) return false;
-  if (/^(study|test|read|write|work|review|prep)$/.test(t)) return true;
-  if (/^work on (project|this|it|stuff|things?)$/.test(t)) return true;
-  if (/^work on\s+\w+$/.test(t) && t.split(/\s+/).length <= 3) return true;
-  return false;
-}
-
-/** Internal: task could use a quick estimate (no modal). */
-function taskNeedsEstimate(task: Task | undefined, listId: string): boolean {
-  if (!task || task.completed || task.removing) return false;
-  if (task.estimatePromptDismissed) return false;
-  if (task.estimatedMinutes != null && task.estimatedMinutes > 0) return false;
-  const raw = (task.text || "").trim();
-  if (!raw) return false;
-  if (isVagueTaskTitle(raw)) return true;
-  if (listId === SYS_LIST_PROJECTS || listId === SYS_LIST_LONGTERM) {
-    const words = raw.split(/\s+/).length;
-    return words <= 4 && raw.length <= 36;
-  }
-  return false;
-}
-
 function getTaskForPick(
   tasksByListId: Record<string, Task[]>,
   pick: FocusForTodayPick,
@@ -388,15 +311,12 @@ function findTaskListIdContaining(
   return null;
 }
 
-/** Ordered tasks for Focus Today (read-only aggregate of other lists). */
+/** Ordered tasks for the Inbox aggregate (read-only merge of other lists). */
 function buildFocusTodayTasksFromStorage(
   tbl: Record<string, Task[]>,
   dayIso: string,
 ): Task[] {
-  const picks = applySoftEstimateReorder(
-    buildFocusForTodayPicks(tbl, dayIso),
-    tbl,
-  );
+  const picks = buildFocusForTodayPicks(tbl, dayIso);
   return picks
     .map((p) => getTaskForPick(tbl, p))
     .filter((t): t is Task => !!t && !t.removing);
@@ -436,88 +356,6 @@ function ListEmptyHero({
       </p>
     </div>
   );
-}
-
-function estimateMinutesForSort(task: Task | undefined): number | null {
-  const m = task?.estimatedMinutes;
-  if (m == null || m <= 0) return null;
-  return m;
-}
-
-/**
- * Soft tie-break only: same segment + same primary sort keys → shorter estimate first.
- * Does not change which tasks are selected (buildFocusForTodayPicks is unchanged).
- */
-function applySoftEstimateReorder(
-  picks: FocusForTodayPick[],
-  tasksByListId: Record<string, Task[]>,
-): FocusForTodayPick[] {
-  if (picks.length === 0) return picks;
-  const overdue = picks.filter((p) => p.listId === SYS_LIST_OVERDUE);
-  const today = picks.filter(
-    (p) =>
-      p.listId === SYS_LIST_TODAY || p.listId === SYS_LIST_INBOX,
-  );
-  const big = picks.filter((p) =>
-    [SYS_LIST_TESTS, SYS_LIST_PROJECTS, SYS_LIST_LONGTERM].includes(p.listId),
-  );
-  const tieEst = (a: FocusForTodayPick, b: FocusForTodayPick) => {
-    const ea = estimateMinutesForSort(getTaskForPick(tasksByListId, a));
-    const eb = estimateMinutesForSort(getTaskForPick(tasksByListId, b));
-    if (ea != null && eb != null && ea !== eb) return ea - eb;
-    if (ea != null && eb == null) return -1;
-    if (ea == null && eb != null) return 1;
-    return a.displayTitle.localeCompare(b.displayTitle);
-  };
-  const sortOverdue = (a: FocusForTodayPick, b: FocusForTodayPick) => {
-    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
-    return tieEst(a, b);
-  };
-  const sortToday = sortOverdue;
-  const sortBig = (a: FocusForTodayPick, b: FocusForTodayPick) => {
-    if (a.daysLeft !== b.daysLeft) return a.daysLeft - b.daysLeft;
-    const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.listId) ?? 9;
-    const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.listId) ?? 9;
-    if (ra !== rb) return ra - rb;
-    return tieEst(a, b);
-  };
-  return [
-    ...[...overdue].sort(sortOverdue),
-    ...[...today].sort(sortToday),
-    ...[...big].sort(sortBig),
-  ];
-}
-
-function formatMinutesLabel(minutes: number): string {
-  if (minutes < 60) return `${minutes} min`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m ? `${h}h ${m}m` : `${h}h`;
-}
-
-function formatFocusTimeLine(
-  pick: FocusForTodayPick,
-  task: Task | undefined,
-): string {
-  const base = pick.timeLabel;
-  const m = task?.estimatedMinutes;
-  if (m != null && m > 0) return `${base} • ${formatMinutesLabel(m)}`;
-  return base;
-}
-
-function focusForTodayRowVisuals(
-  urgency: FocusForTodayPick["urgency"],
-): { bar: string } {
-  switch (urgency) {
-    case "overdue":
-      return { bar: "bg-[#EDE7FA]" };
-    case "critical":
-      return { bar: "bg-[#F3EEFC]" };
-    case "soon":
-      return { bar: "bg-amber-50" };
-    default:
-      return { bar: "bg-[#F8FAFC]" };
-  }
 }
 
 /** Due-date reminders (Tests / Projects / Long-Term) + overdue (Overdue list). */
@@ -2200,6 +2038,7 @@ const TASK_CATEGORY_LISTS: TodayList[] = [
 /** Sidebar primary list rows (same order as TASK_CATEGORY_LISTS for system lists). */
 const SIDEBAR_PRIMARY_LIST_NAV: { id: string; label: string }[] = [
   { id: SYS_LIST_OVERDUE, label: "Overdue" },
+  { id: SYS_LIST_INBOX, label: "Inbox" },
   { id: SYS_LIST_TODAY, label: "Today" },
   { id: SYS_LIST_PROJECTS, label: "Projects" },
   { id: SYS_LIST_TESTS, label: "Tests" },
@@ -2388,42 +2227,6 @@ function SidebarCompletedIcon({
         <>
           <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} fill="none" />
           <path d="M9 12l2 2 4-4" stroke={stroke} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round" />
-        </>
-      )}
-    </svg>
-  );
-}
-
-/** Compass — same stroke/fill pattern as primary list icons (outline #666 → solid lavender). */
-function SidebarPlanMyDayIcon({
-  active,
-  className = "h-[18px] w-[18px] shrink-0",
-}: {
-  active: boolean;
-  className?: string;
-}) {
-  const stroke = active ? "none" : SIDEBAR_ICON_OUTLINE;
-  const sw = active ? 0 : 1.5;
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden>
-      {active ? (
-        <>
-          <circle cx="12" cy="12" r="10" fill={SIDEBAR_ACCENT} />
-          <path
-            d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
-            fill="white"
-          />
-        </>
-      ) : (
-        <>
-          <circle cx="12" cy="12" r="10" stroke={stroke} strokeWidth={sw} fill="none" />
-          <path
-            d="m16.24 7.76-2.12 6.36-6.36 2.12 2.12-6.36 6.36-2.12z"
-            stroke={stroke}
-            strokeWidth={sw}
-            fill="none"
-            strokeLinejoin="round"
-          />
         </>
       )}
     </svg>
@@ -2956,7 +2759,7 @@ export default function App() {
   const focusEnterTimeoutsRef = useRef<number[]>([]);
   /** When false, scheduled finishEnterFocusSession is skipped (user navigated away during zen). */
   const allowFocusEnterRef = useRef(true);
-  /** Work-mode prompts queued from “Focus for today” — shown after zen ripple, not before. */
+  /** Work-mode prompts queued for the timer — shown after zen ripple, not before. */
   const pendingWorkModeAfterZenRef = useRef<
     Array<{ taskId: number; listId: string }> | null
   >(null);
@@ -3020,7 +2823,7 @@ export default function App() {
     useState<DOMRect | null>(null);
 
   const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
-  /** When Focus Today is selected, edits apply to this source list. */
+  /** When Inbox aggregate is selected, edits apply to this source list. */
   const [editingSourceListId, setEditingSourceListId] = useState<string | null>(
     null,
   );
@@ -3188,7 +2991,7 @@ export default function App() {
 
   const mainTasksPanelTitle = useMemo(() => {
     if (todayMainMode === "search") return "Search";
-    if (selectedListId === SYS_LIST_INBOX) return "Focus Today";
+    if (selectedListId === SYS_LIST_INBOX) return "Inbox";
     return (
       selectedList?.label ??
       SIDEBAR_PRIMARY_LIST_NAV.find((r) => r.id === selectedListId)?.label ??
@@ -3307,49 +3110,13 @@ export default function App() {
     [notificationItems],
   );
 
-  const focusForTodayItems = useMemo(() => {
-    const base = buildFocusForTodayPicks(tasksByListId, notificationDay);
-    return applySoftEstimateReorder(base, tasksByListId);
-  }, [tasksByListId, notificationDay]);
-
-  const [planMyDayIntent, setPlanMyDayIntent] = useState(0);
-
-  const planMyDayTaskMap = useMemo(() => {
-    const m = new Map<
-      number,
-      {
-        id: number;
-        text: string;
-        estimatedMinutes?: number | null;
-        priority?: 1 | 2 | 3 | 4;
-      }
-    >();
-    for (const p of focusForTodayItems) {
-      const t = getTaskForPick(tasksByListId, p);
-      if (t) {
-        m.set(t.id, {
-          id: t.id,
-          text: t.text,
-          estimatedMinutes: t.estimatedMinutes,
-          priority: t.priority,
-        });
-      }
+  const inboxTaskSourceByTaskId = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const p of buildFocusForTodayPicks(tasksByListId, notificationDay)) {
+      m.set(p.taskId, p.listId);
     }
     return m;
-  }, [focusForTodayItems, tasksByListId]);
-
-  const planMyDaySidebarTaskCount = useMemo(
-    () =>
-      (tasksByListId[SYS_LIST_INBOX] ?? []).filter(
-        (t) => !t.completed && !t.removing,
-      ).length,
-    [tasksByListId],
-  );
-
-  const isPlanMyDaySidebarActive =
-    activeView === "tasks" &&
-    todayMainMode === "tasks" &&
-    selectedListId === SYS_LIST_INBOX;
+  }, [tasksByListId, notificationDay]);
 
   const mainPanelTaskCount = useMemo(() => {
     if (!selectedListId) return 0;
@@ -3369,115 +3136,6 @@ export default function App() {
     notificationDay,
     visibleTasksForList,
   ]);
-
-  const focusTaskSourceByTaskId = useMemo(() => {
-    const m = new Map<number, string>();
-    for (const p of focusForTodayItems) {
-      m.set(p.taskId, p.listId);
-    }
-    return m;
-  }, [focusForTodayItems]);
-
-  const [estimateSessionActions, setEstimateSessionActions] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      return parseInt(
-        sessionStorage.getItem(ESTIMATE_SESSION_ACTIONS_KEY) || "0",
-        10,
-      );
-    } catch {
-      return 0;
-    }
-  });
-
-  const focusTodaySections = useMemo(() => {
-    const pinned = focusForTodayItems.filter((p) => p.daysLeft <= 0);
-    const upNext = focusForTodayItems.filter((p) => p.daysLeft > 0);
-    return { pinned, upNext };
-  }, [focusForTodayItems]);
-
-  const focusTodayFlatRows = useMemo(() => {
-    const { pinned, upNext } = focusTodaySections;
-    const out: Array<
-      | { kind: "header"; label: string }
-      | { kind: "row"; pick: FocusForTodayPick }
-    > = [];
-    if (pinned.length > 0) {
-      out.push({ kind: "header", label: "Overdue & Due Today" });
-      for (const p of pinned) out.push({ kind: "row", pick: p });
-    }
-    if (upNext.length > 0) {
-      out.push({ kind: "header", label: "Up Next" });
-      for (const p of upNext) out.push({ kind: "row", pick: p });
-    }
-    return out;
-  }, [focusTodaySections]);
-
-  const focusEstimatePromptKeys = useMemo(() => {
-    if (estimateSessionActions >= 2) return new Set<string>();
-    const scored = focusForTodayItems
-      .map((p) => {
-        const t = getTaskForPick(tasksByListId, p);
-        return { p, t };
-      })
-      .filter(
-        ({ t, p }) => t && taskNeedsEstimate(t, p.listId),
-      )
-      .sort((a, b) => {
-        if (a.p.daysLeft !== b.p.daysLeft) return a.p.daysLeft - b.p.daysLeft;
-        const ra = FOCUS_FOR_TODAY_LIST_RANK.get(a.p.listId) ?? 9;
-        const rb = FOCUS_FOR_TODAY_LIST_RANK.get(b.p.listId) ?? 9;
-        return ra - rb || a.p.displayTitle.localeCompare(b.p.displayTitle);
-      });
-    return new Set(
-      scored.slice(0, 2).map((x) => `${x.p.listId}:${x.p.taskId}`),
-    );
-  }, [focusForTodayItems, tasksByListId, estimateSessionActions]);
-
-  const bumpEstimateSessionAction = useCallback(() => {
-    setEstimateSessionActions((n) => {
-      const next = Math.min(n + 1, 99);
-      try {
-        sessionStorage.setItem(ESTIMATE_SESSION_ACTIONS_KEY, String(next));
-      } catch {
-        /* ignore */
-      }
-      return next;
-    });
-  }, []);
-
-  const handleFocusEstimateInline = useCallback(
-    (listId: string, taskId: number, minutes: number | "skip") => {
-      setTasksByListId((prev) => {
-        const arr = [...(prev[listId] ?? [])];
-        const idx = arr.findIndex((t) => t.id === taskId);
-        if (idx === -1) return prev;
-        const t = arr[idx];
-        const next: Task = {
-          ...t,
-          estimatePromptDismissed: true,
-        };
-        if (minutes !== "skip") {
-          next.estimatedMinutes = minutes;
-          recordEstimatePattern(normalizeEstimateKeyword(t.text), minutes);
-        }
-        arr[idx] = next;
-        return { ...prev, [listId]: arr };
-      });
-      if (selectedListId === listId) {
-        setTasks((prev) =>
-          prev.map((tt) => {
-            if (tt.id !== taskId) return tt;
-            const u: Task = { ...tt, estimatePromptDismissed: true };
-            if (minutes !== "skip") u.estimatedMinutes = minutes;
-            return u;
-          }),
-        );
-      }
-      bumpEstimateSessionAction();
-    },
-    [bumpEstimateSessionAction, selectedListId],
-  );
 
   useEffect(() => {
     try {
@@ -3742,10 +3400,6 @@ export default function App() {
     pushTimer(() => setTaskRowExitingId(task.id), 420);
     pushTimer(() => {
       appendCompletedActivity(task.text, 0, listId, listLabel);
-      const est = task.estimatedMinutes;
-      if (est != null && est > 0) {
-        appendPlanMyDayCompletion(task.id, est);
-      }
       if (selectedListIdRef.current === listId) {
         setTasks((prev) =>
           prev.map((x) =>
@@ -4628,13 +4282,6 @@ export default function App() {
         completed: false,
       },
     ]);
-    if (focusSessionEntries.length > 0 && elapsedSecs > 0) {
-      const share =
-        elapsedSecs / 60 / Math.max(1, focusSessionEntries.length);
-      for (const e of focusSessionEntries) {
-        appendPlanMyDayCompletion(e.taskId, share);
-      }
-    }
   };
 
   const cleanupFocusSessionAfterQuit = () => {
@@ -5610,35 +5257,6 @@ export default function App() {
           workModePromptQueueRef.current = queue;
           setPendingWorkModeTaskId(queue[0].taskId);
           setPendingWorkModeListId(queue[0].listId);
-          setIsWorkModeModalOpen(true);
-        });
-      }
-      return [...prev, ...added];
-    });
-  }
-
-  function addAllFocusQueueToSession() {
-    setFocusSessionEntries((prev) => {
-      const keys = new Set(prev.map((e) => `${e.listId}:${e.taskId}`));
-      const added: FocusSessionEntry[] = [];
-      for (const p of focusForTodayItems) {
-        const t = getTaskForPick(tasksByListId, p);
-        if (!t || t.completed || t.removing) continue;
-        const key = `${p.listId}:${p.taskId}`;
-        if (keys.has(key)) continue;
-        keys.add(key);
-        added.push({ listId: p.listId, taskId: p.taskId });
-      }
-      if (!added.length) return prev;
-      if (!isSimulation) {
-        queueMicrotask(() => {
-          const queue = added.map((e) => ({
-            taskId: e.taskId,
-            listId: e.listId,
-          }));
-          workModePromptQueueRef.current = queue;
-          setPendingWorkModeTaskId(queue[0]!.taskId);
-          setPendingWorkModeListId(queue[0]!.listId);
           setIsWorkModeModalOpen(true);
         });
       }
@@ -6949,42 +6567,6 @@ export default function App() {
                   </div>
 
                   <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden overscroll-contain px-4 pb-3 pt-3">
-                    <div className="mb-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (isFocusTimerRunning) {
-                            setFocusSessionDialog({
-                              kind: "quit",
-                              pending: { action: "inboxAndFocus" },
-                            });
-                            return;
-                          }
-                          if (focusEnterZenActive) cancelFocusEnterZen();
-                          if (isFocusSessionActive) cleanupFocusSessionAfterQuit();
-                          setActiveView("tasks");
-                          applyListSelection(SYS_LIST_INBOX);
-                          setPlanMyDayIntent((n) => n + 1);
-                          queueMicrotask(() => taskListInputRef.current?.focus());
-                        }}
-                        className={`sidebar-nav-item ${
-                          isPlanMyDaySidebarActive ? "sidebar-nav-item--active" : ""
-                        }`}
-                      >
-                        <span className="sidebar-icon-slot" aria-hidden>
-                          <SidebarPlanMyDayIcon active={isPlanMyDaySidebarActive} />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-left">
-                          Plan My Day
-                        </span>
-                        {planMyDaySidebarTaskCount > 0 ? (
-                          <span className="sidebar-badge-muted shrink-0">
-                            {planMyDaySidebarTaskCount}
-                          </span>
-                        ) : null}
-                      </button>
-                    </div>
-
                     <nav className="flex flex-col gap-px" aria-label="Tasks">
                       {SIDEBAR_PRIMARY_LIST_NAV.map((row) => {
                         const n = (tasksByListId[row.id] ?? []).filter((t) => !t.completed && !t.removing).length;
@@ -7263,7 +6845,7 @@ export default function App() {
                               subtitle="You're all clear."
                             />
                           ) : selectedListId === SYS_LIST_INBOX &&
-                            focusForTodayItems.length === 0 ? (
+                            todoTasks.length === 0 ? (
                             <ListEmptyHero
                               src={EMPTY_STATE_IMG.focusDayOff}
                               className={listEmptyExit ? "micro-empty-out" : ""}
@@ -7318,13 +6900,6 @@ export default function App() {
 
                         return (
                           <div className="flex w-full flex-col">
-                            {selectedListId === SYS_LIST_INBOX ? (
-                              <PlanMyDayExperience
-                                intent={planMyDayIntent}
-                                picks={focusForTodayItems}
-                                tasksByTaskId={planMyDayTaskMap}
-                              />
-                            ) : null}
                             {selectedListId !== SYS_LIST_OVERDUE &&
                               selectedListId !== SYS_LIST_INBOX && (
                               <>
@@ -7435,92 +7010,6 @@ export default function App() {
                               </>
                             )}
 
-                            {selectedListId === SYS_LIST_INBOX && todoTasks.length > 0 ? (
-                              <div className="mb-4 rounded-xl border border-[#E5E7EB] bg-white p-4 shadow-sm">
-                                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                                  <div className="min-w-0 flex-1">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">
-                                      Focus queue · smart sort
-                                    </p>
-                                    <p className="mt-1 text-[13px] leading-relaxed text-[#6B7280]">
-                                      Order uses due dates and quick time estimates. Add an estimate when prompted to keep the queue accurate.
-                                    </p>
-                                    <ol className="mt-3 space-y-2">
-                                      {focusForTodayItems.map((p, i) => {
-                                        const t = getTaskForPick(tasksByListId, p);
-                                        const key = `${p.listId}:${p.taskId}`;
-                                        const showEst =
-                                          !!t && focusEstimatePromptKeys.has(key);
-                                        return (
-                                          <li
-                                            key={key}
-                                            className="flex flex-col gap-2 rounded-lg border border-[#F1F5F9] bg-[#FAFAFA] px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
-                                          >
-                                            <div className="flex min-w-0 items-start gap-2">
-                                              <span className="text-[12px] font-semibold text-[#9CA3AF]">
-                                                {i + 1}
-                                              </span>
-                                              <div className="min-w-0">
-                                                <p className="font-medium text-[#202020]">{p.displayTitle}</p>
-                                                <p className="text-[12px] text-[#9CA3AF]">
-                                                  {formatFocusTimeLine(p, t)}
-                                                </p>
-                                              </div>
-                                            </div>
-                                            {showEst && t ? (
-                                              <div className="flex flex-wrap gap-1">
-                                                {[15, 25, 45, 60].map((m) => (
-                                                  <button
-                                                    key={m}
-                                                    type="button"
-                                                    onClick={() =>
-                                                      handleFocusEstimateInline(
-                                                        p.listId,
-                                                        p.taskId,
-                                                        m,
-                                                      )
-                                                    }
-                                                    className="rounded-md border border-[#E5E7EB] bg-white px-2 py-0.5 text-[11px] font-medium text-[#6B7280] hover:border-[#6366F1]/40 hover:text-[#6366F1]"
-                                                  >
-                                                    {m}m
-                                                  </button>
-                                                ))}
-                                                <button
-                                                  type="button"
-                                                  onClick={() =>
-                                                    handleFocusEstimateInline(
-                                                      p.listId,
-                                                      p.taskId,
-                                                      "skip",
-                                                    )
-                                                  }
-                                                  className="rounded-md px-2 py-0.5 text-[11px] text-[#9CA3AF] hover:text-[#6B7280]"
-                                                >
-                                                  Skip
-                                                </button>
-                                              </div>
-                                            ) : null}
-                                          </li>
-                                        );
-                                      })}
-                                    </ol>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      addAllFocusQueueToSession();
-                                      if (!isFocusSessionActive && !focusEnterZenActive) {
-                                        runFocusEnterZenTransition();
-                                      }
-                                    }}
-                                    className="shrink-0 rounded-lg bg-[#6366F1] px-4 py-2.5 text-[13px] font-semibold text-white shadow-sm transition hover:bg-[#4f46e5]"
-                                  >
-                                    Send to timer
-                                  </button>
-                                </div>
-                              </div>
-                            ) : null}
-
                             {filtered.length === 0 ? (
                               emptyBlock
                             ) : (
@@ -7532,7 +7021,7 @@ export default function App() {
                                   const isSelected = taskDetailModalId === t.id;
                                   const sourceListId =
                                     selectedListId === SYS_LIST_INBOX
-                                      ? focusTaskSourceByTaskId.get(t.id) ??
+                                      ? inboxTaskSourceByTaskId.get(t.id) ??
                                         selectedListId
                                       : selectedListId!;
                                   const classLabel =
@@ -7839,7 +7328,7 @@ export default function App() {
                                             startEditTask(
                                               t,
                                               selectedListId === SYS_LIST_INBOX
-                                                ? focusTaskSourceByTaskId.get(
+                                                ? inboxTaskSourceByTaskId.get(
                                                     t.id,
                                                   )
                                                 : undefined,
@@ -7931,7 +7420,7 @@ export default function App() {
                         if (tid == null) return;
                         const lid =
                           selectedListId === SYS_LIST_INBOX
-                            ? focusTaskSourceByTaskId.get(tid)
+                            ? inboxTaskSourceByTaskId.get(tid)
                             : selectedListId;
                         const resolved =
                           lid ?? findTaskListIdContaining(tasksByListId, tid);

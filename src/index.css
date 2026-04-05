@@ -43,7 +43,7 @@
   color: #666666;
 }
 
-/* Focus Today — Todoist “Add task” row: no frame; only the lead glyph is full color */
+/* Sidebar “Add task” row: no frame; only the lead glyph is full color */
 .sidebar-focus-today-wrap {
   padding-top: 0;
 }
