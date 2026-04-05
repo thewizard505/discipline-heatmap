@@ -2584,6 +2584,7 @@ export default function App() {
   }>(null);
 
   const [focusFinaleOpen, setFocusFinaleOpen] = useState(false);
+  const [focusFinaleModalOpen, setFocusFinaleModalOpen] = useState(false);
   const [focusFinalePhase, setFocusFinalePhase] = useState<1 | 2 | 3>(1);
   const [focusFinaleSnapshot, setFocusFinaleSnapshot] = useState<{
     integrity: number;
@@ -3534,9 +3535,15 @@ export default function App() {
 
   useEffect(() => {
     if (!focusFinaleOpen || !focusFinaleSnapshot) return;
+    setFocusFinaleModalOpen(false);
     setFocusFinalePhase(1);
-    const tStats = window.setTimeout(() => setFocusFinalePhase(3), 280);
+    const tModal = window.setTimeout(() => {
+      setFocusFinaleModalOpen(true);
+      setFocusFinalePhase(2);
+    }, 700);
+    const tStats = window.setTimeout(() => setFocusFinalePhase(3), 700 + 500);
     return () => {
+      window.clearTimeout(tModal);
       window.clearTimeout(tStats);
     };
   }, [focusFinaleOpen, focusFinaleSnapshot]);
@@ -4284,6 +4291,7 @@ export default function App() {
 
   const cleanupFocusSessionAfterQuit = () => {
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -5148,6 +5156,7 @@ export default function App() {
     focusSessionTasksCompletedRef.current = 0;
     setIsVictory(false);
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -5393,12 +5402,14 @@ export default function App() {
     focusFinaleSnapshotRef.current = snap;
     setFocusFinaleSnapshot(snap);
     setFocusFinalePhase(1);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleOpen(true);
   }
 
   function dismissFocusFinale() {
     const snap = focusFinaleSnapshotRef.current;
     setFocusFinaleOpen(false);
+    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -8371,7 +8382,7 @@ export default function App() {
 
             {isFocusSessionActive && (
               <div
-                className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#F7F7F8] text-[#1c1c1e] antialiased transition-[filter] duration-200 ease-out dark:bg-[#0F0F10] dark:text-[#f2f2f7] ${
+                className={`dark relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#0F0F10] text-[#ececec] antialiased transition-[filter] duration-200 ease-out ${
                   focusRootShake ? "micro-focus-shake" : ""
                 }`}
               >
@@ -8417,62 +8428,14 @@ export default function App() {
                     } transition-[box-shadow,ring] duration-200 ease-out`}
                   >
                     {focusFinaleOpen && focusFinaleSnapshot ? (
-                      <motion.div
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
-                        className="flex flex-col items-center text-center"
+                      <div
+                        className="flex min-h-[200px] flex-col items-center justify-center py-10"
+                        aria-hidden
                       >
-                        <p className="text-[15px] font-medium text-[#1c1c1e] dark:text-[#f2f2f7]">
-                          Session complete
+                        <p className="text-[13px] text-[#8e8e93]">
+                          Session summary
                         </p>
-                        <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
-                          Summary for this block.
-                        </p>
-                        <div
-                          className={`mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-3 ${
-                            focusFinalePhase >= 3 ? "opacity-100" : "opacity-0"
-                          } transition-opacity duration-200 ease-out`}
-                        >
-                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
-                              Integrity
-                            </p>
-                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
-                              {focusFinaleSnapshot.integrity}%
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
-                              Time focused
-                            </p>
-                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
-                              {(() => {
-                                const s = focusFinaleSnapshot.elapsedSecs;
-                                const m = Math.floor(s / 60);
-                                const r = s % 60;
-                                if (m <= 0) return `${r}s`;
-                                return `${m}m ${String(r).padStart(2, "0")}s`;
-                              })()}
-                            </p>
-                          </div>
-                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
-                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
-                              Tasks
-                            </p>
-                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
-                              {focusFinaleSnapshot.tasksDone}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={dismissFocusFinale}
-                          className="mt-10 h-[52px] w-full max-w-sm rounded-[14px] bg-[#6366F1] text-[15px] font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:brightness-105 active:scale-[0.98] dark:hover:brightness-110"
-                        >
-                          Continue
-                        </button>
-                      </motion.div>
+                      </div>
                     ) : (
                       <>
                         <div
@@ -8769,6 +8732,102 @@ export default function App() {
                     </div>
                   </section>
                 </div>
+                {focusFinaleModalOpen && focusFinaleSnapshot && (
+                  <div
+                    className="absolute inset-0 z-[450] flex items-center justify-center p-6"
+                    role="dialog"
+                    aria-modal="true"
+                    aria-labelledby="focus-finale-title"
+                  >
+                    <button
+                      type="button"
+                      className="absolute inset-0 cursor-pointer border-0 bg-black/55 p-0 backdrop-blur-[2px] dark:bg-black/70"
+                      aria-label="Dismiss celebration"
+                      onClick={dismissFocusFinale}
+                    />
+                    <div
+                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-white/[0.08] bg-[#1c1c1e] px-8 py-10 text-center shadow-[0_24px_80px_rgba(0,0,0,0.45)] pointer-events-auto"
+                      onClick={(e) => e.stopPropagation()}
+                      role="presentation"
+                    >
+                      <h2
+                        id="focus-finale-title"
+                        className={`text-[1.65rem] font-semibold tracking-tight text-[#f2f2f7] transition-all duration-500 ease-out ${
+                          focusFinalePhase >= 2
+                            ? "translate-y-0 opacity-100"
+                            : "translate-y-3 opacity-0"
+                        }`}
+                      >
+                        You&apos;re Finished!
+                      </h2>
+                      <div
+                        className={`mt-8 space-y-5 text-left transition-opacity duration-500 ${
+                          focusFinalePhase >= 3 ? "opacity-100" : "opacity-0"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-baseline justify-between gap-3 border-b border-white/[0.08] pb-4 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "translate-y-0 opacity-100"
+                              : "translate-y-4 opacity-0"
+                          }`}
+                        >
+                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                            Focus integrity
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                            {focusFinaleSnapshot.integrity}%
+                          </span>
+                        </div>
+                        <div
+                          className={`flex items-baseline justify-between gap-3 border-b border-white/[0.08] pb-4 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "translate-y-0 opacity-100"
+                              : "translate-y-4 opacity-0"
+                          }`}
+                          style={{
+                            transitionDelay:
+                              focusFinalePhase >= 3 ? "120ms" : "0ms",
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                            Time in focus
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                            {(() => {
+                              const s = focusFinaleSnapshot.elapsedSecs;
+                              const m = Math.floor(s / 60);
+                              const r = s % 60;
+                              if (m <= 0) return `${r}s`;
+                              return `${m}m ${String(r).padStart(2, "0")}s`;
+                            })()}
+                          </span>
+                        </div>
+                        <div
+                          className={`flex items-baseline justify-between gap-3 transition-all duration-500 ease-out ${
+                            focusFinalePhase >= 3
+                              ? "translate-y-0 opacity-100"
+                              : "translate-y-4 opacity-0"
+                          }`}
+                          style={{
+                            transitionDelay:
+                              focusFinalePhase >= 3 ? "240ms" : "0ms",
+                          }}
+                        >
+                          <span className="text-[13px] font-medium text-[#a1a1a6]">
+                            Tasks completed
+                          </span>
+                          <span className="text-xl font-semibold tabular-nums text-[#f2f2f7]">
+                            {focusFinaleSnapshot.tasksDone}
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-8 text-[11px] text-[#6e6e73]">
+                        Tap outside to continue
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
