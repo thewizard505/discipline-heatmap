@@ -2584,7 +2584,6 @@ export default function App() {
   }>(null);
 
   const [focusFinaleOpen, setFocusFinaleOpen] = useState(false);
-  const [focusFinaleModalOpen, setFocusFinaleModalOpen] = useState(false);
   const [focusFinalePhase, setFocusFinalePhase] = useState<1 | 2 | 3>(1);
   const [focusFinaleSnapshot, setFocusFinaleSnapshot] = useState<{
     integrity: number;
@@ -3535,15 +3534,9 @@ export default function App() {
 
   useEffect(() => {
     if (!focusFinaleOpen || !focusFinaleSnapshot) return;
-    setFocusFinaleModalOpen(false);
     setFocusFinalePhase(1);
-    const tModal = window.setTimeout(() => {
-      setFocusFinaleModalOpen(true);
-      setFocusFinalePhase(2);
-    }, 700);
-    const tStats = window.setTimeout(() => setFocusFinalePhase(3), 700 + 500);
+    const tStats = window.setTimeout(() => setFocusFinalePhase(3), 280);
     return () => {
-      window.clearTimeout(tModal);
       window.clearTimeout(tStats);
     };
   }, [focusFinaleOpen, focusFinaleSnapshot]);
@@ -4291,7 +4284,6 @@ export default function App() {
 
   const cleanupFocusSessionAfterQuit = () => {
     setFocusFinaleOpen(false);
-    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -5156,7 +5148,6 @@ export default function App() {
     focusSessionTasksCompletedRef.current = 0;
     setIsVictory(false);
     setFocusFinaleOpen(false);
-    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -5402,14 +5393,12 @@ export default function App() {
     focusFinaleSnapshotRef.current = snap;
     setFocusFinaleSnapshot(snap);
     setFocusFinalePhase(1);
-    setFocusFinaleModalOpen(false);
     setFocusFinaleOpen(true);
   }
 
   function dismissFocusFinale() {
     const snap = focusFinaleSnapshotRef.current;
     setFocusFinaleOpen(false);
-    setFocusFinaleModalOpen(false);
     setFocusFinaleSnapshot(null);
     focusFinaleSnapshotRef.current = null;
     setFocusFinalePhase(1);
@@ -5682,6 +5671,17 @@ export default function App() {
     initialSeconds > 0
       ? (seconds / initialSeconds) * FOCUS_TIMER_RING_CIRCUMFERENCE
       : FOCUS_TIMER_RING_CIRCUMFERENCE;
+  const completedFocusSessionsCount = useMemo(
+    () => focusSessionRecords.filter((r) => r.completed).length,
+    [focusSessionRecords],
+  );
+  const focusHeroTaskLabel = useMemo(() => {
+    const e = focusSessionEntries[0];
+    if (!e) return null;
+    const t = (tasksByListId[e.listId] ?? []).find((x) => x.id === e.taskId);
+    if (!t || t.removing) return null;
+    return getFocusSessionDisplayLabel(e.listId, t.text);
+  }, [focusSessionEntries, tasksByListId]);
   const auraColor =
     integrityScoreNum > 80
       ? "37, 99, 235"
@@ -8371,674 +8371,407 @@ export default function App() {
 
             {isFocusSessionActive && (
               <div
-                className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#FAFAFA] text-[#111111] transition-[filter] duration-300 ease-out ${
+                className={`relative flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto bg-[#F7F7F8] text-[#1c1c1e] antialiased transition-[filter] duration-200 ease-out dark:bg-[#0F0F10] dark:text-[#f2f2f7] ${
                   focusRootShake ? "micro-focus-shake" : ""
                 }`}
               >
                 <div
-                  className="pointer-events-none absolute inset-0 z-[15] micro-focus-vignette opacity-40"
-                  aria-hidden
-                />
-                <div className="pointer-events-none absolute inset-0 z-0" />
-                <div className="relative z-10 flex min-h-0 min-w-0 flex-1 flex-row items-stretch overflow-x-hidden">
-                  <div
-                    className={`flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden overflow-y-auto overscroll-y-contain ${
-                      focusImmerseIntro ? "micro-focus-main-in" : ""
-                    }`}
-                  >
-                    <div className="mx-auto flex w-full max-w-[720px] flex-col items-stretch px-4 pb-20 pt-12 sm:px-6 sm:pb-24 sm:pt-16">
+                  className={`mx-auto flex w-full max-w-[680px] flex-col px-5 pb-16 pt-10 sm:px-6 ${
+                    focusImmerseIntro ? "opacity-95" : "opacity-100"
+                  } transition-opacity duration-200`}
+                >
                   {warning && (
-              <div className="fixed top-24 z-[100] rounded-2xl bg-[#7C6CF2] px-6 py-2.5 text-[13px] font-medium text-white shadow-[0_8px_24px_rgba(124,108,242,0.35)]">
-                {warning}
-              </div>
-            )}
-            {floatingTime && (
-              <div
-                key={floatingTime.id}
-                className="fixed top-1/2 z-[300] animate-float-fade text-6xl font-semibold text-[#7C6CF2] drop-shadow-[0_0_12px_rgba(124,108,242,0.2)]"
-              >
-                {floatingTime.text}
-              </div>
-            )}
-            {stayLockedHint && (
-              <div className="fixed bottom-28 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/95 px-4 py-1.5 text-[11px] font-medium tracking-wide text-[#666666] shadow-[0_4px_12px_rgba(0,0,0,0.06)] backdrop-blur-sm transition-opacity duration-200 ease-out">
-                Stay locked in.
-              </div>
-            )}
-
-            <header
-              className={`mb-10 space-y-2 text-center sm:mb-12 ${
-                focusImmerseIntro ? "opacity-80" : "opacity-100"
-              } transition-opacity duration-300`}
-            >
-              <h1 className="text-2xl font-medium tracking-tight text-[#666666] sm:text-[1.65rem]">
-                Hello <span className="text-[#111111]">User</span>
-              </h1>
-              <p className="text-sm font-normal leading-relaxed text-[#888888] sm:text-[15px]">
-                {randomGreeting}
-              </p>
-              <p
-                className={`inline-flex items-center justify-center gap-1 text-[12px] font-normal text-[#9a9a9a] ${
-                  streakMicro === "up"
-                    ? "micro-streak-up"
-                    : streakMicro === "down"
-                      ? "micro-streak-down"
-                      : ""
-                }`}
-              >
-                <span aria-hidden>🔥</span>
-                <span>{streak} day streak</span>
-              </p>
-            </header>
-
-            <section className="mb-10 space-y-4 sm:mb-12">
-              <label
-                htmlFor="focus-task-input"
-                className="block text-left text-[15px] font-medium text-[#111111]"
-              >
-                What are you working on?
-              </label>
-              <div className="flex w-full items-stretch gap-2 rounded-2xl bg-[#F5F5F7] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] transition-shadow duration-200 focus-within:shadow-[inset_0_0_0_1px_rgba(124,108,242,0.25)] sm:py-3.5">
-                <input
-                  id="focus-task-input"
-                  ref={focusSessionTaskInputRef}
-                  disabled={isSimulation}
-                  value={taskInput}
-                  onChange={(e) => setTaskInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      addTaskFromFocusBar({ fromEnter: true });
-                    }
-                  }}
-                  placeholder={
-                    isSimulation ? "Simulating input..." : "Name your objective…"
-                  }
-                  className={`min-h-[44px] flex-1 rounded-xl border-0 bg-transparent text-[15px] font-normal leading-snug text-[#111111] outline-none ring-0 placeholder:text-[#9a9a9a] focus:ring-0 ${
-                    taskInputClearFlash ? "opacity-50" : ""
-                  } font-[system-ui,-apple-system,BlinkMacSystemFont,'Segoe_UI',Roboto,sans-serif]`}
-                />
-                <button
-                  disabled={isSimulation}
-                  type="button"
-                  onClick={() =>
-                    addTaskFromFocusBar({ fromButtonClick: true })
-                  }
-                  className="shrink-0 self-center rounded-full px-3 py-1.5 text-[13px] font-medium text-[#7C6CF2] transition-colors duration-200 hover:bg-[#7C6CF2]/10 active:scale-[0.98] disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-              {taskInputLiveHints.length > 0 && (
-                <div className="space-y-0.5 pl-0.5" aria-live="polite">
-                  {taskInputLiveHints.map((hint, hi) => (
-                    <p
-                      key={hi}
-                      className="micro-hint-in text-[11px] leading-snug text-[#666666]"
-                      style={{ animationDelay: `${hi * 40}ms` }}
-                    >
-                      {hint}
-                    </p>
-                  ))}
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                {FOCUS_DURATION_PRESET_SECS.map((sec) => {
-                  const active = focusDurationPresetSec === sec;
-                  const label =
-                    sec === 15 * 60 ? "15 min" : sec === 25 * 60 ? "25 min" : "50 min";
-                  return (
-                    <button
-                      key={sec}
-                      type="button"
-                      disabled={running || isSimulation}
-                      onClick={() => {
-                        setFocusDurationPresetSec(sec);
-                        setSeconds(sec);
-                        setInitialSeconds(sec);
-                      }}
-                      className={`rounded-full px-5 py-2 text-[13px] font-medium transition-all duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 ${
-                        active
-                          ? "bg-[#7C6CF2] text-white shadow-[0_4px_14px_rgba(124,108,242,0.35)]"
-                          : "bg-[#ECECED] text-[#444444] hover:bg-[#E0E0E3]"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            {/* Timer hero */}
-            <div className="relative z-[200] mb-8 w-full sm:mb-10">
-              <div
-                className={`relative overflow-visible transition-[box-shadow,filter,transform] duration-300 ease-out ${
-                  focusFinaleOpen ? "focus-finale-timer-wrap" : ""
-                } ${focusTimerNudge ? "micro-timer-nudge" : ""} ${
-                  running ? "focus-timer-running-glow" : ""
-                }`}
-              >
-                {focusFinaleOpen && (
-                  <div
-                    className="pointer-events-none absolute -inset-10 z-0 rounded-[3.75rem] focus-finale-streamers-ring"
-                    aria-hidden
-                  />
-                )}
-                <div
-                  className={`focus-timer-hero-card rounded-3xl bg-white px-6 pb-10 pt-10 shadow-[0_10px_30px_rgba(0,0,0,0.05)] transition-all duration-300 sm:px-10 sm:pb-12 sm:pt-12 ${
-                    focusFinaleOpen ? "focus-finale-timer-card" : ""
-                  } ${running ? "ring-1 ring-[#7C6CF2]/10" : ""}`}
-                >
-                  <div className="relative mx-auto aspect-square w-full max-w-[min(100%,320px)]">
-                    <svg
-                      className="absolute inset-0 z-[1] h-full w-full -rotate-90"
-                      viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
-                      aria-hidden
-                    >
-                      <circle
-                        cx={FOCUS_TIMER_SVG_CENTER}
-                        cy={FOCUS_TIMER_SVG_CENTER}
-                        r={FOCUS_TIMER_RING_RADIUS}
-                        stroke="rgba(0,0,0,0.08)"
-                        strokeWidth="4"
-                        fill="none"
-                      />
-                      <circle
-                        cx={FOCUS_TIMER_SVG_CENTER}
-                        cy={FOCUS_TIMER_SVG_CENTER}
-                        r={FOCUS_TIMER_RING_RADIUS}
-                        stroke="#7C6CF2"
-                        strokeWidth="4"
-                        fill="none"
-                        strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
-                        strokeDashoffset={
-                          FOCUS_TIMER_RING_CIRCUMFERENCE -
-                          focusTimerProgressLength
-                        }
-                        strokeLinecap="round"
-                        style={{
-                          transition:
-                            "stroke-dashoffset 1s linear, stroke 0.35s ease",
-                        }}
-                      />
-                    </svg>
-                    <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center">
-                      <div
-                        className={`focus-timer-digits text-[clamp(4rem,14vw,6rem)] tabular-nums leading-none tracking-tight text-[#111111] transition-all duration-300 ${
-                          running ? "micro-focus-timer-pulse" : ""
-                        }`}
-                      >
-                        {String(Math.floor(Math.abs(seconds) / 60)).padStart(
-                          2,
-                          "0",
-                        )}
-                        <span className="inline-block translate-y-[-0.02em] opacity-90">
-                          :
-                        </span>
-                        {String(Math.abs(seconds) % 60).padStart(2, "0")}
-                      </div>
+                    <div className="fixed top-20 z-[100] max-w-sm rounded-xl bg-[#6366F1] px-5 py-2.5 text-[13px] font-medium text-white shadow-lg shadow-[#6366F1]/25">
+                      {warning}
                     </div>
-                  </div>
-                  <p className="mt-8 text-center text-[12px] font-normal tracking-wide text-[#888888]">
-                    Focus time remaining
-                  </p>
-                  {running && (
-                    <p
-                      className={`mt-2 text-center text-[12px] font-normal transition-colors duration-200 ${
-                        isViolating ? "text-red-500" : "text-[#666666]"
-                      }`}
-                    >
-                      Focus integrity {integrityScore}%
-                    </p>
                   )}
-                </div>
-              </div>
-            </div>
-
-            <div className="mb-10 flex flex-col items-center gap-3 sm:mb-12">
-              <button
-                type="button"
-                disabled={isSimulation || (!running && seconds <= 0)}
-                onClick={() => {
-                  if (running) {
-                    setRunning(false);
-                    return;
-                  }
-                  startTimer();
-                }}
-                className="rounded-full bg-[#7C6CF2] px-8 py-3.5 text-[15px] font-semibold text-white shadow-[0_6px_20px_rgba(124,108,242,0.35)] transition-all duration-200 hover:bg-[#6f63e6] hover:shadow-[0_8px_24px_rgba(124,108,242,0.4)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {running ? "Pause" : "Start Timer"}
-              </button>
-              <button
-                type="button"
-                disabled={isSimulation}
-                onClick={() => {
-                  setSeconds((s) => s + 900);
-                  setInitialSeconds((s) => s + 900);
-                }}
-                className="text-[13px] font-medium text-[#666666] transition-colors duration-200 hover:text-[#111111] active:scale-[0.98] disabled:opacity-50"
-              >
-                +15 min
-              </button>
-            </div>
-
-            <section
-              className="mb-12 flex flex-wrap items-center justify-center gap-x-8 gap-y-3 border-t border-black/[0.04] pt-8 text-[12px] text-[#666666] sm:gap-x-10"
-              aria-label="Session stats"
-            >
-              <div className="text-center sm:text-left">
-                <span className="text-[#111111] tabular-nums font-medium">
-                  {focusSessionEntries.length}
-                </span>
-                <span className="ml-1.5">tasks in session</span>
-              </div>
-              <div className="text-center sm:text-left">
-                <span className="text-[#111111] tabular-nums font-medium">
-                  {String(Math.floor(timerAccumulator / 60)).padStart(2, "0")}:
-                  {String(timerAccumulator % 60).padStart(2, "0")}
-                </span>
-                <span className="ml-1.5">time in focus</span>
-              </div>
-              <div className="text-center sm:text-left">
-                <span className="text-[#111111] tabular-nums font-medium">
-                  {integrityScore}
-                </span>
-                <span className="ml-1.5">integrity</span>
-              </div>
-            </section>
-
-            <section className="space-y-3">
-              <h2 className="text-[15px] font-medium text-[#111111]">
-                This session
-              </h2>
-              <div className="flex w-full flex-col gap-2 overflow-visible rounded-2xl bg-white p-3 shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-                {focusSessionEntries.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <p className="text-[14px] font-medium text-[#666666]">
-                      No tasks yet
-                    </p>
-                    <p className="mt-1 text-[12px] text-[#888888]">
-                      Add a task above to get started
-                    </p>
-                  </div>
-                ) : (
-                  focusSessionEntries
-                    .map((entry) => {
-                      const t = (tasksByListId[entry.listId] ?? []).find(
-                        (x) => x.id === entry.taskId,
-                      );
-                      if (!t || t.removing) return null;
-                      return { entry, t };
-                    })
-                    .filter(
-                      (
-                        row,
-                      ): row is {
-                        entry: FocusSessionEntry;
-                        t: Task;
-                      } => row !== null,
-                    )
-                    .map(({ entry, t }) => {
-                      const est = t.estimatedMinutes ?? 25;
-                      const timeLabel = `${est} min`;
-                      const itemDone = t.completed;
-                      return (
-                        <div
-                          key={`${entry.listId}-${entry.taskId}`}
-                          className={`task-item ${
-                            itemDone ? "done" : ""
-                          } ${t.removing ? "translate-x-12 opacity-0" : "opacity-100"} ${
-                            focusSessionNewRowId === t.id ? "micro-row-enter" : ""
-                          }`}
-                        >
-                          <button
-                            type="button"
-                            className="task-check"
-                            disabled={isSimulation}
-                            onClick={() =>
-                              completeFocusTask(entry.listId, entry.taskId)
-                            }
-                            title="Mark complete"
-                          />
-                          <span className="task-label">
-                            {getFocusSessionDisplayLabel(entry.listId, t.text)}
-                          </span>
-                          <span className="rounded-full bg-[#7C6CF2]/12 px-2 py-0.5 text-[11px] font-medium text-[#5e54c9]">
-                            Work
-                          </span>
-                          <span className="task-time">{timeLabel}</span>
-                        </div>
-                      );
-                    })
-                )}
-              </div>
-            </section>
+                  {floatingTime && (
+                    <div
+                      key={floatingTime.id}
+                      className="fixed top-1/2 z-[300] animate-float-fade text-5xl font-semibold tabular-nums text-[#6366F1] dark:text-[#818cf8]"
+                    >
+                      {floatingTime.text}
                     </div>
-                  </div>
+                  )}
+                  {stayLockedHint && (
+                    <div className="fixed bottom-24 left-1/2 z-[320] -translate-x-1/2 rounded-full border border-black/[0.06] bg-white/90 px-4 py-1.5 text-[11px] font-medium text-[#636366] shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-[#1c1c1e]/90 dark:text-[#a1a1a6]">
+                      Stay on task.
+                    </div>
+                  )}
 
-                  <div
-                    className={`flex w-[min(320px,34vw)] flex-shrink-0 flex-col self-stretch py-3 pr-3 pl-0 sm:w-[min(360px,32vw)] sm:py-4 sm:pr-4 transition-opacity duration-300 ease-out ${
-                      focusImmerseIntro ? "opacity-[0.92]" : "opacity-100"
-                    }`}
+                  <header className="mb-8 space-y-1 text-center">
+                    <h1 className="text-[1.75rem] font-semibold tracking-tight text-[#1c1c1e] dark:text-[#f5f5f7] sm:text-[1.875rem]">
+                      Focus
+                    </h1>
+                    <p className="text-[13px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
+                      {randomGreeting}
+                    </p>
+                    <p className="text-[12px] tabular-nums text-[#8e8e93] dark:text-[#7c7c80]">
+                      Streak {streak} days
+                    </p>
+                  </header>
+
+                  <article
+                    className={`rounded-[20px] border border-[#e5e5ea] bg-[#fcfcfd] p-7 shadow-[0_1px_2px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)] dark:border-white/[0.08] dark:bg-[#141416] dark:shadow-[0_1px_0_rgba(255,255,255,0.04)_inset] sm:p-8 ${
+                      running ? "ring-1 ring-[#6366F1]/15 dark:ring-[#6366F1]/25" : ""
+                    } transition-[box-shadow,ring] duration-200 ease-out`}
                   >
-                    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-3xl border border-black/[0.04] bg-white shadow-[0_10px_30px_rgba(0,0,0,0.05)]">
-                      <div className="shrink-0 border-b border-black/[0.06] bg-white px-4 py-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
-                            <span
-                              className="inline-flex h-[18px] w-[18px] shrink-0 items-center justify-center text-[#888888]"
+                    {focusFinaleOpen && focusFinaleSnapshot ? (
+                      <motion.div
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.22, ease: [0.22, 0.61, 0.36, 1] }}
+                        className="flex flex-col items-center text-center"
+                      >
+                        <p className="text-[15px] font-medium text-[#1c1c1e] dark:text-[#f2f2f7]">
+                          Session complete
+                        </p>
+                        <p className="mt-2 max-w-sm text-[13px] leading-relaxed text-[#6e6e73] dark:text-[#98989d]">
+                          Summary for this block.
+                        </p>
+                        <div
+                          className={`mt-8 grid w-full grid-cols-1 gap-3 sm:grid-cols-3 ${
+                            focusFinalePhase >= 3 ? "opacity-100" : "opacity-0"
+                          } transition-opacity duration-200 ease-out`}
+                        >
+                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                              Integrity
+                            </p>
+                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
+                              {focusFinaleSnapshot.integrity}%
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                              Time focused
+                            </p>
+                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
+                              {(() => {
+                                const s = focusFinaleSnapshot.elapsedSecs;
+                                const m = Math.floor(s / 60);
+                                const r = s % 60;
+                                if (m <= 0) return `${r}s`;
+                                return `${m}m ${String(r).padStart(2, "0")}s`;
+                              })()}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-[#e5e5ea] bg-white px-4 py-3 text-left dark:border-white/[0.08] dark:bg-[#1c1c1e]">
+                            <p className="text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                              Tasks
+                            </p>
+                            <p className="mt-1 text-xl font-semibold tabular-nums text-[#1c1c1e] dark:text-[#f2f2f7]">
+                              {focusFinaleSnapshot.tasksDone}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={dismissFocusFinale}
+                          className="mt-10 h-[52px] w-full max-w-sm rounded-[14px] bg-[#6366F1] text-[15px] font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:brightness-105 active:scale-[0.98] dark:hover:brightness-110"
+                        >
+                          Continue
+                        </button>
+                      </motion.div>
+                    ) : (
+                      <>
+                        <div
+                          className={`space-y-8 ${running ? "hidden" : ""}`}
+                        >
+                          <div className="space-y-2">
+                            <label
+                              htmlFor="focus-task-input"
+                              className="block text-left text-[13px] font-medium text-[#3a3a3c] dark:text-[#d1d1d6]"
+                            >
+                              What are you working on?
+                            </label>
+                            <div className="flex w-full items-stretch gap-2 rounded-[12px] border border-[#e5e5ea] bg-white px-3.5 py-2.5 transition-[border-color,box-shadow] duration-200 ease-out focus-within:border-[#6366F1]/50 focus-within:shadow-[0_0_0_3px_rgba(99,102,241,0.12)] dark:border-white/[0.1] dark:bg-[#1c1c1e]">
+                              <input
+                                id="focus-task-input"
+                                ref={focusSessionTaskInputRef}
+                                disabled={isSimulation}
+                                value={taskInput}
+                                onChange={(e) => setTaskInput(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    addTaskFromFocusBar({ fromEnter: true });
+                                  }
+                                }}
+                                placeholder={
+                                  isSimulation
+                                    ? "Simulating…"
+                                    : "Enter your focus task…"
+                                }
+                                className={`min-h-[44px] flex-1 rounded-[10px] border-0 bg-transparent text-[15px] leading-snug text-[#1c1c1e] outline-none placeholder:text-[#aeaeb2] dark:text-[#f2f2f7] dark:placeholder:text-[#636366] ${
+                                  taskInputClearFlash ? "opacity-50" : ""
+                                }`}
+                              />
+                              <button
+                                disabled={isSimulation}
+                                type="button"
+                                onClick={() =>
+                                  addTaskFromFocusBar({ fromButtonClick: true })
+                                }
+                                className="shrink-0 self-center rounded-lg px-3 py-2 text-[13px] font-semibold text-[#6366F1] transition-colors duration-200 ease-out hover:bg-[#6366F1]/10 active:scale-[0.98] disabled:opacity-50"
+                              >
+                                Add
+                              </button>
+                            </div>
+                            {taskInputLiveHints.length > 0 && (
+                              <div className="space-y-0.5" aria-live="polite">
+                                {taskInputLiveHints.map((hint, hi) => (
+                                  <p
+                                    key={hi}
+                                    className="text-[12px] leading-snug text-[#6e6e73] dark:text-[#98989d]"
+                                  >
+                                    {hint}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="space-y-3">
+                            <p className="text-[13px] font-medium text-[#3a3a3c] dark:text-[#d1d1d6]">
+                              Focus length
+                            </p>
+                            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                              {FOCUS_DURATION_PRESET_SECS.map((sec) => {
+                                const active = focusDurationPresetSec === sec;
+                                const label =
+                                  sec === 15 * 60
+                                    ? "15"
+                                    : sec === 25 * 60
+                                      ? "25"
+                                      : "50";
+                                return (
+                                  <button
+                                    key={sec}
+                                    type="button"
+                                    disabled={running || isSimulation}
+                                    onClick={() => {
+                                      setFocusDurationPresetSec(sec);
+                                      setSeconds(sec);
+                                      setInitialSeconds(sec);
+                                    }}
+                                    className={`min-h-[44px] rounded-full text-[14px] font-semibold tabular-nums transition-all duration-200 ease-out active:scale-[0.98] disabled:opacity-50 ${
+                                      active
+                                        ? "bg-[#6366F1] text-white shadow-md shadow-[#6366F1]/25"
+                                        : "border border-[#e5e5ea] bg-white text-[#3a3a3c] hover:border-[#6366F1]/35 dark:border-white/[0.1] dark:bg-[#1c1c1e] dark:text-[#e5e5ea]"
+                                    }`}
+                                  >
+                                    {label} min
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div
+                          className={
+                            running ? "space-y-5 pt-0" : "space-y-5 pt-2 sm:pt-4"
+                          }
+                        >
+                          {focusHeroTaskLabel && running && (
+                            <p className="text-center text-[14px] font-medium leading-snug text-[#3a3a3c] dark:text-[#d1d1d6]">
+                              {focusHeroTaskLabel}
+                            </p>
+                          )}
+                          <div className="relative mx-auto aspect-square w-full max-w-[300px] min-h-[220px] sm:max-w-[320px]">
+                            <svg
+                              className="absolute inset-0 z-[1] h-full w-full -rotate-90"
+                              viewBox={`0 0 ${FOCUS_TIMER_SVG_SIZE} ${FOCUS_TIMER_SVG_SIZE}`}
                               aria-hidden
                             >
-                              <svg
-                                viewBox="0 0 24 24"
-                                fill="none"
+                              <circle
+                                cx={FOCUS_TIMER_SVG_CENTER}
+                                cy={FOCUS_TIMER_SVG_CENTER}
+                                r={FOCUS_TIMER_RING_RADIUS}
                                 stroke="currentColor"
-                                strokeWidth="2"
+                                strokeWidth="5"
+                                className="text-[#e5e5ea] dark:text-white/[0.12]"
+                                fill="none"
+                              />
+                              <circle
+                                cx={FOCUS_TIMER_SVG_CENTER}
+                                cy={FOCUS_TIMER_SVG_CENTER}
+                                r={FOCUS_TIMER_RING_RADIUS}
+                                stroke="#6366F1"
+                                strokeWidth="5"
+                                fill="none"
+                                strokeDasharray={FOCUS_TIMER_RING_CIRCUMFERENCE}
+                                strokeDashoffset={
+                                  FOCUS_TIMER_RING_CIRCUMFERENCE -
+                                  focusTimerProgressLength
+                                }
                                 strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" />
-                              </svg>
-                            </span>
-                            <h2 className="min-w-0 truncate font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif] text-[14px] font-medium leading-7 tracking-tight text-[#111111]">
-                              Task queue
-                            </h2>
-                          </div>
-                          <div
-                            className="shrink-0 p-1.5 text-[#AAAAAA]"
-                            aria-hidden
-                          >
-                            <svg
-                              className="h-[18px] w-[18px]"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2"
-                            >
-                              <circle cx="5" cy="12" r="1.5" fill="currentColor" />
-                              <circle cx="12" cy="12" r="1.5" fill="currentColor" />
-                              <circle cx="19" cy="12" r="1.5" fill="currentColor" />
+                                style={{
+                                  transition:
+                                    "stroke-dashoffset 0.9s linear, stroke 0.2s ease-out",
+                                }}
+                              />
                             </svg>
+                            <div className="absolute inset-0 z-[2] flex flex-col items-center justify-center">
+                              <div
+                                className={`focus-timer-digits text-[clamp(3.75rem,18vw,5.5rem)] tabular-nums leading-none tracking-tight text-[#1c1c1e] transition-all duration-200 ease-out dark:text-[#f2f2f7] ${
+                                  running ? "micro-focus-timer-pulse" : ""
+                                }`}
+                              >
+                                {String(Math.floor(Math.abs(seconds) / 60)).padStart(
+                                  2,
+                                  "0",
+                                )}
+                                <span className="inline-block translate-y-[-0.02em] opacity-80">
+                                  :
+                                </span>
+                                {String(Math.abs(seconds) % 60).padStart(2, "0")}
+                              </div>
+                            </div>
                           </div>
+                          <p className="text-center text-[12px] font-medium text-[#8e8e93] dark:text-[#7c7c80]">
+                            {running ? "Remaining" : "Ready"}
+                          </p>
+                          {running && (
+                            <p
+                              className={`text-center text-[12px] font-medium tabular-nums transition-colors duration-200 ease-out ${
+                                isViolating ? "text-red-500" : "text-[#6e6e73] dark:text-[#98989d]"
+                              }`}
+                            >
+                              Integrity {integrityScore}%
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-[#FAFAFA] px-2.5 py-3 sm:px-3">
-                          <div className="flex flex-col">
-                            {focusSidebarSections.map((section, secIdx) => {
-                              const expanded =
-                                !!focusPickerExpanded[section.listId];
-                              return (
-                                <div
-                                  key={section.listId}
-                                  className={`border-b border-black/[0.06] last:border-b-0 ${secIdx === 0 ? "pt-0" : ""}`}
-                                >
-                                  <button
-                                    type="button"
-                                    aria-expanded={expanded}
-                                    onClick={() =>
-                                      setFocusPickerExpanded((prev) => ({
-                                        ...prev,
-                                        [section.listId]:
-                                          !prev[section.listId],
-                                      }))
-                                    }
-                                    className="queue-row w-full text-left"
-                                  >
-                                    <TaskSystemNavIcon
-                                      listId={section.listId}
-                                      className="h-5 w-5 shrink-0 text-[#888888]"
-                                    />
-                                    <span className="queue-row-name min-w-0 truncate font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]">
-                                      {section.label}
-                                    </span>
-                                    <span
-                                      className={`queue-count shrink-0 tabular-nums ${
-                                        section.listId === SYS_LIST_OVERDUE &&
-                                        section.tasks.length > 0
-                                          ? "overdue"
-                                          : ""
+
+                        <div className="mt-8 space-y-3">
+                          <button
+                            type="button"
+                            disabled={
+                              isSimulation ||
+                              (!running &&
+                                (focusSessionEntries.length === 0 ||
+                                  seconds <= 0))
+                            }
+                            onClick={() => {
+                              if (running) {
+                                finishSessionManual();
+                                return;
+                              }
+                              startTimer();
+                            }}
+                            className="flex h-[52px] w-full items-center justify-center rounded-[14px] bg-[#6366F1] text-[15px] font-semibold text-white shadow-sm transition-all duration-200 ease-out hover:brightness-105 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:brightness-100 dark:hover:brightness-110"
+                          >
+                            {running ? "End Session" : "Start Focus Session"}
+                          </button>
+                          {!running && (
+                            <button
+                              type="button"
+                              disabled={isSimulation}
+                              onClick={() => {
+                                setSeconds((s) => s + 900);
+                                setInitialSeconds((s) => s + 900);
+                              }}
+                              className="w-full py-2 text-[13px] font-medium text-[#6e6e73] transition-colors duration-200 ease-out hover:text-[#1c1c1e] active:scale-[0.98] dark:text-[#98989d] dark:hover:text-[#f2f2f7]"
+                            >
+                              +15 minutes
+                            </button>
+                          )}
+                        </div>
+
+                        {focusSessionEntries.length > 0 && (
+                          <div className="mt-8 border-t border-[#e5e5ea] pt-6 dark:border-white/[0.08]">
+                            <p className="mb-3 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                              Queue
+                            </p>
+                            <ul className="space-y-2">
+                              {focusSessionEntries
+                                .map((entry) => {
+                                  const t = (tasksByListId[entry.listId] ?? []).find(
+                                    (x) => x.id === entry.taskId,
+                                  );
+                                  if (!t || t.removing) return null;
+                                  return { entry, t };
+                                })
+                                .filter(
+                                  (
+                                    row,
+                                  ): row is {
+                                    entry: FocusSessionEntry;
+                                    t: Task;
+                                  } => row !== null,
+                                )
+                                .map(({ entry, t }) => {
+                                  const itemDone = t.completed;
+                                  return (
+                                    <li
+                                      key={`${entry.listId}-${entry.taskId}`}
+                                      className={`flex items-center gap-3 rounded-[12px] border border-[#e5e5ea] bg-white px-3 py-2.5 dark:border-white/[0.08] dark:bg-[#1c1c1e] ${
+                                        itemDone ? "opacity-50" : ""
                                       }`}
                                     >
-                                      {section.tasks.length}
-                                    </span>
-                                    <svg
-                                      className={`h-4 w-4 shrink-0 text-[#888888] transition-transform duration-200 ease-out ${expanded ? "rotate-90" : ""}`}
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2"
-                                      aria-hidden
-                                    >
-                                      <path
-                                        d="M9 18l6-6-6-6"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
+                                      <button
+                                        type="button"
+                                        className="task-check shrink-0"
+                                        disabled={isSimulation}
+                                        onClick={() =>
+                                          completeFocusTask(
+                                            entry.listId,
+                                            entry.taskId,
+                                          )
+                                        }
+                                        title="Complete"
                                       />
-                                    </svg>
-                                  </button>
-                                  <div
-                                    className={`grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none ${expanded ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
-                                  >
-                                    <div className="min-h-0 overflow-hidden">
-                                      <div className="space-y-2 pb-2 pl-0.5 pr-0.5 pt-0.5">
-                                        {section.tasks.length > 0 && (
-                                          <button
-                                            type="button"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              addAllTasksToFocusSession(
-                                                section.listId,
-                                              );
-                                            }}
-                                            className="mb-1 flex w-full items-center justify-center gap-1.5 rounded-full border border-dashed border-[#7C6CF2]/35 bg-white py-2 text-[11px] font-medium text-[#555555] transition hover:border-[#7C6CF2]/50 hover:bg-white active:scale-[0.99] font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif]"
-                                          >
-                                            <span className="text-[12px] font-medium text-[#7C6CF2]">
-                                              +
-                                            </span>
-                                            Add all {section.label} tasks
-                                          </button>
+                                      <span className="min-w-0 flex-1 text-[14px] leading-snug text-[#1c1c1e] dark:text-[#f2f2f7]">
+                                        {getFocusSessionDisplayLabel(
+                                          entry.listId,
+                                          t.text,
                                         )}
-                                        {section.tasks.length === 0 ? (
-                                          <div className="py-6 text-center">
-                                            <p className="text-[12px] font-medium text-[#666666]">
-                                              No tasks yet
-                                            </p>
-                                            <p className="mt-1 text-[11px] text-[#888888]">
-                                              Add a task to get started
-                                            </p>
-                                          </div>
-                                        ) : (
-                                          <ul className="space-y-2">
-                                            {section.tasks.map((task) => {
-                                              const inSession =
-                                                focusSessionKeySet.has(
-                                                  `${section.listId}:${task.id}`,
-                                                );
-                                              return (
-                                                <li
-                                                  key={`${section.listId}-${task.id}`}
-                                                >
-                                                  <button
-                                                    type="button"
-                                                    disabled={inSession}
-                                                    aria-label={
-                                                      inSession
-                                                        ? `${task.text} — already in session`
-                                                        : `Add ${task.text} to focus session`
-                                                    }
-                                                    onClick={() =>
-                                                      addTaskToFocusSession(
-                                                        section.listId,
-                                                        task.id,
-                                                      )
-                                                    }
-                                                    className={`group flex w-full items-start gap-2.5 rounded-2xl border px-2.5 py-2.5 text-left transition active:scale-[0.99] ${
-                                                      inSession
-                                                        ? "cursor-default border-[#7C6CF2]/25 bg-[#7C6CF2]/08"
-                                                        : "border-black/[0.06] bg-white hover:border-[#7C6CF2]/20 hover:shadow-sm"
-                                                    }`}
-                                                  >
-                                                    <span
-                                                      className={`mt-0.5 flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border text-[13px] font-medium leading-none transition-colors ${
-                                                        inSession
-                                                          ? "border-[#7C6CF2]/40 bg-[#7C6CF2]/15 text-[#5e54c9]"
-                                                          : "border-[#DDDDDD] bg-[#F5F5F7] text-[#444444] group-hover:border-[#7C6CF2]/40 group-hover:text-[#111111]"
-                                                      }`}
-                                                      aria-hidden
-                                                    >
-                                                      {inSession ? (
-                                                        <svg
-                                                          className="h-3 w-3"
-                                                          viewBox="0 0 24 24"
-                                                          fill="none"
-                                                          stroke="currentColor"
-                                                          strokeWidth="3"
-                                                          strokeLinecap="round"
-                                                          strokeLinejoin="round"
-                                                        >
-                                                          <path d="M20 6L9 17l-5-5" />
-                                                        </svg>
-                                                      ) : (
-                                                        <span>+</span>
-                                                      )}
-                                                    </span>
-                                                    <span className="min-w-0 flex-1">
-                                                      <span
-                                                        className={`block text-[13px] leading-snug font-[system-ui,-apple-system,'Segoe_UI',Roboto,sans-serif] ${
-                                                          inSession
-                                                            ? "text-[#666666]"
-                                                            : "text-[#111111]"
-                                                        }`}
-                                                      >
-                                                        {task.text}
-                                                      </span>
-                                                      {inSession && (
-                                                        <span className="mt-0.5 block text-[10px] font-medium text-[#888888]">
-                                                          In your session
-                                                        </span>
-                                                      )}
-                                                    </span>
-                                                  </button>
-                                                </li>
-                                              );
-                                            })}
-                                          </ul>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              );
-                            })}
+                                      </span>
+                                    </li>
+                                  );
+                                })}
+                            </ul>
                           </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {focusFinaleModalOpen && focusFinaleSnapshot && (
-                  <div
-                    className="absolute inset-0 z-[450] flex items-center justify-center p-6"
-                    role="dialog"
-                    aria-modal="true"
-                    aria-labelledby="focus-finale-title"
+                        )}
+                      </>
+                    )}
+                  </article>
+
+                  <section
+                    className="mt-8 grid grid-cols-3 gap-4 border-t border-[#e5e5ea] pt-8 dark:border-white/[0.08]"
+                    aria-label="Focus stats"
                   >
-                    <button
-                      type="button"
-                      className="absolute inset-0 bg-white/50 backdrop-blur-xl cursor-pointer border-0 p-0"
-                      aria-label="Dismiss celebration"
-                      onClick={dismissFocusFinale}
-                    />
-                    <div
-                      className="relative z-[1] w-full max-w-md rounded-[28px] border border-[#E5E7EB]/80 bg-white/95 px-8 py-10 shadow-[0_24px_80px_rgba(0,0,0,0.12)] pointer-events-auto text-center font-['Plus_Jakarta_Sans',system-ui,sans-serif]"
-                      onClick={(e) => e.stopPropagation()}
-                      role="presentation"
-                    >
-                      <h2
-                        id="focus-finale-title"
-                        className={`text-[1.65rem] font-semibold tracking-tight text-[#111827] transition-all duration-500 ease-out ${
-                          focusFinalePhase >= 2
-                            ? "opacity-100 translate-y-0"
-                            : "opacity-0 translate-y-3"
-                        }`}
-                      >
-                        You&apos;re Finished!
-                      </h2>
-                      <div
-                        className={`mt-8 space-y-5 text-left transition-opacity duration-500 ${
-                          focusFinalePhase >= 3 ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        <div
-                          className={`flex items-baseline justify-between gap-3 border-b border-[#E5E7EB] pb-4 transition-all duration-500 ease-out ${
-                            focusFinalePhase >= 3
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-4"
-                          }`}
-                          style={{
-                            transitionDelay:
-                              focusFinalePhase >= 3 ? "0ms" : "0ms",
-                          }}
-                        >
-                          <span className="text-[13px] font-medium text-[#6B7280]">
-                            🎯 Focus integrity
-                          </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
-                            {focusFinaleSnapshot.integrity}%
-                          </span>
-                        </div>
-                        <div
-                          className={`flex items-baseline justify-between gap-3 border-b border-[#E5E7EB] pb-4 transition-all duration-500 ease-out ${
-                            focusFinalePhase >= 3
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-4"
-                          }`}
-                          style={{
-                            transitionDelay:
-                              focusFinalePhase >= 3 ? "120ms" : "0ms",
-                          }}
-                        >
-                          <span className="text-[13px] font-medium text-[#6B7280]">
-                            ⏱ Time in focus
-                          </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
-                            {(() => {
-                              const s = focusFinaleSnapshot.elapsedSecs;
-                              const m = Math.floor(s / 60);
-                              const r = s % 60;
-                              if (m <= 0) return `${r}s`;
-                              return `${m}m ${String(r).padStart(2, "0")}s`;
-                            })()}
-                          </span>
-                        </div>
-                        <div
-                          className={`flex items-baseline justify-between gap-3 transition-all duration-500 ease-out ${
-                            focusFinalePhase >= 3
-                              ? "opacity-100 translate-y-0"
-                              : "opacity-0 translate-y-4"
-                          }`}
-                          style={{
-                            transitionDelay:
-                              focusFinalePhase >= 3 ? "240ms" : "0ms",
-                          }}
-                        >
-                          <span className="text-[13px] font-medium text-[#6B7280]">
-                            ✓ Tasks completed
-                          </span>
-                          <span className="text-xl font-semibold tabular-nums text-[#111827]">
-                            {focusFinaleSnapshot.tasksDone}
-                          </span>
-                        </div>
-                      </div>
-                      <p className="mt-8 text-[11px] text-[#9CA3AF]">
-                        Tap outside to continue
+                    <div className="text-center">
+                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                        {completedFocusSessionsCount}
+                      </p>
+                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                        Sessions
                       </p>
                     </div>
-                  </div>
-                )}
+                    <div className="text-center">
+                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                        {String(Math.floor(timerAccumulator / 60)).padStart(2, "0")}
+                        <span className="text-[#c7c7cc] dark:text-[#48484a]">:</span>
+                        {String(timerAccumulator % 60).padStart(2, "0")}
+                      </p>
+                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                        Time focused
+                      </p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[1.375rem] font-semibold tabular-nums leading-none tracking-tight text-[#1c1c1e] dark:text-[#f2f2f7] sm:text-2xl">
+                        {running ? `${integrityScore}%` : "—"}
+                      </p>
+                      <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-[#8e8e93]">
+                        Integrity
+                      </p>
+                    </div>
+                  </section>
+                </div>
               </div>
             )}
+
 
           </div>
 
